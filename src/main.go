@@ -23,11 +23,10 @@ var opts = &slog.HandlerOptions{
 		curTime := attr.Value.Time()
 
 		attr.Value = slog.StringValue(curTime.Format(time.DateTime))
-
 		return attr
 	},
 }
-var logger = slog.New(slog.NewJSONHandler(os.Stderr, opts))
+var logger = slog.New(slog.NewTextHandler(os.Stderr, opts))
 
 func main() {
 	slog.SetDefault(logger)
@@ -50,6 +49,7 @@ func main() {
 
 	logger.Info(fmt.Sprintf("Authorized on account %s", bot.Self.UserName))
 
+	update_handlers.InitCommands()
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
