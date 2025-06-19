@@ -1,8 +1,10 @@
 package main
 
 import (
-	"log"
+	"fmt"
+	"log/slog"
 	"os"
+	"time"
 
 	bot "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/bot"
 	update_handlers "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers"
@@ -10,10 +12,29 @@ import (
 	"github.com/joho/godotenv"
 )
 
+var opts = &slog.HandlerOptions{
+	AddSource: false,
+	Level:     slog.LevelDebug,
+	ReplaceAttr: func(groups []string, attr slog.Attr) slog.Attr {
+		if attr.Key != slog.TimeKey {
+			return attr
+		}
+
+		curTime := attr.Value.Time()
+
+		attr.Value = slog.StringValue(curTime.Format(time.DateTime))
+
+		return attr
+	},
+}
+var logger = slog.New(slog.NewJSONHandler(os.Stderr, opts))
+
 func main() {
+	slog.SetDefault(logger)
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		logger.Error("Error loading .env file")
+		os.Exit(-1)
 	}
 	bot_token := os.Getenv("BOT_TOKEN")
 
@@ -21,12 +42,13 @@ func main() {
 
 	err = bot_controller.Init(bot_token, true)
 	if err != nil {
-		log.Panic(err)
+		logger.Error(err.Error())
+		os.Exit(-1)
 	}
 
 	bot, err := bot_controller.GetBot()
 
-	log.Printf("Authorized on account %s", bot.Self.UserName)
+	logger.Info(fmt.Sprintf("Authorized on account %s", bot.Self.UserName))
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60

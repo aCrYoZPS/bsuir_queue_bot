@@ -14,7 +14,8 @@ coverage.*
 profile.cov
 
 vendor/
-
+*.history/
+*.vscode/
 go.work
 go.work.sum
 
