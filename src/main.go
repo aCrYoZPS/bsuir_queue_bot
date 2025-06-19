@@ -25,6 +25,9 @@ func main() {
 	}
 
 	bot, err := bot_controller.GetBot()
+	if err != nil {
+		log.Panic(err)
+	}
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
