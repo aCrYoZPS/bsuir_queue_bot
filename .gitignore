@@ -19,5 +19,8 @@ vendor/
 go.work
 go.work.sum
 
+credentials.json
+token.json
 .env
+sqlite3.db
 .null-ls*
