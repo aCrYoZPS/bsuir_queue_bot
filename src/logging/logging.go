@@ -26,6 +26,10 @@ func FatalLog(message string) {
 	os.Exit(-1)
 }
 
+func Info(message string) {
+	slog.Info(message)
+}
+
 func InitLogging() {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, opts))
 	slog.SetDefault(logger)

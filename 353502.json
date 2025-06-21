@@ -17,8 +17,8 @@
     "calendarId": "2lnt2vnn9r3mnka3iah6u1tsn8@group.calendar.google.com",
     "educationDegree": 1
   },
-  "schedules": null,
-  "previousSchedules": {
+  "previousSchedules": null,
+  "schedules": {
     "Суббота": [
       {
         "auditories": ["209-4 к."],

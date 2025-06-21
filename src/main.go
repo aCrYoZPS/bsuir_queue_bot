@@ -16,7 +16,6 @@ import (
 
 func main() {
 	logging.InitLogging()
-
 	err := godotenv.Load()
 	if err != nil {
 		logging.FatalLog("Error loading .env file")
