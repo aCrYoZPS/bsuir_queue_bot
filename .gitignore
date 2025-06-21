@@ -23,4 +23,5 @@ credentials.json
 token.json
 .env
 sqlite3.db
+schema.sql
 .null-ls*

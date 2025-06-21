@@ -50,7 +50,6 @@ func main() {
 		FatalLog(err.Error())
 	}
 
-	ctx := context.Background()
 	credentialsFile, err := os.ReadFile("credentials.json")
 	if err != nil {
 		FatalLog(fmt.Sprintf("Unable to read client secret file: %v", err))
@@ -60,6 +59,8 @@ func main() {
 		FatalLog(fmt.Sprintf("Unable to parse client secret file to config: %v", err))
 	}
 	client := getClient(config)
+
+	ctx := context.Background()
 	srv, err := sheets.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		FatalLog(fmt.Sprintf("Unable to retrieve sheets client: %v", err.Error()))
@@ -148,6 +149,13 @@ func InitBotController() {
 	updates := bot.GetUpdatesChan(u)
 
 	for update := range updates {
-		update_handlers.HandleUpdate(&update, bot)
+		if update.Message != nil {
+			if update.Message.Command() != "" {
+				update_handlers.HandleCommands(&update, bot)
+			}
+			if update.CallbackQuery != nil {
+				update_handlers.HandleCallbacks(&update, bot)
+			}
+		}
 	}
 }
