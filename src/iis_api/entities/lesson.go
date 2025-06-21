@@ -1,6 +1,8 @@
 package iis_api_entities
 
-// I mean, it's basically a enum.  
+import "time"
+
+// I mean, it's basically a enum.
 type Subgroup int8
 
 const (
@@ -10,8 +12,10 @@ const (
 )
 
 type Lesson struct {
-	Subject        string   `json:"subject"`
-	LessonType     string   `json:"lessonTypeAbbrev"`
-	SubgroupNumber Subgroup `json:"numSubgroup"`
-	WeekNumber     []int8   `json:"weekNumber"`
+	Subject        string    `json:"subject,omitempty"`
+	LessonType     string    `json:"lessonTypeAbbrev,omitempty"`
+	SubgroupNumber Subgroup  `json:"numSubgroup,omitempty"`
+	WeekNumber     []int8    `json:"weekNumber,omitempty"`
+	StartDate      time.Time `json:"startLessonDate"`
+	EndDate        time.Time `json:"endLessonDate"`
 }
