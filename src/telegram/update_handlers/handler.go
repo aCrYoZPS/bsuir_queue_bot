@@ -35,7 +35,7 @@ func HandleCommands(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
 }
 
 func HandleCallbacks(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
-	callback := tgbotapi.NewCallback(update.CallbackQuery.InlineMessageID, update.CallbackQuery.Data)
+	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 	if _, err := bot.Request(callback); err != nil {
 		slog.Error(err.Error())
 	}
