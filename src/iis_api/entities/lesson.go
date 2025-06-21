@@ -7,19 +7,18 @@ import (
 )
 
 // I mean, it's basically a enum.
-type (
-	Subgroup int8
-	DateTime time.Time
-)
-
-// I'm not dumb, it uses the freest time
-var timeFormat = "02.01.2006"
+type Subgroup int8
 
 const (
 	AllSubgroups   = Subgroup(0)
 	FirstSubgroup  = Subgroup(1)
 	SecondSubgroup = Subgroup(2)
 )
+
+type DateTime time.Time
+
+// I'm not dumb, it uses the freest time
+var timeFormat = "02.01.2006 +0300"
 
 type Lesson struct {
 	Subject        string   `json:"subject,omitempty"`
