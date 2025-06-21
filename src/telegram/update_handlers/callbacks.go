@@ -7,33 +7,6 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func HandleCommands(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
-	switch update.Message.Command() {
-	case HELP_COMMAND:
-		var text string
-		for _, command := range commands {
-			text += "/" + command.Command + ": " + command.Description + "\n"
-		}
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
-		_, err := bot.Send(msg)
-		if err != nil {
-			slog.Error(err.Error())
-		}
-	case SUBMIT_COMMAND:
-		text := "Select preferred discipline"
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
-		msg.ReplyMarkup = createDisciplinesKeyboard()
-		_, err := bot.Send(msg)
-		if err != nil {
-			slog.Error(err.Error())
-		}
-	default:
-		if _, err := bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Unknown command")); err != nil {
-			slog.Error(err.Error())
-		}
-	}
-}
-
 func HandleCallbacks(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
 	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 	if _, err := bot.Request(callback); err != nil {
