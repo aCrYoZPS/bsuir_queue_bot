@@ -20,7 +20,7 @@ func GetNextLessons(subject string, group_id string, subgroup entities.Subgroup,
 		return nil, err
 	}
 
-	_, err = GetCurrentWeek()
+	week, err = GetWeekForDate(date)
 	if err != nil {
 		return nil, err
 	}
