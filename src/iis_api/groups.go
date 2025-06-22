@@ -3,7 +3,6 @@ package iis_api
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -49,15 +48,6 @@ func GetAllGroups() ([]entities.Group, error) {
 
 	if err := json.NewDecoder(file).Decode(&data); err != nil {
 		return nil, err
-	}
-
-	i := 0
-	for _, group := range data {
-		slog.Info(fmt.Sprintf("%+v", group))
-		if i > 5 {
-			break
-		}
-		i += 1
 	}
 
 	return data, nil

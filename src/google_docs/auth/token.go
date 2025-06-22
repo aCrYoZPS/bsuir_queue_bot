@@ -43,7 +43,7 @@ func getConfig() (*oauth2.Config, error) {
 }
 
 func saveToken(path string, token *oauth2.Token) error {
-	slog.Info(fmt.Sprintf("Saving credential file to: %s\n", path))
+	slog.Info(fmt.Sprintf("Saving credential file to: %s", path))
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err

@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	gdocs_auth "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/auth"
-	iis_api "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api"
 	logging "github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
 	bot "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/bot"
 	"google.golang.org/api/option"
@@ -16,15 +15,10 @@ import (
 
 func main() {
 	logging.InitLogging()
+
 	err := godotenv.Load()
 	if err != nil {
 		logging.FatalLog("Error loading .env file")
-	}
-
-	// Perhaps, should handle API limits
-	_, err = iis_api.GetAllGroups()
-	if err != nil {
-		logging.FatalLog(err.Error())
 	}
 
 	client, err := gdocs_auth.GetClient()
