@@ -1,6 +1,10 @@
 package update_handlers
 
-import tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+import (
+	"log/slog"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+)
 
 const (
 	HELP_COMMAND   = "help"
@@ -12,6 +16,33 @@ var commands = []tgbotapi.BotCommand{
 	{Command: HELP_COMMAND, Description: "Команды и информация"},
 	{Command: SUBMIT_COMMAND, Description: "Yeah, I am lazy even for that"},
 	{Command: ASSIGN_COMMAND, Description: "Submit your request for becoming admin of the chosen group"},
+}
+
+func HandleCommands(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
+	switch update.Message.Command() {
+	case HELP_COMMAND:
+		var text string
+		for _, command := range commands {
+			text += "/" + command.Command + ": " + command.Description + "\n"
+		}
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
+		_, err := bot.Send(msg)
+		if err != nil {
+			slog.Error(err.Error())
+		}
+	case SUBMIT_COMMAND:
+		text := "Select preferred discipline"
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
+		msg.ReplyMarkup = createDisciplinesKeyboard()
+		_, err := bot.Send(msg)
+		if err != nil {
+			slog.Error(err.Error())
+		}
+	default:
+		if _, err := bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Unknown command")); err != nil {
+			slog.Error(err.Error())
+		}
+	}
 }
 
 // Probably is not worthy enough to be a separate package at all, but for the readability, why not
