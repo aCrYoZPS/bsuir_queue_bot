@@ -1,6 +1,7 @@
 package iis_api_entities
 
-// I mean, it's basically a enum.  
+
+// I mean, it's basically a enum.
 type Subgroup int8
 
 const (
@@ -10,8 +11,10 @@ const (
 )
 
 type Lesson struct {
-	Subject        string   `json:"subject"`
-	LessonType     string   `json:"lessonTypeAbbrev"`
-	SubgroupNumber Subgroup `json:"numSubgroup"`
-	WeekNumber     []int8   `json:"weekNumber"`
+	Subject         string   `json:"subject"`
+	LessonType      string   `json:"lessonTypeAbbrev"`
+	SubgroupNumber  Subgroup `json:"numSubgroup"`
+	WeekNumber      []int8   `json:"weekNumber"`
+	StartLessonDate string   `json:"startLessonDay"`
+	EndLessonDate   string   `json:"endLessonDay"`
 }
