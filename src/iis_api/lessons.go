@@ -6,6 +6,7 @@ import (
 	"time"
 
 	entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/utils"
 )
 
 func GetNextLessons(subject string, group_id string, subgroup entities.Subgroup, date time.Time) ([]entities.Lesson, error) {
@@ -20,10 +21,8 @@ func GetNextLessons(subject string, group_id string, subgroup entities.Subgroup,
 		return nil, err
 	}
 
-	week, err := GetWeekForDate(date)
-	if err != nil {
-		return nil, err
-	}
+	week := utils.CalculateWeek(date)
+
 
 	return make([]entities.Lesson, 3), nil
 }
