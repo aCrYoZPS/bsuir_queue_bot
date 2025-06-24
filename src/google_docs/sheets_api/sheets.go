@@ -52,6 +52,7 @@ type Lesson struct {
 func EntityToLesson(labwork iis_api_entities.Lesson, date time.Time) *Lesson {
 	return &Lesson{
 		date,
+		//TODO: change to the current time of labwork
 		time.Now(),
 		labwork.Subject,
 		labwork.SubgroupNumber,

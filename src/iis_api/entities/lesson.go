@@ -2,6 +2,7 @@ package iis_api_entities
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 	"time"
 )
@@ -17,6 +18,8 @@ const (
 
 type DateTime time.Time
 
+type TimeOnly time.Time
+
 // I'm not dumb, it uses the freest time
 var timeFormat = "02.01.2006 +0300"
 
@@ -26,6 +29,7 @@ type Lesson struct {
 	SubgroupNumber Subgroup `json:"numSubgroup,omitempty"`
 	WeekNumber     []int8   `json:"weekNumber,omitempty"`
 	StartDate      DateTime `json:"startLessonDate"`
+	StartTime      TimeOnly `json:"startLessonTime"`
 	EndDate        DateTime `json:"endLessonDate"`
 }
 
@@ -52,4 +56,26 @@ func (dt DateTime) MarshalJSON() ([]byte, error) {
 
 func (dt DateTime) Format(s string) string {
 	return time.Time(dt).Format(s)
+}
+
+func (to TimeOnly) UnmarshalJSON(bytes []byte) error {
+	timeString := strings.Trim(string(bytes), `"`)
+	if timeString == "null" {
+		to = TimeOnly{}
+		return errors.New("null time field")
+	}
+	timeVal, err := time.Parse(time.TimeOnly, timeString)
+	if err != nil {
+		return err
+	}
+	to = TimeOnly(timeVal)
+	return nil
+}
+
+func (to TimeOnly) MarshalJSON() ([]byte, error) {
+	return json.Marshal(time.Time(to))
+}
+
+func (to TimeOnly) Format(fmt string) string {
+	return time.Time(to).Format(fmt)
 }
