@@ -21,13 +21,17 @@ var opts = &slog.HandlerOptions{
 	},
 }
 
-func FatalLog(message string) {
-	slog.Error(message)
+func FatalLog(message string, args ...any) {
+	slog.Error(message, args...)
 	os.Exit(-1)
 }
 
-func Info(message string) {
-	slog.Info(message)
+func Info(message string, args ...any) {
+	slog.Info(message, args...)
+}
+
+func Error(message string, args ...any) {
+	slog.Error(message, args...)
 }
 
 func InitLogging() {

@@ -1,9 +1,15 @@
 package interfaces
 
-import iis_api_entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
+import (
+	"database/sql"
+
+	entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
+)
 
 type GroupsRepository interface {
-	GetAllGroups() ([]iis_api_entities.Group, error)
-	SaveAllGroups([]iis_api_entities.Group) error
+	GetAll() ([]entities.Group, error)
+	Add(group *entities.Group) error
+	AddRange(groups []entities.Group) error
+	GetById(id int) (*entities.Group, error)
+	Delete(id int) error
 }
-
