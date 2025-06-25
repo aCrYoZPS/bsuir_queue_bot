@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log/slog"
+
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/ioc"
 	logging "github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
 	bot "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/bot"
@@ -18,7 +20,10 @@ func main() {
 
 	//TODO: CHANGE TO STARTUP SCRIPT OF SOME KIND
 	srv := ioc.UseSheetsApiService()
-	srv.CreateLists()
+	err = srv.CreateSheets()
+	if err != nil {
+		slog.Error("failed to init sheets", "err", err.Error())
+	}
 
 	bot.InitBot()
 }

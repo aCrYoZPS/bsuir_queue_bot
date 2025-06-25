@@ -16,10 +16,10 @@ func NewGroupsRepositoryMock() *GroupsRepositoryMock {
 	return &GroupsRepositoryMock{}
 }
 
-func GetAllGroups() ([]iis_api_entities.Group, error) {
+func (*GroupsRepositoryMock) GetAllGroups() ([]iis_api_entities.Group, error) {
 	return MockGroups, nil
 }
 
-func SaveAllGroups([]iis_api_entities.Group) error {
+func (*GroupsRepositoryMock) SaveAllGroups([]iis_api_entities.Group) error {
 	return nil
 }

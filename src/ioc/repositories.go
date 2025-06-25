@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces/mocks"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -20,6 +21,11 @@ var useSqliteConnection = provider(
 	},
 )
 
+var useMockGroupsRepository = provider(
+	func() interfaces.GroupsRepository {
+		return mocks.NewGroupsRepositoryMock()
+	},
+)
 var useGroupsGepository = provider(
 	func() interfaces.GroupsRepository {
 		return sqlite.NewGroupsRepository(
@@ -28,6 +34,11 @@ var useGroupsGepository = provider(
 	},
 )
 
+var useMockLessonsRepository = provider(
+	func() interfaces.LessonsRepository {
+		return mocks.NewLessonsRepositoryMock()
+	},
+)
 var useLessonsRepository = provider(
 	func() interfaces.LessonsRepository {
 		return sqlite.NewLessonsRepository(
