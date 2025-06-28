@@ -27,7 +27,7 @@ func NewSheetsApiService(groups interfaces.GroupsRepository, lessons interfaces.
 }
 
 func (serv *SheetsApiService) CreateSheets() error {
-	groups, err := serv.groupsRepo.GetAllGroups()
+	groups, err := serv.groupsRepo.GetAll()
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func EntityToLesson(labwork iis_api_entities.Lesson, date time.Time) *Lesson {
 }
 
 func (serv *SheetsApiService) CreateLists() error {
-	groups, err := serv.groupsRepo.GetAllGroups()
+	groups, err := serv.groupsRepo.GetAll()
 	if err != nil {
 		return err
 	}

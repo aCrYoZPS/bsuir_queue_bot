@@ -1,8 +1,6 @@
 package interfaces
 
 import (
-	"database/sql"
-
 	entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 )
 

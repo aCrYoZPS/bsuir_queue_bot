@@ -28,9 +28,14 @@ var useMockGroupsRepository = provider(
 )
 var useGroupsGepository = provider(
 	func() interfaces.GroupsRepository {
-		return sqlite.NewGroupsRepository(
+		repo, err := sqlite.NewGroupsRepository(
 			useSqliteConnection(),
 		)
+		if err != nil {
+			slog.Error(err.Error())
+			panic(err)
+		}
+		return repo
 	},
 )
 
