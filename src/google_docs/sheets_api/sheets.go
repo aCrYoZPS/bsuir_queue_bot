@@ -31,7 +31,7 @@ func (serv *SheetsApiService) CreateSheets() error {
 	if err != nil {
 		return err
 	}
-	//I haven't figured out a way to batch these requests :(
+
 	for _, group := range groups {
 		newSheet := sheets.Spreadsheet{Properties: &sheets.SpreadsheetProperties{
 			Title: group.Name,
