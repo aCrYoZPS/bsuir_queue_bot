@@ -18,7 +18,10 @@ var useSqliteConnection = provider(
 		if err != nil {
 			logging.FatalLog(err.Error())
 		}
-
+		err = sqlite.DatabaseInit(conn)
+		if err != nil {
+			logging.FatalLog(err.Error())
+		}
 		return conn
 	},
 )
@@ -57,13 +60,9 @@ var useMockLessonsRepository = provider(
 
 var useLessonsRepository = provider(
 	func() interfaces.LessonsRepository {
-		repos, err := sqlite.NewLessonsRepository(
+		repos := sqlite.NewLessonsRepository(
 			useSqliteConnection(),
 		)
-		if err != nil {
-			logging.FatalLog(err.Error())
-		}
-
 		return repos
 	},
 )

@@ -6,7 +6,7 @@ import (
 )
 
 type LessonsRepository interface {
-	GetNextLabworks(subject string, groupId int64) ([]persistance.Lesson, error)
-	GetAllLabworks(groupId int64) ([]persistance.Lesson, error)
-	AddLabworks([]entities.Lesson) error
+	GetNext(subject string, groupId int64) ([]persistance.Lesson, error)
+	GetAll(groupId int64) ([]persistance.Lesson, error)
+	AddRange([]entities.Lesson) error
 }

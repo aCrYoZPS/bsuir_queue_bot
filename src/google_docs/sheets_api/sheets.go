@@ -52,7 +52,7 @@ func (serv *SheetsApiService) CreateLists() error {
 	for _, group := range groups {
 		update := sheets.BatchUpdateSpreadsheetRequest{}
 
-		lessons, err := serv.lessonsRepo.GetAllLabworks(int64(group.Id))
+		lessons, err := serv.lessonsRepo.GetAll(int64(group.Id))
 		for _, lesson := range lessons {
 			updateTitle := lesson.Subject + " " + serv.formatDateToEuropean(lesson.Date)
 			if iis_api_entities.Subgroup(lesson.SubgroupNumber) != iis_api_entities.AllSubgroups {
