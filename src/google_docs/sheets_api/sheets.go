@@ -27,11 +27,11 @@ func NewSheetsApiService(groups interfaces.GroupsRepository, lessons interfaces.
 }
 
 func (serv *SheetsApiService) CreateSheets() error {
-	groups, err := serv.groupsRepo.GetAllGroups()
+	groups, err := serv.groupsRepo.GetAll()
 	if err != nil {
 		return err
 	}
-	//I haven't figured out a way to batch these requests :(
+	// I haven't figured out a way to batch these requests :(
 	for _, group := range groups {
 		newSheet := sheets.Spreadsheet{Properties: &sheets.SpreadsheetProperties{
 			Title: group.Name,
@@ -64,13 +64,14 @@ func EntityToLesson(labwork iis_api_entities.Lesson, date time.Time) *Lesson {
 }
 
 func (serv *SheetsApiService) CreateLists() error {
-	groups, err := serv.groupsRepo.GetAllGroups()
+	groups, err := serv.groupsRepo.GetAll()
 	if err != nil {
 		return err
 	}
 	for _, group := range groups {
-		var update = sheets.BatchUpdateSpreadsheetRequest{}
-		labworks, err := serv.lessonsRepo.GetAllLabworks(&group)
+		update := sheets.BatchUpdateSpreadsheetRequest{}
+		// subject to change anyway
+		labworks, err := serv.lessonsRepo.GetAllByGroupId(group.Id)
 		if err != nil {
 			return err
 		}
@@ -97,12 +98,12 @@ func (serv *SheetsApiService) CreateLists() error {
 }
 
 func (serv *SheetsApiService) ClearSpreadsheet(spreadsheetId string) error {
-	var getSpreadsheetRequest = sheets.SpreadsheetsGetCall{}
+	getSpreadsheetRequest := sheets.SpreadsheetsGetCall{}
 	spreadsheet, err := getSpreadsheetRequest.Do()
 	if err != nil {
 		return err
 	}
-	var deleteSheetsRequest = sheets.BatchUpdateSpreadsheetRequest{}
+	deleteSheetsRequest := sheets.BatchUpdateSpreadsheetRequest{}
 	for _, sheet := range spreadsheet.Sheets {
 		deleteSheetsRequest.Requests = append(deleteSheetsRequest.Requests, &sheets.Request{
 			DeleteSheet: &sheets.DeleteSheetRequest{SheetId: sheet.Properties.SheetId},
@@ -117,10 +118,10 @@ func (serv *SheetsApiService) getSortedLessons(labworks []iis_api_entities.Lesso
 	if len(labworks) == 0 {
 		return nil
 	}
-	var lessons = make([]Lesson, 0, len(labworks)*10)
+	lessons := make([]Lesson, 0, len(labworks)*10)
 	lessons = append(lessons, *EntityToLesson(labworks[0], time.Time(labworks[0].StartDate)))
 	for _, labwork := range labworks {
-		var startDate, endDate = time.Time(labwork.StartDate), time.Time(labwork.EndDate)
+		startDate, endDate := time.Time(labwork.StartDate), time.Time(labwork.EndDate)
 		currentDate := startDate
 		for !currentDate.Equal(endDate) {
 			currentDate = currentDate.Add(time.Hour * 24 * 7 * serv.calculateWeeksDistance(labwork.WeekNumber, utils.CalculateWeek(startDate)))

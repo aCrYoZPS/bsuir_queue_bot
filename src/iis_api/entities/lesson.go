@@ -24,6 +24,7 @@ type TimeOnly time.Time
 var timeFormat = "02.01.2006 +0300"
 
 type Lesson struct {
+	Id             int      `json:"-" db:"id"`
 	Subject        string   `json:"subject,omitempty" db:"subject"`
 	LessonType     string   `json:"lessonTypeAbbrev,omitempty" db:"lesson_type"`
 	SubgroupNumber Subgroup `json:"numSubgroup,omitempty" db:"subgroup_number"`
@@ -31,6 +32,7 @@ type Lesson struct {
 	StartDate      DateTime `json:"startLessonDate" db:"start_date"`
 	StartTime      TimeOnly `json:"startLessonTime" db:"start_time"`
 	EndDate        DateTime `json:"endLessonDate" db:"end_date"`
+	GroupId        int      `json:"-" db:"group_id"`
 }
 
 func (dt *DateTime) UnmarshalJSON(b []byte) error {

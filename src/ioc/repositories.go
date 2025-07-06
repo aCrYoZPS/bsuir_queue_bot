@@ -2,7 +2,8 @@ package ioc
 
 import (
 	"database/sql"
-	"log/slog"
+
+	logging "github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces/mocks"
@@ -14,9 +15,9 @@ var useSqliteConnection = provider(
 	func() *sql.DB {
 		conn, err := sql.Open("sqlite3", "./sqlite3.db")
 		if err != nil {
-			slog.Error(err.Error())
-			panic(err)
+			logging.FatalLog(err.Error())
 		}
+
 		return conn
 	},
 )
@@ -26,11 +27,17 @@ var useMockGroupsRepository = provider(
 		return mocks.NewGroupsRepositoryMock()
 	},
 )
+
 var useGroupsGepository = provider(
 	func() interfaces.GroupsRepository {
-		return sqlite.NewGroupsRepository(
+		repos, err := sqlite.NewGroupsRepository(
 			useSqliteConnection(),
 		)
+		if err != nil {
+			logging.FatalLog(err.Error())
+		}
+
+		return repos
 	},
 )
 
@@ -39,10 +46,16 @@ var useMockLessonsRepository = provider(
 		return mocks.NewLessonsRepositoryMock()
 	},
 )
+
 var useLessonsRepository = provider(
 	func() interfaces.LessonsRepository {
-		return sqlite.NewLessonsRepository(
+		repos, err := sqlite.NewLessonsRepository(
 			useSqliteConnection(),
 		)
+		if err != nil {
+			logging.FatalLog(err.Error())
+		}
+
+		return repos
 	},
 )
