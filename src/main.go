@@ -16,7 +16,6 @@ func main() {
 		logging.FatalLog("Error loading .env file")
 	}
 
-	// TODO: CHANGE TO STARTUP SCRIPT OF SOME KIND
 	srv := ioc.UseSheetsApiService()
 	err = srv.CreateSheets()
 	if err != nil {

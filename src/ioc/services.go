@@ -30,7 +30,7 @@ var useSheetsApi = provider(
 var UseSheetsApiService = provider(
 	func() sheetsapi.SheetsApi {
 		return sheetsapi.NewSheetsApiService(
-			useMockGroupsRepository(), useMockLessonsRepository(),
+			useGroupsGepository(), useLessonsRepository(),
 			useSheetsApi(),
 		)
 	},

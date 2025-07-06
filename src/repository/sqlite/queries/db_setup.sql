@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS groups (
 	faculty_id INTEGER,
 	spreadsheet_id TEXT,
 	admin_id INTEGER
-)
+);
 CREATE TABLE IF NOT EXISTS lessons (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     group_id        INTEGER,
@@ -12,12 +12,14 @@ CREATE TABLE IF NOT EXISTS lessons (
 	lesson_type     TEXT NOT NULL, 
     subgroup_number INTEGER NOT NULL,
 	date 			INTEGER NOT NULL,
-	time     		INTEGER NOT NULL
+	time     		INTEGER NOT NULL,
     FOREIGN KEY (group_id) REFERENCES groups(id)
-)
+);
+
 CREATE TABLE IF NOT EXISTS lessons_weeks (
     lesson_id INTEGER,
     week_number INTEGER NOT NULL,
-    FOREIGN KEY (lesson_id) REFERENCES lessons(id),
-)
+    FOREIGN KEY (lesson_id) REFERENCES lessons(id)
+);
+
 CREATE INDEX IF NOT EXISTS lessons_weeks_id_idx ON lessons_weeks (lesson_id);

@@ -38,4 +38,5 @@ func FromLessonEntity(lesson *entities.Lesson, date time.Time) *Lesson {
 }
 
 type Group struct {
+	
 }
