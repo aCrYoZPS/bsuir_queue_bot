@@ -18,6 +18,11 @@ var useSqliteConnection = provider(
 			slog.Error(err.Error())
 			panic(err)
 		}
+		err = sqlite.DatabaseInit(conn)
+		if err != nil {
+			slog.Error(err.Error())
+			panic(err)
+		}
 		return conn
 	},
 )

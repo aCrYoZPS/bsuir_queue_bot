@@ -24,6 +24,9 @@ type TimeOnly time.Time
 var timeFormat = "02.01.2006 +0300"
 
 type Lesson struct {
+	GroupInfo struct {
+		GroupId int64 `json:"id"`
+	} `json:"studentGroupDto"`
 	Subject        string   `json:"subject,omitempty" db:"subject"`
 	LessonType     string   `json:"lessonTypeAbbrev,omitempty" db:"lesson_type"`
 	SubgroupNumber Subgroup `json:"numSubgroup,omitempty" db:"subgroup_number"`
@@ -32,6 +35,8 @@ type Lesson struct {
 	StartTime      TimeOnly `json:"startLessonTime" db:"start_time"`
 	EndDate        DateTime `json:"endLessonDate" db:"end_date"`
 }
+
+const AVAILABLE_LESSONS_COUNT = 3
 
 func (dt *DateTime) UnmarshalJSON(b []byte) error {
 	s := strings.Trim(string(b), `"`)

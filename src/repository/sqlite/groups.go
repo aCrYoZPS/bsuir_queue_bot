@@ -18,19 +18,6 @@ func NewGroupsRepository(db *sql.DB) (interfaces.GroupsRepository, error) {
 		db: db,
 	}
 
-	_, err := repo.db.Exec(`CREATE TABLE IF NOT EXISTS groups
-							(
-								id INTEGER PRIMARY KEY,
-								name TEXT UNIQUE,
-								faculty_id INTEGER,
-								spreadsheet_id TEXT,
-								admin_id INTEGER
-							)`,
-	)
-	if err != nil {
-		return nil, err
-	}
-
 	return repo, nil
 }
 
