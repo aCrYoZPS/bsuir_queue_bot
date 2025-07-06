@@ -8,7 +8,6 @@ import (
 
 	iis_api_entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/utils"
 	"google.golang.org/api/sheets/v4"
 )
 
@@ -31,6 +30,7 @@ func (serv *SheetsApiService) CreateSheets() error {
 	if err != nil {
 		return err
 	}
+
 	// I haven't figured out a way to batch these requests :(
 	for _, group := range groups {
 		newSheet := sheets.Spreadsheet{Properties: &sheets.SpreadsheetProperties{
@@ -46,23 +46,6 @@ func (serv *SheetsApiService) CreateSheets() error {
 	return nil
 }
 
-// Labwork has date of start. Here we have struct that simply represents a specific lesson
-type Lesson struct {
-	date     time.Time
-	time     time.Time
-	subject  string
-	subgroup iis_api_entities.Subgroup
-}
-
-func EntityToLesson(labwork iis_api_entities.Lesson, date time.Time) *Lesson {
-	return &Lesson{
-		date,
-		time.Time(labwork.StartTime),
-		labwork.Subject,
-		labwork.SubgroupNumber,
-	}
-}
-
 func (serv *SheetsApiService) CreateLists() error {
 	groups, err := serv.groupsRepo.GetAll()
 	if err != nil {
@@ -70,17 +53,12 @@ func (serv *SheetsApiService) CreateLists() error {
 	}
 	for _, group := range groups {
 		update := sheets.BatchUpdateSpreadsheetRequest{}
-		// subject to change anyway
-		labworks, err := serv.lessonsRepo.GetAllByGroupId(group.Id)
-		if err != nil {
-			return err
-		}
 
-		sortedLessons := serv.getSortedLessons(labworks)
-		for _, lesson := range sortedLessons {
-			updateTitle := lesson.subject + " " + serv.formatDateToEuropean(lesson.date)
-			if lesson.subgroup != iis_api_entities.AllSubgroups {
-				updateTitle += fmt.Sprintf(" (%s)", fmt.Sprint(int(lesson.subgroup)))
+		lessons, err := serv.lessonsRepo.GetAllLabworks(int64(group.Id))
+		for _, lesson := range lessons {
+			updateTitle := lesson.Subject + " " + serv.formatDateToEuropean(lesson.Date)
+			if iis_api_entities.Subgroup(lesson.SubgroupNumber) != iis_api_entities.AllSubgroups {
+				updateTitle += fmt.Sprintf(" (%s)", fmt.Sprint(int(lesson.SubgroupNumber)))
 			}
 			update.Requests = append(update.Requests, &sheets.Request{
 				AddSheet: &sheets.AddSheetRequest{Properties: &sheets.SheetProperties{

@@ -7,6 +7,7 @@ import (
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces/mocks"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/memory"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -25,6 +26,13 @@ var useSqliteConnection = provider(
 var useMockGroupsRepository = provider(
 	func() interfaces.GroupsRepository {
 		return mocks.NewGroupsRepositoryMock()
+	},
+)
+
+var useHandlersCache = provider(
+	func() interfaces.HandlersCache {
+		repo := memory.NewHandlersCache()
+		return repo
 	},
 )
 

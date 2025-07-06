@@ -38,6 +38,13 @@ func HandleCommands(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
 		if err != nil {
 			slog.Error(err.Error())
 		}
+	case ASSIGN_COMMAND:
+		text := "Enter the desired group number and send proofs of belonging to it"
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
+		_, err := bot.Send(msg)
+		if err != nil {
+			slog.Error(err.Error())
+		}
 	default:
 		if _, err := bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Unknown command")); err != nil {
 			slog.Error(err.Error())
