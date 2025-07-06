@@ -22,32 +22,15 @@ type LessonsRepository struct {
 	db *sql.DB
 }
 
-func NewLessonsRepository(db *sql.DB) (interfaces.LessonsRepository, error) {
+func NewLessonsRepository(db *sql.DB) interfaces.LessonsRepository {
 	repo := &LessonsRepository{
 		db: db,
 	}
 
-	_, err := repo.db.Exec(`CREATE TABLE IF NOT EXISTS lessons
-							(
-								id INTEGER PRIMARY KEY,
-								subject TEXT UNIQUE,
-								lesson_type TEXT,
-								subgroup_number INTEGER,
-								week_numbers TEXT,
-								start_date INTEGER,
-								start_time INTEGER,
-								end_date INTEGER,
-								group_id INTEGER
-							)`,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return repo, nil
+	return repo
 }
 
-func (repo *LessonsRepository) AddLabworks(lessons []entities.Lesson) error {
+func (repo *LessonsRepository) AddRange(lessons []entities.Lesson) error {
 	ctx, cancel := context.WithTimeout(context.Background(), QUERY_TIMEOUT)
 	defer cancel()
 	tx, err := repo.db.BeginTx(ctx, nil)
@@ -63,7 +46,7 @@ func (repo *LessonsRepository) AddLabworks(lessons []entities.Lesson) error {
 	return err
 }
 
-func (repo *LessonsRepository) GetAllLabworks(groupId int64) ([]persistance.Lesson, error) {
+func (repo *LessonsRepository) GetAll(groupId int64) ([]persistance.Lesson, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), QUERY_TIMEOUT)
 	defer cancel()
 
@@ -83,7 +66,7 @@ func (repo *LessonsRepository) GetAllLabworks(groupId int64) ([]persistance.Less
 	return lessons, nil
 }
 
-func (repo *LessonsRepository) GetNextLabworks(subject string, groupId int64) ([]persistance.Lesson, error) {
+func (repo *LessonsRepository) GetNext(subject string, groupId int64) ([]persistance.Lesson, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), QUERY_TIMEOUT)
 	defer cancel()
 

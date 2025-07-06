@@ -2,8 +2,6 @@ package sheetsapi
 
 import (
 	"fmt"
-	"slices"
-	"sort"
 	"time"
 
 	iis_api_entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
@@ -54,7 +52,7 @@ func (serv *SheetsApiService) CreateLists() error {
 	for _, group := range groups {
 		update := sheets.BatchUpdateSpreadsheetRequest{}
 
-		lessons, err := serv.lessonsRepo.GetAllLabworks(int64(group.Id))
+		lessons, err := serv.lessonsRepo.GetAll(int64(group.Id))
 		for _, lesson := range lessons {
 			updateTitle := lesson.Subject + " " + serv.formatDateToEuropean(lesson.Date)
 			if iis_api_entities.Subgroup(lesson.SubgroupNumber) != iis_api_entities.AllSubgroups {
@@ -92,44 +90,7 @@ func (serv *SheetsApiService) ClearSpreadsheet(spreadsheetId string) error {
 	return err
 }
 
-func (serv *SheetsApiService) getSortedLessons(labworks []iis_api_entities.Lesson) []Lesson {
-	if len(labworks) == 0 {
-		return nil
-	}
-	lessons := make([]Lesson, 0, len(labworks)*10)
-	lessons = append(lessons, *EntityToLesson(labworks[0], time.Time(labworks[0].StartDate)))
-	for _, labwork := range labworks {
-		startDate, endDate := time.Time(labwork.StartDate), time.Time(labwork.EndDate)
-		currentDate := startDate
-		for !currentDate.Equal(endDate) {
-			currentDate = currentDate.Add(time.Hour * 24 * 7 * serv.calculateWeeksDistance(labwork.WeekNumber, utils.CalculateWeek(startDate)))
-			lessons = append(lessons, *EntityToLesson(labwork, currentDate))
-		}
-	}
-
-	sort.Slice(lessons, func(i, j int) bool {
-		if !lessons[i].date.Equal(lessons[j].date) {
-			return lessons[i].date.Before(lessons[j].date)
-		}
-		return lessons[i].time.Before(lessons[j].time)
-	})
-
-	return lessons
-}
-
-type Week = int8
-
-// Returns value from 0 to 3, to measure distance in weeks between labworks.
-// Doesn't handle cases, where week is unpresent in slice of weeks
-func (serv *SheetsApiService) calculateWeeksDistance(weeks []Week, current Week) time.Duration {
-	return time.Duration(weeks[(slices.Index(weeks, current)+1)%len(weeks)] - current)
-}
-
-// 24.04.2005 format of date
 func (serv *SheetsApiService) formatDateToEuropean(date time.Time) string {
-	return fmt.Sprint(date.Day()) + "." + fmt.Sprint(date.Month()) + "." + fmt.Sprint(date.Year())
-}
 
-func (serv *SheetsApiService) ClearLists() error {
-	return nil
+	return fmt.Sprint(date.Day()) + "." + fmt.Sprint(date.Month()) + "." + fmt.Sprint(date.Year())
 }
