@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	driveapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/drive_api"
 	iis_api_entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"google.golang.org/api/sheets/v4"
@@ -12,13 +13,15 @@ import (
 type SheetsApiService struct {
 	groupsRepo  interfaces.GroupsRepository
 	lessonsRepo interfaces.LessonsRepository
+	driveApi    driveapi.DriveApi
 	api         *sheets.Service
 }
 
-func NewSheetsApiService(groups interfaces.GroupsRepository, lessons interfaces.LessonsRepository, api *sheets.Service) *SheetsApiService {
+func NewSheetsApiService(groups interfaces.GroupsRepository, lessons interfaces.LessonsRepository, driveApi driveapi.DriveApi, api *sheets.Service) *SheetsApiService {
 	return &SheetsApiService{
 		groupsRepo:  groups,
 		lessonsRepo: lessons,
+		driveApi:    driveApi,
 		api:         api,
 	}
 }
@@ -31,12 +34,19 @@ func (serv *SheetsApiService) CreateSheets() error {
 
 	// I haven't figured out a way to batch these requests :(
 	for _, group := range groups {
+		exists, err := serv.driveApi.DoesSheetExist(group.Name)
+		if err != nil {
+			return nil
+		}
+		if exists {
+			continue
+		}
 		newSheet := sheets.Spreadsheet{Properties: &sheets.SpreadsheetProperties{
 			Title: group.Name,
 		}}
 
 		res := serv.api.Spreadsheets.Create(&newSheet)
-		_, err := res.Do()
+		_, err = res.Do()
 		if err != nil {
 			return err
 		}
@@ -51,7 +61,6 @@ func (serv *SheetsApiService) CreateLists() error {
 	}
 	for _, group := range groups {
 		update := sheets.BatchUpdateSpreadsheetRequest{}
-
 		lessons, err := serv.lessonsRepo.GetAll(int64(group.Id))
 		for _, lesson := range lessons {
 			updateTitle := lesson.Subject + " " + serv.formatDateToEuropean(lesson.Date)

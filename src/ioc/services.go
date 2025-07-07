@@ -3,22 +3,31 @@ package ioc
 import (
 	"context"
 	"log/slog"
+	"net/http"
 
 	google_docs_auth "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/auth"
+	driveapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/drive_api"
 	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/sheets_api"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
+	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/option"
 	"google.golang.org/api/sheets/v4"
 )
 
-var useSheetsApi = provider(
-	func() *sheets.Service {
+var useGoogleClient = provider(
+	func() *http.Client {
 		client, err := google_docs_auth.GetClient()
 		if err != nil {
-			slog.Error(err.Error())
-			panic(err)
+			logging.FatalLog(err.Error())
 		}
+		return client
+	},
+)
+
+var useSheetsApi = provider(
+	func() *sheets.Service {
 		ctx := context.Background()
-		srv, err := sheets.NewService(ctx, option.WithHTTPClient(client))
+		srv, err := sheets.NewService(ctx, option.WithHTTPClient(useGoogleClient()))
 		if err != nil {
 			slog.Error(err.Error())
 			panic(err)
@@ -27,11 +36,30 @@ var useSheetsApi = provider(
 	},
 )
 
+var useDriveApi = provider(
+	func() *drive.Service {
+		ctx := context.Background()
+		srv, err := drive.NewService(ctx, option.WithHTTPClient(useGoogleClient()))
+		if err != nil {
+			logging.FatalLog(err.Error())
+		}
+		return srv
+	},
+)
+
+var UseDriveApiService = provider(
+	func() driveapi.DriveApi {
+		return driveapi.NewDriveApiService(
+			useGroupsGepository(), useDriveApi(),
+		)
+	},
+)
+
 var UseSheetsApiService = provider(
 	func() sheetsapi.SheetsApi {
 		return sheetsapi.NewSheetsApiService(
 			useGroupsGepository(), useLessonsRepository(),
-			useSheetsApi(),
+			UseDriveApiService(), useSheetsApi(),
 		)
 	},
 )
