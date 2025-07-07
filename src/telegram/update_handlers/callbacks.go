@@ -1,20 +1,20 @@
 package update_handlers
 
 import (
-	"log/slog"
 	"slices"
 
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 func HandleCallbacks(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
 	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 	if _, err := bot.Request(callback); err != nil {
-		slog.Error(err.Error())
+		logging.Error(err.Error())
 	}
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Data)
 	if _, err := bot.Send(msg); err != nil {
-		slog.Error(err.Error())
+		logging.Error(err.Error())
 	}
 }
 
