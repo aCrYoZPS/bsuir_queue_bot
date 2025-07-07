@@ -46,7 +46,12 @@ func (serv *SheetsApiService) CreateSheets() error {
 		}}
 
 		res := serv.api.Spreadsheets.Create(&newSheet)
-		_, err = res.Do()
+		sheet, err := res.Do()
+		if err != nil {
+			return err
+		}
+		group.SpreadsheetId = sheet.SpreadsheetId
+		err = serv.groupsRepo.Update(&group)
 		if err != nil {
 			return err
 		}

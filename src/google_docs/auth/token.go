@@ -39,7 +39,7 @@ func getConfig() (*oauth2.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	return google.ConfigFromJSON(credentialsFile, "https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file")
+	return google.ConfigFromJSON(credentialsFile, "https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive")
 }
 
 func saveToken(path string, token *oauth2.Token) error {

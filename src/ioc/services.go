@@ -58,7 +58,7 @@ var UseDriveApiService = provider(
 var UseSheetsApiService = provider(
 	func() sheetsapi.SheetsApi {
 		return sheetsapi.NewSheetsApiService(
-			useGroupsGepository(), useLessonsRepository(),
+			useMockGroupsRepository(), useLessonsRepository(),
 			UseDriveApiService(), useSheetsApi(),
 		)
 	},
