@@ -9,6 +9,7 @@ import (
 )
 
 type GroupsRepository struct {
+	interfaces.GroupsRepository
 	db *sql.DB
 }
 

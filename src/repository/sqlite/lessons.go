@@ -19,6 +19,7 @@ const (
 )
 
 type LessonsRepository struct {
+	interfaces.LessonsRepository
 	db *sql.DB
 }
 
