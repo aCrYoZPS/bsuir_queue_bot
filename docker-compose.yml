@@ -1,0 +1,13 @@
+services: 
+  backend:
+    container_name: "queue_bot"
+    env_file: 
+      - path: ./src/.env
+        required: true
+    tty: true
+    build: 
+      context: .
+      target: main
+      network: host
+    volumes:
+      - ./src/data:/usr/src/app/data

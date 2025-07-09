@@ -14,7 +14,7 @@ import (
 
 var useSqliteConnection = provider(
 	func() *sql.DB {
-		conn, err := sql.Open("sqlite3", "./sqlite3.db")
+		conn, err := sql.Open("sqlite3", "./data/sqlite3.db")
 		if err != nil {
 			logging.FatalLog(err.Error())
 		}
