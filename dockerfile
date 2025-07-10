@@ -20,5 +20,6 @@ WORKDIR /app
 COPY --from=build /build .
 
 WORKDIR /app/src
-# RUN --mount=type=secret,OAUTH2_CREDENTIALS=/run/secrets/oauth2
+RUN --mount=type=secret,id=credentials.json
+RUN --mount=type=secret,id=token.json
 ENTRYPOINT ["./main"]
