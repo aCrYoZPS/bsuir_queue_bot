@@ -8,6 +8,5 @@ services:
     build: 
       context: .
       target: main
-      network: host
     volumes:
       - ./src/data:/usr/src/app/data

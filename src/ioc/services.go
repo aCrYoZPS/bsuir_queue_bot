@@ -9,6 +9,8 @@ import (
 	driveapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/drive_api"
 	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/sheets_api"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/bot"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers"
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/option"
 	"google.golang.org/api/sheets/v4"
@@ -61,5 +63,19 @@ var UseSheetsApiService = provider(
 			useMockGroupsRepository(), useLessonsRepository(),
 			UseDriveApiService(), useSheetsApi(),
 		)
+	},
+)
+
+var UseMessageService = provider(
+	func() bot.MessagesService {
+		return update_handlers.NewMessagesHandler(
+			useHandlersCache(),
+		)
+	},
+)
+
+var UseCallbacksService = provider(
+	func() bot.CallbacksService {
+		return update_handlers.NewCallbackService()
 	},
 )

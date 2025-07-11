@@ -19,18 +19,18 @@ func NewHandlersCache() *HandlersCache {
 }
 
 func (cache *HandlersCache) Save(info interfaces.CachedInfo) error {
-	cache.storage.Store(info.ChatId, info)
+	cache.storage.Store(info.ChatId(), info)
 	return nil
 }
 
 func (cache *HandlersCache) Get(chatId int64) (*interfaces.CachedInfo, error) {
 	value, ok := cache.storage.LoadAndDelete(chatId)
 	if !ok {
-		return nil, errors.New("No info cached")
+		return nil, errors.New("no info cached")
 	}
 	cached, ok := value.(interfaces.CachedInfo)
 	if !ok {
-		return nil, errors.New("Info cached is in incorrect type")
+		return nil, errors.New("info cached is in incorrect type")
 	}
 	return &cached, nil
 }

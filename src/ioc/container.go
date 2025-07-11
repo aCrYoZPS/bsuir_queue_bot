@@ -21,7 +21,7 @@ func provider[T any](factory func() T) func() T {
 	providerId := getNextId()
 	return func() T {
 		if pending, ok := isPending[providerId]; ok && pending {
-			slog.Error(fmt.Sprintf("Cirricular dependecy of id %d in a container", providerId))
+			slog.Error(fmt.Sprintf("cirricular dependecy of id %d in a container", providerId))
 			os.Exit(-1)
 		}
 		if _, ok := container[providerId]; !ok {
