@@ -1,13 +1,10 @@
 package update_handlers
 
 import (
-<<<<<<< HEAD
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
-=======
 	"log/slog"
 
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
->>>>>>> b9dfac65e2826f04e755903fa773ab7503d2fb20
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
