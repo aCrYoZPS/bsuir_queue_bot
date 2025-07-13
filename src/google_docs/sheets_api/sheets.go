@@ -91,6 +91,5 @@ func (serv *SheetsApiService) ClearSpreadsheet(spreadsheetId string) error {
 }
 
 func (serv *SheetsApiService) formatDateToEuropean(date time.Time) string {
-
 	return fmt.Sprint(date.Day()) + "." + fmt.Sprint(date.Month()) + "." + fmt.Sprint(date.Year())
 }

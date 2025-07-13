@@ -54,6 +54,7 @@ func InitBot() {
 	update_handlers.InitCommands()
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
+	u.AllowedUpdates = []string{"message", "callback_query"}
 
 	updates := bot.GetUpdatesChan(u)
 
@@ -61,10 +62,11 @@ func InitBot() {
 		if update.Message != nil {
 			if update.Message.Command() != "" {
 				update_handlers.HandleCommands(&update, bot)
+			} else {
+				update_handlers.HandleMessage(&update, bot)
 			}
-			if update.CallbackQuery != nil {
-				update_handlers.HandleCallbacks(&update, bot)
-			}
+		} else if update.CallbackQuery != nil {
+			update_handlers.HandleCallbacks(&update, bot)
 		}
 	}
 }
