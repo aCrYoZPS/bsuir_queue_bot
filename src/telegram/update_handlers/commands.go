@@ -1,9 +1,13 @@
 package update_handlers
 
 import (
+<<<<<<< HEAD
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
+=======
 	"log/slog"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
+>>>>>>> b9dfac65e2826f04e755903fa773ab7503d2fb20
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -11,6 +15,11 @@ const (
 	HELP_COMMAND   = "help"
 	SUBMIT_COMMAND = "submit"
 	ASSIGN_COMMAND = "assign"
+
+	SELECT_SUBJECT_STATE = "subject"
+	SELECT_DATE_STATE    = "date"
+	SUBMIT_PROOF_STATE   = "proof"
+	IDLE_STATE           = ""
 )
 
 var commands = []tgbotapi.BotCommand{
@@ -42,15 +51,15 @@ func (*MessagesService) HandleCommands(update *tgbotapi.Update, bot *tgbotapi.Bo
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
 		_, err := bot.Send(msg)
 		if err != nil {
-			slog.Error(err.Error())
+			logging.Error(err.Error())
 		}
 	case SUBMIT_COMMAND:
-		text := "Select preferred discipline"
+		text := "Выберите предмет"
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
 		msg.ReplyMarkup = createDisciplinesKeyboard()
 		_, err := bot.Send(msg)
 		if err != nil {
-			slog.Error(err.Error())
+			logging.Error(err.Error())
 		}
 	case ASSIGN_COMMAND:
 		text := "Enter the desired group number and send proofs of belonging to it"

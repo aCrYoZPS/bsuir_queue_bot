@@ -34,6 +34,7 @@ func (controller *BotController) Start() {
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
+	u.AllowedUpdates = []string{"message", "callback_query"}
 
 	updates := controller.bot.GetUpdatesChan(u)
 
