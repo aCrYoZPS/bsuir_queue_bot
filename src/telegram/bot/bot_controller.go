@@ -41,9 +41,10 @@ func (controller *BotController) Start() {
 		if update.Message != nil {
 			if update.Message.Command() != "" {
 				controller.msgSrv.HandleCommands(&update, controller.bot)
-			}
-			if update.CallbackQuery != nil {
+			} else if update.CallbackQuery != nil {
 				controller.callbackSrv.HandleCallbacks(&update, controller.bot)
+			} else {
+				controller.msgSrv.HandleMessages(&update, controller.bot)
 			}
 		}
 	}

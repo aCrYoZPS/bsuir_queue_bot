@@ -19,8 +19,12 @@ var commands = []tgbotapi.BotCommand{
 	{Command: ASSIGN_COMMAND, Description: "Submit your request for becoming admin of the chosen group"},
 }
 
+type StateMachine interface {
+	HandleState(curState, message string) error
+}
 type MessagesService struct {
-	cache interfaces.HandlersCache
+	cache        interfaces.HandlersCache
+	stateMachine StateMachine
 }
 
 func NewMessagesHandler(cache interfaces.HandlersCache) *MessagesService {
@@ -57,6 +61,26 @@ func (*MessagesService) HandleCommands(update *tgbotapi.Update, bot *tgbotapi.Bo
 		}
 	default:
 		if _, err := bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Unknown command")); err != nil {
+			slog.Error(err.Error())
+		}
+	}
+}
+
+func (srv *MessagesService) HandleMessages(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
+	if update.Message.Text == "" {
+		text := "Enter a valid text message please"
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
+		_, err := bot.Send(msg)
+		if err != nil {
+			slog.Error(err.Error())
+		}
+	} else {
+		info, err := srv.cache.Get(update.Message.Chat.ID)
+		if err != nil {
+			slog.Error(err.Error())
+		}
+		err = srv.stateMachine.HandleState(info.State(), update.Message.Text)
+		if err != nil {
 			slog.Error(err.Error())
 		}
 	}
