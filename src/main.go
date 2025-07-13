@@ -1,9 +1,10 @@
 package main
 
 import (
+	"os"
+
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/ioc"
 	logging "github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
-	bot "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/bot"
 
 	"github.com/joho/godotenv"
 )
@@ -11,17 +12,19 @@ import (
 func main() {
 	logging.InitLogging()
 
-	err := godotenv.Load()
-	if err != nil {
-		logging.FatalLog("Error loading .env file")
+	_, exists := os.LookupEnv("ENVIRONMENT")
+	if !exists {
+		err := godotenv.Load()
+		if err != nil {
+			logging.FatalLog("Error loading .env file")
+		}
 	}
-
-	// TODO: CHANGE TO STARTUP SCRIPT OF SOME KIND
 	srv := ioc.UseSheetsApiService()
-	err = srv.CreateSheets()
+	err := srv.CreateSheets()
 	if err != nil {
 		logging.Error("failed to init sheets", "err", err.Error())
 	}
 
-	bot.InitBot()
+	controller := ioc.UseBotController()
+	controller.Start()
 }

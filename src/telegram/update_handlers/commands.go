@@ -1,7 +1,13 @@
 package update_handlers
 
 import (
+<<<<<<< HEAD
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
+=======
+	"log/slog"
+
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
+>>>>>>> b9dfac65e2826f04e755903fa773ab7503d2fb20
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -22,9 +28,16 @@ var commands = []tgbotapi.BotCommand{
 	{Command: ASSIGN_COMMAND, Description: "Отправка заявки на роль администратора группы"},
 }
 
-var userStates = make(map[int64]string)
+type MessagesService struct {
+	cache interfaces.HandlersCache
+}
 
-func HandleCommands(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
+func NewMessagesHandler(cache interfaces.HandlersCache) *MessagesService {
+	tgbotapi.NewSetMyCommands(commands...)
+	return &MessagesService{cache: cache}
+}
+
+func (*MessagesService) HandleCommands(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
 	switch update.Message.Command() {
 	case HELP_COMMAND:
 		var text string

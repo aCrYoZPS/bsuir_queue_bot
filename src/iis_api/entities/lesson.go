@@ -38,7 +38,7 @@ type Lesson struct {
 	GroupId        int      `json:"-" db:"group_id"`
 }
 
-const AVAILABLE_LESSONS_COUNT = 3
+const AVAILABLE_LESSONS_COUNT = 4
 
 func (dt *DateTime) UnmarshalJSON(b []byte) error {
 	s := strings.Trim(string(b), `"`)
