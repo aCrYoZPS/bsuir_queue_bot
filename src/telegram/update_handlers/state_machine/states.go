@@ -10,7 +10,7 @@ type DefaultState struct {
 	State
 }
 
-func (*DefaultState) Handle(machine update_handlers.StateMachine, message string) error {
+func (*DefaultState) Handle(machine update_handlers.StateMachine, message StateName) error {
 	return errors.Join(errors.ErrUnsupported, errors.New("answers are only to commands"))
 }
 

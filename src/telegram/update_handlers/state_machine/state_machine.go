@@ -8,7 +8,7 @@ import (
 type StateName string
 
 type State interface {
-	Handle(machine StateMachine, newState StateName)
+	Handle(machine update_handlers.StateMachine, newState StateName) error
 }
 
 type StateMachine struct {
@@ -18,9 +18,9 @@ type StateMachine struct {
 }
 
 func NewStateMachine(cache interfaces.CachedInfo) *StateMachine {
-	return &StateMachine{cache: cache}
+	return &StateMachine{cache: cache, state: &DefaultState{}}
 }
 
-func HandleState(curState, message string) error {
+func (machine *StateMachine) HandleState(curState, message string) error {
 	return nil
 }
