@@ -2,11 +2,13 @@ services:
   backend:
     container_name: "queue_bot"
     env_file: 
-      - path: ./src/.env
+      - path: .env
         required: true
     tty: true
     build: 
       context: .
       target: main
     volumes:
-      - ./src/data:/usr/src/app/data
+      - ./data:/app/data
+      - ./credentials.json:/app/credentials.json:ro
+      - ./token.json:/app/token.json:ro

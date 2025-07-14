@@ -31,6 +31,7 @@ func GetClient() (*http.Client, error) {
 			return nil, err
 		}
 	}
+
 	return config.Client(context.Background(), token), nil
 }
 
@@ -39,17 +40,21 @@ func getConfig() (*oauth2.Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return google.ConfigFromJSON(credentialsFile, "https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive")
 }
 
 func saveToken(path string, token *oauth2.Token) error {
 	slog.Info(fmt.Sprintf("Saving credential file to: %s", path))
+
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}
+
 	defer file.Close()
 	json.NewEncoder(file).Encode(token)
+
 	return nil
 }
 
@@ -58,9 +63,11 @@ func tokenFromFile(filename string) (*oauth2.Token, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	defer file.Close()
 	tok := &oauth2.Token{}
 	err = json.NewDecoder(file).Decode(tok)
+
 	return tok, err
 }
 
