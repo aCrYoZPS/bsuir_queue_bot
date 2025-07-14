@@ -2,7 +2,7 @@ services:
   backend:
     container_name: "queue_bot"
     env_file: 
-      - path: .env
+      - path: ./src/.env
         required: true
     tty: true
     build: 
