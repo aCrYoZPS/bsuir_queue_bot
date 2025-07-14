@@ -12,21 +12,16 @@ const (
 	HELP_COMMAND   = "help"
 	SUBMIT_COMMAND = "submit"
 	ASSIGN_COMMAND = "assign"
-
-	SELECT_SUBJECT_STATE = "subject"
-	SELECT_DATE_STATE    = "date"
-	SUBMIT_PROOF_STATE   = "proof"
-	IDLE_STATE           = ""
 )
 
 var commands = []tgbotapi.BotCommand{
-	{Command: HELP_COMMAND, Description: "Commands and their short description"},
-	{Command: SUBMIT_COMMAND, Description: "Yeah, I am lazy even for that"},
-	{Command: ASSIGN_COMMAND, Description: "Submit your request for becoming admin of the chosen group"},
+	{Command: HELP_COMMAND, Description: "Команды и информация"},
+	{Command: SUBMIT_COMMAND, Description: "Запись на сдачу лабораторной"},
+	{Command: ASSIGN_COMMAND, Description: "Отправка заявки на роль администратора группы"},
 }
 
 type StateMachine interface {
-	HandleState(curState, message string) error
+	HandleState(chatId int64, message string) error
 }
 type MessagesService struct {
 	cache        interfaces.HandlersCache
@@ -59,14 +54,14 @@ func (*MessagesService) HandleCommands(update *tgbotapi.Update, bot *tgbotapi.Bo
 			logging.Error(err.Error())
 		}
 	case ASSIGN_COMMAND:
-		text := "Enter the desired group number and send proofs of belonging to it"
+		text := "Введите номер группы и отправьте подтверждение принадлежности к ней"
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
 		_, err := bot.Send(msg)
 		if err != nil {
 			slog.Error(err.Error())
 		}
 	default:
-		if _, err := bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Unknown command")); err != nil {
+		if _, err := bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Незнакомая команда")); err != nil {
 			slog.Error(err.Error())
 		}
 	}
@@ -81,11 +76,7 @@ func (srv *MessagesService) HandleMessages(update *tgbotapi.Update, bot *tgbotap
 			slog.Error(err.Error())
 		}
 	} else {
-		info, err := srv.cache.Get(update.Message.Chat.ID)
-		if err != nil {
-			slog.Error(err.Error())
-		}
-		err = srv.stateMachine.HandleState(info.State(), update.Message.Text)
+		err := srv.stateMachine.HandleState(update.Message.Chat.ID, update.Message.Text)
 		if err != nil {
 			slog.Error(err.Error())
 		}

@@ -8,19 +8,28 @@ import (
 type StateName string
 
 type State interface {
-	Handle(machine update_handlers.StateMachine, newState StateName) error
+	StateName() StateName
+	Handle(cache interfaces.HandlersCache, newState StateName) error
 }
 
 type StateMachine struct {
-	state State
 	update_handlers.StateMachine
-	cache interfaces.CachedInfo
+	cache interfaces.HandlersCache
 }
 
-func NewStateMachine(cache interfaces.CachedInfo) *StateMachine {
-	return &StateMachine{cache: cache, state: &DefaultState{}}
+func NewStateMachine(cache interfaces.HandlersCache) *StateMachine {
+	return &StateMachine{cache: cache}
 }
 
-func (machine *StateMachine) HandleState(curState, message string) error {
+func (machine *StateMachine) HandleState(chatId int64, message string) error {
+	info, err := machine.cache.Get(chatId)
+	if err != nil {
+		return err
+	}
+	state, err := getStateByName(info.State())
+	if err != nil {
+		return err
+	}
+	state.Handle(machine.cache, StateName(message))
 	return nil
 }

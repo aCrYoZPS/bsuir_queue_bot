@@ -31,7 +31,6 @@ func NewBotController(token string, debug bool, msgSrv MessagesService, callback
 
 func (controller *BotController) Start() {
 	logging.Info(fmt.Sprintf("authorized on account %s", controller.bot.Self.UserName))
-
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 	u.AllowedUpdates = []string{"message", "callback_query"}
