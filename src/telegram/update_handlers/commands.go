@@ -33,7 +33,7 @@ func NewMessagesHandler(cache interfaces.HandlersCache) *MessagesService {
 	return &MessagesService{cache: cache}
 }
 
-func (*MessagesService) HandleCommands(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
+func (srv *MessagesService) HandleCommands(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
 	switch update.Message.Command() {
 	case HELP_COMMAND:
 		var text string

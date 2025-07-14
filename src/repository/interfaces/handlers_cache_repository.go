@@ -1,6 +1,9 @@
 package interfaces
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 type CachedInfo struct {
 	chatId   int64
@@ -31,4 +34,6 @@ func NewCachedInfo(ChatId int64, State string) *CachedInfo {
 type HandlersCache interface {
 	Save(CachedInfo) error
 	Get(chatId int64) (*CachedInfo, error)
+	AcquireLock(chatId int64) *sync.Mutex
+	ReleaseLock(chatId int64)
 }
