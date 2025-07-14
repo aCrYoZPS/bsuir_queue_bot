@@ -11,6 +11,8 @@ RUN --mount=type=cache,target=/go/pkg/mod
 RUN CGO_ENABLED=1 GOOS=linux
 
 COPY . .
+RUN --mount=type=secret,id=credentials.json
+RUN --mount=type=secret,id=token.json
 RUN go build -o ./src/main ./src/main.go
 
 FROM alpine AS main
@@ -20,6 +22,4 @@ WORKDIR /app
 COPY --from=build /build .
 
 WORKDIR /app/src
-RUN --mount=type=secret,id=credentials.json
-RUN --mount=type=secret,id=token.json
 ENTRYPOINT ["./main"]

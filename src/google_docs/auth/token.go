@@ -18,7 +18,7 @@ func GetClient() (*http.Client, error) {
 		return nil, err
 	}
 
-	tokenFile := "token.json"
+	tokenFile := "/run/secrets/token"
 	token, err := tokenFromFile(tokenFile)
 	if err != nil {
 		token, err = getTokenFromWeb(config)
@@ -35,7 +35,7 @@ func GetClient() (*http.Client, error) {
 }
 
 func getConfig() (*oauth2.Config, error) {
-	credentialsFile, err := os.ReadFile("credentials.json")
+	credentialsFile, err := os.ReadFile("/run/secrets/credentials")
 	if err != nil {
 		return nil, err
 	}

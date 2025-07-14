@@ -10,3 +10,11 @@ services:
       target: main
     volumes:
       - ./src/data:/usr/src/app/data
+    secrets:
+      - credentials
+      - token
+secrets:
+  credentials:
+   file: ./src/credentials.json
+  token:
+   file: ./src/token.json
