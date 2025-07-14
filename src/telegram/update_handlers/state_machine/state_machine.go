@@ -30,14 +30,18 @@ func (machine *StateMachine) HandleState(chatId int64, message string) error {
 
 	defer mu.Unlock()
 	defer machine.cache.ReleaseLock(chatId)
+
 	info, err := machine.cache.Get(chatId)
 	if err != nil {
 		return err
 	}
+
 	state, err := getStateByName(info.State())
 	if err != nil {
 		return err
 	}
+
 	state.Handle(chatId, message)
+
 	return nil
 }

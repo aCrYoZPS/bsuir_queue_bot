@@ -7,14 +7,17 @@ import (
 )
 
 func DatabaseInit(db *sql.DB) error {
-	queryFile, err := os.Open("./repository/sqlite/queries/db_setup.sql")
+	queryFile, err := os.Open("./sql/db_setup.sql")
 	if err != nil {
 		return err
 	}
+
 	query, err := io.ReadAll(queryFile)
 	if err != nil {
 		return err
 	}
+
 	_, err = db.Exec(string(query))
+
 	return err
 }
