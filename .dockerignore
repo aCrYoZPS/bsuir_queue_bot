@@ -25,3 +25,5 @@ go.work.sum
 **/sqlite3.db
 **/schema.sql
 .null-ls*
+Dockerfile.dev
+docker-compose-dev.yml

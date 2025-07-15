@@ -2,6 +2,7 @@ package ioc
 
 import (
 	"database/sql"
+	"os"
 
 	logging "github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
 
@@ -14,7 +15,7 @@ import (
 
 var useSqliteConnection = provider(
 	func() *sql.DB {
-		conn, err := sql.Open("sqlite3", "./data/sqlite3.db")
+		conn, err := sql.Open("sqlite3", os.Getenv("SQLITE_FILE"))
 		if err != nil {
 			logging.FatalLog(err.Error())
 		}

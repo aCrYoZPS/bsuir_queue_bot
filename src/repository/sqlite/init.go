@@ -6,8 +6,9 @@ import (
 	"os"
 )
 
+
 func DatabaseInit(db *sql.DB) error {
-	queryFile, err := os.Open("./sql/db_setup.sql")
+	queryFile, err := os.Open(os.Getenv("SQLITE_INIT_FILE"))
 	if err != nil {
 		return err
 	}

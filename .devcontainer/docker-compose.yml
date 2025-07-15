@@ -1,26 +1,28 @@
 services: 
-  backend:
-    container_name: "queue_bot"
+  backend_dev: 
+    container_name: "queue_bot_dev"
     env_file: 
-      - path: ./src/.env
+      - path: ../src/.env
         required: true
+    stdin_open: true
     tty: true
     build: 
-      context: .
+      context: ..
+      dockerfile: ./.devcontainer/Dockerfile.dev
       target: main
-      dockerfile: Dockerfile
     environment:
       - OAUTH2_TOKEN_FILE=/run/secrets/token.json
       - OAUTH2_CREDENTIALS_FILE=/run/secrets/credentials.json
       - SQLITE_FILE=../data/sqlite3.db
       - SQLITE_INIT_FILE=../sql/db_setup.sql
     volumes:
-      - ./:/app
+      - ../.vscode:/app/.vscode
+      - ../:/app
     secrets:
       - credentials
       - token
 secrets:
   credentials:
-   file: ./src/credentials.json
+   file: ../src/credentials.json
   token:
-   file: ./src/token.json
+   file: ../src/token.json
