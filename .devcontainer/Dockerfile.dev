@@ -18,6 +18,11 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y ca-certificates
 
+ARG UID=1000
+ARG GID=1000
+ENV UID=${UID}
+ENV GID=${GID}
+
 COPY --from=build /build/bin ./bin
 COPY ./go.mod .
 COPY ./go.sum .

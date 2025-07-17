@@ -15,6 +15,7 @@ func (handler *AdminCallbackHandler) HandleCallback(update *tgbotapi.Update, bot
 	if _, err := bot.Request(callback); err != nil {
 		return err
 	}
+	
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Data)
 	if _, err := bot.Send(msg); err != nil {
 		return err

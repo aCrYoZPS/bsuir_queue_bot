@@ -24,8 +24,6 @@ services:
       - OAUTH2_CREDENTIALS_FILE=/run/secrets/credentials.json
       - SQLITE_FILE=../data/sqlite3.db
       - SQLITE_INIT_FILE=../sql/db_setup.sql
-    ports:
-      - "4000:4000"  
     volumes:
       - ../src:/app/src
       - ../data:/app/data

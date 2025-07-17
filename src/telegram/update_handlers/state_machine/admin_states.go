@@ -28,6 +28,8 @@ type adminSubmitForm struct {
 	AdditionalInfo string `json:"info,omitempty"`
 }
 
+const infoTemplate = "Имя: {{.Name}} \nГруппа: {{.Group}}\n{{if .AdditionalInfo}}Доп информация: {{.AdditionalInfo}} {{end}}"
+
 type adminSubmitStartState struct {
 	State
 	cache interfaces.HandlersCache
@@ -155,49 +157,38 @@ func (state *adminSubmittingProofState) Handle(chatId int64, message *tgbotapi.M
 	if err != nil {
 		return err
 	}
+
 	form := &adminSubmitForm{}
 	err = json.Unmarshal([]byte(info), form)
 	if err != nil {
 		return err
 	}
-
 	form.AdditionalInfo = message.Caption
-	var buf bytes.Buffer
-	tmplString := "Имя: {{.Name}} \nГруппа: {{.Group}}\n{{if .AdditionalInfo}}Доп информация: {{.AdditionalInfo}} {{end}}"
-	tmpl := template.Must(template.New("tmpl").Parse(tmplString))
-	tmpl.Execute(&buf, form)
 
-	maxSize := 0
-	maxSizeId := ""
-	for _, photo := range message.Photo {
-		if photo.FileSize > maxSize {
-			maxSizeId = photo.FileID
-		}
-	}
+	maxSizeId := selectMaxSizedPhoto(message.Photo)
 	file, err := state.bot.GetFile(tgbotapi.FileConfig{FileID: maxSizeId})
 	if err != nil {
 		return err
 	}
-
 	link := file.Link(os.Getenv("BOT_TOKEN"))
-	filePath := os.Getenv("DATA_DIRECTORY") + file.FileUniqueID
-	out, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	defer os.Remove(filePath)
-
 	resp, err := http.Get(link)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+
+	err = state.cache.RemoveInfo(chatId)
+	if err != nil {
+		return err
+	}
+
 	msg := tgbotapi.NewPhoto(chatId, tgbotapi.FileReader{Name: "rnd_name", Reader: resp.Body})
+	var buf bytes.Buffer
+	tmpl := template.Must(template.New("tmpl").Parse(infoTemplate))
+	tmpl.Execute(&buf, form)
 	msg.Caption = buf.String()
 	msg.ReplyMarkup = createMarkupKeyboard()
-	err = tgutils.SendPhotoToOwners(msg, state.bot)
-	return err
+	return tgutils.SendPhotoToOwners(msg, state.bot)
 }
 
 func createMarkupKeyboard() *tgbotapi.InlineKeyboardMarkup {
@@ -205,4 +196,15 @@ func createMarkupKeyboard() *tgbotapi.InlineKeyboardMarkup {
 	row = append(row, tgbotapi.NewInlineKeyboardButtonData("Accept", ADMIN_CALLBACKS+"accept"), tgbotapi.NewInlineKeyboardButtonData("Decline", ADMIN_CALLBACKS+"decline"))
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(row)
 	return &keyboard
+}
+
+func selectMaxSizedPhoto(sizes []tgbotapi.PhotoSize) string {
+	maxSize := 0
+	maxSizeId := ""
+	for _, photo := range sizes {
+		if photo.FileSize > maxSize {
+			maxSizeId = photo.FileID
+		}
+	}
+	return maxSizeId
 }
