@@ -32,8 +32,11 @@ func NewCachedInfo(ChatId int64, State string) *CachedInfo {
 }
 
 type HandlersCache interface {
-	Save(CachedInfo) error
-	Get(chatId int64) (*CachedInfo, error)
+	SaveState(CachedInfo) error
+	GetState(chatId int64) (*CachedInfo, error)
+	SaveInfo(chatId int64, json string) error
+	GetInfo(chatId int64) (string, error)
+	RemoveInfo(chatId int64) error
 	AcquireLock(chatId int64) *sync.Mutex
 	ReleaseLock(chatId int64)
 }

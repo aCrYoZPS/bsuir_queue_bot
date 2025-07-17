@@ -10,25 +10,28 @@ import (
 // TODO: create background processes to clean the maps for GC
 type HandlersCache struct {
 	interfaces.HandlersCache
-	storage sync.Map
-	locks   sync.Map
+	stateStorage sync.Map
+	infoStorage  sync.Map
+	locks        sync.Map
 }
 
 func NewHandlersCache() *HandlersCache {
 	return &HandlersCache{
-		storage: sync.Map{},
+		stateStorage: sync.Map{},
+		infoStorage:  sync.Map{},
+		locks:        sync.Map{},
 	}
 }
 
-func (cache *HandlersCache) Save(info interfaces.CachedInfo) error {
-	cache.storage.Store(info.ChatId(), info)
+func (cache *HandlersCache) SaveState(info interfaces.CachedInfo) error {
+	cache.stateStorage.Store(info.ChatId(), info)
 	return nil
 }
 
-func (cache *HandlersCache) Get(chatId int64) (*interfaces.CachedInfo, error) {
-	value, ok := cache.storage.LoadAndDelete(chatId)
+func (cache *HandlersCache) GetState(chatId int64) (*interfaces.CachedInfo, error) {
+	value, ok := cache.stateStorage.LoadAndDelete(chatId)
 	if !ok {
-		return nil, errors.New("no info cached")
+		return nil, nil
 	}
 	cached, ok := value.(interfaces.CachedInfo)
 	if !ok {
@@ -48,4 +51,25 @@ func (cache *HandlersCache) AcquireLock(chatId int64) *sync.Mutex {
 
 func (cache *HandlersCache) ReleaseLock(chatId int64) {
 	cache.locks.Delete(chatId)
+}
+
+func (cache *HandlersCache) SaveInfo(chatId int64, json string) error {
+	cache.infoStorage.Store(chatId, json)
+	return nil
+}
+
+func (cache *HandlersCache) GetInfo(chatId int64) (string, error) {
+	val, ok := cache.infoStorage.Load(chatId)
+	if !ok {
+		return "", nil
+	}
+	info, ok := val.(string)
+	if !ok {
+		return "", errors.New("info cached is in incorrect type")
+	}
+	return info, nil
+}
+func (cache *HandlersCache) RemoveInfo(chatId int64) error {
+	cache.infoStorage.Delete(chatId)
+	return nil
 }

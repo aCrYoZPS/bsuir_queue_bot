@@ -42,3 +42,22 @@ type User struct {
 	Roles     []role
 	TgId      int64
 }
+
+func NewUser(FullName, GroupName string, GroupId int64, TgId int64, opts ...func(*User)) *User {
+	user := User{
+		FullName:  FullName,
+		GroupName: GroupName,
+		GroupId:   GroupId,
+		TgId:      TgId,
+	}
+	for _, opt := range opts {
+		opt(&user)
+	}
+	return &user
+}
+
+func WithUserId(id int64) func(*User) {
+	return func(usr *User) {
+		usr.Id = id
+	}
+}

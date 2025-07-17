@@ -10,7 +10,7 @@ RUN go mod download
 RUN CGO_ENABLED=1 GOOS=linux
 
 COPY . .
-RUN go build -o ./bin/main ./src/main.go
+RUN go build -gcflags=all="-N -l" -o ./bin/main ./src/main.go
 
 FROM debian:bookworm-slim AS main
 
@@ -19,7 +19,12 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y ca-certificates
 
 COPY --from=build /build/bin ./bin
+COPY ./go.mod .
+COPY ./go.sum .
 
 RUN --mount=type=secret,id=credentials.json
 RUN --mount=type=secret,id=token.json
+
+EXPOSE 2345
+
 ENTRYPOINT ["/bin/bash"]

@@ -10,7 +10,7 @@ type StateName string
 
 type State interface {
 	StateName() StateName
-	Handle(chatId int64, message string) error
+	Handle(chatId int64, message *tgbotapi.Message) error
 }
 
 type StateMachine struct {
@@ -24,24 +24,30 @@ func NewStateMachine(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) *Stat
 	return &StateMachine{cache: cache, bot: bot}
 }
 
-func (machine *StateMachine) HandleState(chatId int64, message string) error {
+func (machine *StateMachine) HandleState(chatId int64, message *tgbotapi.Message) error {
 	mu := machine.cache.AcquireLock(chatId)
 	mu.Lock()
 
 	defer mu.Unlock()
 	defer machine.cache.ReleaseLock(chatId)
 
-	info, err := machine.cache.Get(chatId)
+	info, err := machine.cache.GetState(chatId)
 	if err != nil {
 		return err
 	}
 
-	state, err := getStateByName(info.State())
-	if err != nil {
-		return err
+	var state State
+	if info != nil {
+		state, err = getStateByName(info.State())
+		if err != nil {
+			return err
+		}
+	} else {
+		state, err = getStateByName(string(IDLE_STATE))
+		if err != nil {
+			return err
+		}
 	}
 
-	state.Handle(chatId, message)
-
-	return nil
+	return state.Handle(chatId, message)
 }

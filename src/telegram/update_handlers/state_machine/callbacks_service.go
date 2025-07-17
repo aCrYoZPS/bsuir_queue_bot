@@ -1,10 +1,14 @@
-package update_handlers
+package stateMachine
 
 import (
 	"slices"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+)
+
+const (
+	ADMIN_CALLBACKS = "admin"
 )
 
 type CallbacksService struct {
@@ -15,16 +19,19 @@ func NewCallbackService() *CallbacksService {
 	return &CallbacksService{}
 }
 
+type CallbackHandler interface {
+	HandleCallback(update *tgbotapi.Update, bot *tgbotapi.BotAPI) error
+}
+
 func (*CallbacksService) HandleCallbacks(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
-	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
-	if _, err := bot.Request(callback); err != nil {
-		logging.Error(err.Error())
+	if update.CallbackQuery == nil {
+		logging.Error("no callback in update")
 		return
 	}
-	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Data)
-	if _, err := bot.Send(msg); err != nil {
-		logging.Error(err.Error())
-		return
+
+	switch update.CallbackQuery.ID {
+	case ADMIN_CALLBACKS:
+		//TODO:
 	}
 }
 

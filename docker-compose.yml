@@ -14,8 +14,10 @@ services:
       - OAUTH2_CREDENTIALS_FILE=/run/secrets/credentials.json
       - SQLITE_FILE=../data/sqlite3.db
       - SQLITE_INIT_FILE=../sql/db_setup.sql
+      - DATA_DIRECTORY=../data
     volumes:
-      - ./:/app
+      - ./data:/app/data
+      - ./sql:/app/sql
     secrets:
       - credentials
       - token

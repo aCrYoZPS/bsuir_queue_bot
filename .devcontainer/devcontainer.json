@@ -12,6 +12,7 @@
 	"service": "backend_dev",
 	// The optional 'workspaceFolder' property is the path VS Code should open by default when
 	// connected. This is typically a file mount in .devcontainer/docker-compose.yml
+	"onCreateCommand": "go get -ldflags \"-s -w -extldflags '-static'\" github.com/go-delve/delve/cmd/dlv",
 	"workspaceFolder": "/app",
 	"features": {
 		"ghcr.io/devcontainers/features/go:1": {

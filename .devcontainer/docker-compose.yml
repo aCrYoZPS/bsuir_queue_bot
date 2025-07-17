@@ -10,14 +10,28 @@ services:
       context: ..
       dockerfile: ./.devcontainer/Dockerfile.dev
       target: main
+    develop:
+     watch:
+      - action: sync
+        path: ./src
+        target: /app/src
+        ignore:
+          - bin/
+      - action: rebuild
+        path: go.mod
     environment:
       - OAUTH2_TOKEN_FILE=/run/secrets/token.json
       - OAUTH2_CREDENTIALS_FILE=/run/secrets/credentials.json
       - SQLITE_FILE=../data/sqlite3.db
       - SQLITE_INIT_FILE=../sql/db_setup.sql
+    ports:
+      - "4000:4000"  
     volumes:
+      - ../src:/app/src
+      - ../data:/app/data
+      - ../sql:/app/sql
       - ../.vscode:/app/.vscode
-      - ../:/app
+      - ../.devcontainer:/app/.devcontainer
     secrets:
       - credentials
       - token

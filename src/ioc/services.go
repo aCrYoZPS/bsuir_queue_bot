@@ -69,7 +69,7 @@ var UseSheetsApiService = provider(
 var UseMessageService = provider(
 	func() bot.MessagesService {
 		return update_handlers.NewMessagesHandler(
-			useHandlersCache(),
+			useStateMachine(), useHandlersCache(),
 		)
 	},
 )

@@ -13,19 +13,12 @@ type BotController struct {
 	callbackSrv CallbacksService
 }
 
-func NewBotController(token string, debug bool, msgSrv MessagesService, callbackSrv CallbacksService) (*BotController, error) {
-	bot, err := tgbotapi.NewBotAPI(token)
-	if err != nil {
-		return nil, err
-	}
-
+func NewBotController(bot *tgbotapi.BotAPI, msgSrv MessagesService, callbackSrv CallbacksService) (*BotController, error) {
 	bc := &BotController{
 		bot:         bot,
 		msgSrv:      msgSrv,
 		callbackSrv: callbackSrv,
 	}
-	bc.bot.Debug = debug
-
 	return bc, nil
 }
 
