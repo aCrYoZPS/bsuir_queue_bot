@@ -11,7 +11,14 @@ import (
 	entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 )
 
-func GetAllGroups() ([]entities.Group, error) {
+type GroupsService struct {
+}
+
+func NewGroupsService() *GroupsService {
+	return &GroupsService{}
+}
+
+func (*GroupsService) GetAllGroups() ([]entities.Group, error) {
 	// Later on it will be transfered to the db, however now that will do
 	if _, err := os.Stat("groups.json"); errors.Is(err, os.ErrNotExist) {
 		file, err := os.Create("groups.json")
@@ -51,4 +58,8 @@ func GetAllGroups() ([]entities.Group, error) {
 	}
 
 	return data, nil
+}
+
+func (*GroupsService) DoesGroupExist(name string) (bool, error) {
+	return true, nil
 }

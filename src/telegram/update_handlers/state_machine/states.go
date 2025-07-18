@@ -17,6 +17,17 @@ const (
 
 var once sync.Once
 
+type GroupsService interface {
+	DoesGroupExist(name string) (bool, error)
+}
+
+//Will be required by init states
+type statesConfig struct {
+	cache         interfaces.HandlersCache
+	bot           *tgbotapi.BotAPI
+	groupsService GroupsService
+}
+
 func InitStates(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) {
 	once.Do(
 		func() {

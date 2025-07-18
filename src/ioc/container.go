@@ -1,10 +1,9 @@
-// FUCK IT WE BALL
 package ioc
 
 import (
 	"fmt"
-	"log/slog"
-	"os"
+	
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
 )
 
 var currentId = 0
@@ -21,8 +20,7 @@ func provider[T any](factory func() T) func() T {
 	providerId := getNextId()
 	return func() T {
 		if pending, ok := isPending[providerId]; ok && pending {
-			slog.Error(fmt.Sprintf("cirricular dependecy of id %d in a container", providerId))
-			os.Exit(-1)
+			logging.FatalLog(fmt.Sprintf("cirricular dependecy of id %d in a container", providerId))
 		}
 		if _, ok := container[providerId]; !ok {
 			isPending[providerId] = true

@@ -27,3 +27,4 @@ go.work.sum
 .null-ls*
 Dockerfile.dev
 docker-compose-dev.yml
+groups.json

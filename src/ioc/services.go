@@ -11,6 +11,7 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/bot"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers"
+	stateMachine "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine"
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/option"
 	"google.golang.org/api/sheets/v4"
@@ -52,7 +53,7 @@ var useDriveApi = provider(
 var UseDriveApiService = provider(
 	func() driveapi.DriveApi {
 		return driveapi.NewDriveApiService(
-			useGroupsGepository(), useDriveApi(),
+			useGroupsRepository(), useDriveApi(),
 		)
 	},
 )
@@ -76,6 +77,6 @@ var UseMessageService = provider(
 
 var UseCallbacksService = provider(
 	func() bot.CallbacksService {
-		return update_handlers.NewCallbackService()
+		return stateMachine.NewCallbackService(useUsersRepository(), useHandlersCache())
 	},
 )

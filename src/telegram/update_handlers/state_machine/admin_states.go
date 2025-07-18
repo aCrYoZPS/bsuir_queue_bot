@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"text/template"
@@ -14,6 +16,7 @@ import (
 )
 
 var errInvalidInput error
+var errWrongGroup error
 
 const (
 	ADMIN_SUBMIT_START_STATE     StateName = "submit"
@@ -23,6 +26,7 @@ const (
 )
 
 type adminSubmitForm struct {
+	ChatId         int64  `json:"chatId,omitempty"`
 	Name           string `json:"name,omitempty"`
 	Group          string `json:"group,omitempty"`
 	AdditionalInfo string `json:"info,omitempty"`
@@ -72,7 +76,7 @@ func (state *adminSubmittingNameState) Handle(chatId int64, message *tgbotapi.Me
 	if message.Text == "" {
 		return errors.New("no text in message")
 	}
-	info, err := json.Marshal(&adminSubmitForm{Name: message.Text})
+	info, err := json.Marshal(&adminSubmitForm{ChatId: message.Chat.ID, Name: message.Text})
 	if err != nil {
 		return err
 	}
@@ -172,28 +176,25 @@ func (state *adminSubmittingProofState) Handle(chatId int64, message *tgbotapi.M
 	}
 	link := file.Link(os.Getenv("BOT_TOKEN"))
 	resp, err := http.Get(link)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		return err
 	}
 	defer resp.Body.Close()
-
-	err = state.cache.RemoveInfo(chatId)
-	if err != nil {
-		return err
-	}
 
 	msg := tgbotapi.NewPhoto(chatId, tgbotapi.FileReader{Name: "rnd_name", Reader: resp.Body})
 	var buf bytes.Buffer
 	tmpl := template.Must(template.New("tmpl").Parse(infoTemplate))
 	tmpl.Execute(&buf, form)
 	msg.Caption = buf.String()
-	msg.ReplyMarkup = createMarkupKeyboard()
+	msg.ReplyMarkup = createMarkupKeyboard(form)
 	return tgutils.SendPhotoToOwners(msg, state.bot)
 }
 
-func createMarkupKeyboard() *tgbotapi.InlineKeyboardMarkup {
+func createMarkupKeyboard(form *adminSubmitForm) *tgbotapi.InlineKeyboardMarkup {
 	row := []tgbotapi.InlineKeyboardButton{}
-	row = append(row, tgbotapi.NewInlineKeyboardButtonData("Accept", ADMIN_CALLBACKS+"accept"), tgbotapi.NewInlineKeyboardButtonData("Decline", ADMIN_CALLBACKS+"decline"))
+	acceptData := ADMIN_CALLBACKS + "accept" + fmt.Sprint(form.ChatId)
+	declineData := ADMIN_CALLBACKS + "decline" + fmt.Sprint(form.ChatId)
+	row = append(row, tgbotapi.NewInlineKeyboardButtonData("Accept", acceptData), tgbotapi.NewInlineKeyboardButtonData("Decline", declineData))
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(row)
 	return &keyboard
 }

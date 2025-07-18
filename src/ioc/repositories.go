@@ -40,7 +40,7 @@ var useHandlersCache = provider(
 	},
 )
 
-var useGroupsGepository = provider(
+var useGroupsRepository = provider(
 	func() interfaces.GroupsRepository {
 		repos, err := sqlite.NewGroupsRepository(
 			useSqliteConnection(),
@@ -56,6 +56,12 @@ var useGroupsGepository = provider(
 var useMockLessonsRepository = provider(
 	func() interfaces.LessonsRepository {
 		return mocks.NewLessonsRepositoryMock()
+	},
+)
+
+var useUsersRepository = provider(
+	func() interfaces.UsersRepository {
+		return sqlite.NewUsersRepository(useSqliteConnection())
 	},
 )
 

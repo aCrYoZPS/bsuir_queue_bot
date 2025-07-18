@@ -43,11 +43,10 @@ type User struct {
 	TgId      int64
 }
 
-func NewUser(FullName, GroupName string, GroupId int64, TgId int64, opts ...func(*User)) *User {
+func NewUser(FullName, GroupName string, TgId int64, opts ...func(*User)) *User {
 	user := User{
 		FullName:  FullName,
 		GroupName: GroupName,
-		GroupId:   GroupId,
 		TgId:      TgId,
 	}
 	for _, opt := range opts {
@@ -59,5 +58,17 @@ func NewUser(FullName, GroupName string, GroupId int64, TgId int64, opts ...func
 func WithUserId(id int64) func(*User) {
 	return func(usr *User) {
 		usr.Id = id
+	}
+}
+
+func WithGroupId(groupId int64) func(*User) {
+	return func(usr *User) {
+		usr.GroupId = groupId
+	}
+}
+
+func WithAdminRole() func(*User) {
+	return func(usr *User) {
+		usr.Roles = append(usr.Roles, Admin)
 	}
 }

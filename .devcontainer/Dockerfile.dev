@@ -1,18 +1,4 @@
-FROM golang:bookworm AS build
-
-WORKDIR /build
-
-COPY ./go.mod .
-COPY ./go.sum .
-
-RUN --mount=type=cache,target=/go/pkg/mod 
-RUN go mod download
-RUN CGO_ENABLED=1 GOOS=linux
-
-COPY . .
-RUN go build -gcflags=all="-N -l" -o ./bin/main ./src/main.go
-
-FROM debian:bookworm-slim AS main
+FROM golang:bookworm AS main
 
 WORKDIR /app
 
@@ -23,13 +9,10 @@ ARG GID=1000
 ENV UID=${UID}
 ENV GID=${GID}
 
-COPY --from=build /build/bin ./bin
 COPY ./go.mod .
 COPY ./go.sum .
 
 RUN --mount=type=secret,id=credentials.json
 RUN --mount=type=secret,id=token.json
-
-EXPOSE 2345
 
 ENTRYPOINT ["/bin/bash"]

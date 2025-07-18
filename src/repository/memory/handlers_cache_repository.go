@@ -29,7 +29,7 @@ func (cache *HandlersCache) SaveState(info interfaces.CachedInfo) error {
 }
 
 func (cache *HandlersCache) GetState(chatId int64) (*interfaces.CachedInfo, error) {
-	value, ok := cache.stateStorage.LoadAndDelete(chatId)
+	value, ok := cache.stateStorage.Load(chatId)
 	if !ok {
 		return nil, nil
 	}
@@ -68,8 +68,4 @@ func (cache *HandlersCache) GetInfo(chatId int64) (string, error) {
 		return "", errors.New("info cached is in incorrect type")
 	}
 	return info, nil
-}
-func (cache *HandlersCache) RemoveInfo(chatId int64) error {
-	cache.infoStorage.Delete(chatId)
-	return nil
 }

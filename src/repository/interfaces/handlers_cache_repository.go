@@ -36,7 +36,6 @@ type HandlersCache interface {
 	GetState(chatId int64) (*CachedInfo, error)
 	SaveInfo(chatId int64, json string) error
 	GetInfo(chatId int64) (string, error)
-	RemoveInfo(chatId int64) error
 	AcquireLock(chatId int64) *sync.Mutex
 	ReleaseLock(chatId int64)
 }
