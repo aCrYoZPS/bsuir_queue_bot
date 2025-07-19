@@ -2,11 +2,13 @@ package sqlite
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
 	entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
+	"github.com/mattn/go-sqlite3"
 )
 
 const GROUPS_TABLE = "groups"
@@ -76,6 +78,17 @@ func (repos *GroupsRepository) AddRange(groups []entities.Group) error {
 	return err
 }
 
+func (repos *GroupsRepository) AddNonPresented(groups []entities.Group) error {
+	query := fmt.Sprintf("INSERT INTO %s (name, faculty_id, spreadsheet_id, admin_id) VALUES ($1, $2, $3, $4)", GROUPS_TABLE)
+	for _, group := range groups {
+		_, err := repos.db.Exec(query, group.Name, group.FacultyId, group.SpreadsheetId, group.AdminId)
+		if err, ok := err.(sqlite3.Error); ok && err.ExtendedCode != sqlite3.ErrConstraintUnique {
+			return err
+		}
+	}
+	return nil
+}
+
 func (repos *GroupsRepository) GetById(id int) (*entities.Group, error) {
 	row := repos.db.QueryRow(fmt.Sprintf("SELECT * FROM %s WHERE id=$1", GROUPS_TABLE), id)
 	g := &entities.Group{}
@@ -108,4 +121,16 @@ func (repos *GroupsRepository) Update(group *entities.Group) error {
 	_, err := repos.db.Exec("UPDATE groups SET name=$1, faculty_id=$2, spreadsheet_id=$3, admin_id=$4 WHERE id=$5",
 		group.Name, group.FacultyId, group.SpreadsheetId, group.AdminId, group.Id)
 	return err
+}
+
+func (repos *GroupsRepository) DoesGroupExist(groupName string) (bool, error) {
+	query := fmt.Sprintf("SELECT 1 FROM %s WHERE name=$1", GROUPS_TABLE)
+	row := repos.db.QueryRow(query, groupName)
+	if row.Err() != nil {
+		if errors.Is(row.Err(), sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, row.Err()
+	}
+	return true, nil
 }

@@ -48,7 +48,6 @@ var useGroupsRepository = provider(
 		if err != nil {
 			logging.FatalLog(err.Error())
 		}
-
 		return repos
 	},
 )

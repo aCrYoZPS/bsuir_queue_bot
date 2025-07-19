@@ -10,6 +10,8 @@ type GroupsRepository interface {
 	GetAll() ([]entities.Group, error)
 	Add(group *entities.Group) error
 	AddRange(groups []entities.Group) error
+	AddNonPresented(groups []entities.Group) error
+	DoesGroupExist(groupName string) (bool, error)
 	Update(group *entities.Group) error
 	Delete(id int) error
 }

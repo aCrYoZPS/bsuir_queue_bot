@@ -16,12 +16,6 @@ CREATE TABLE IF NOT EXISTS lessons (
     FOREIGN KEY (group_id) REFERENCES groups(id)
 );
 
-CREATE TABLE IF NOT EXISTS lessons_weeks (
-    lesson_id INTEGER,
-    week_number INTEGER NOT NULL,
-    FOREIGN KEY (lesson_id) REFERENCES lessons(id)
-);
-
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tg_id INTEGER,
@@ -30,10 +24,18 @@ CREATE TABLE IF NOT EXISTS users (
     FOREIGN KEY (group_id) REFERENCES groups(id)
 );
 
+CREATE TABLE IF NOT EXISTS lessons_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER, 
+    lesson_id INTEGER,
+    FOREIGN KEY (lesson_id) REFERENCES lessons(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS lessons_requests_user_id_idx ON lessons_requests(user_id);
+
 CREATE TABLE IF NOT EXISTS users_roles (
     user_id INTEGER,
     role_name TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
-
-CREATE INDEX IF NOT EXISTS lessons_weeks_id_idx ON lessons_weeks (lesson_id);

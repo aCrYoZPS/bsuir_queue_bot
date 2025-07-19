@@ -97,10 +97,11 @@ type adminSubmitingGroupState struct {
 	State
 	cache interfaces.HandlersCache
 	bot   *tgbotapi.BotAPI
+	srv   GroupsService
 }
 
-func newAdminSubmitingGroupState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) *adminSubmitingGroupState {
-	return &adminSubmitingGroupState{cache: cache, bot: bot}
+func newAdminSubmitingGroupState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, srv GroupsService) *adminSubmitingGroupState {
+	return &adminSubmitingGroupState{cache: cache, bot: bot, srv: srv}
 }
 
 func (*adminSubmitingGroupState) StateName() StateName {
@@ -110,6 +111,15 @@ func (*adminSubmitingGroupState) StateName() StateName {
 func (state *adminSubmitingGroupState) Handle(chatId int64, message *tgbotapi.Message) error {
 	if message.Text == "" {
 		return errors.Join(errInvalidInput, errors.New("no text in message"))
+	}
+	exists, err := state.srv.DoesGroupExist(message.Text)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		msg := tgbotapi.NewMessage(chatId, "Введите номер существующей группы")
+		_, err := state.bot.Send(msg)
+		return err
 	}
 	info, err := state.cache.GetInfo(chatId)
 	if err != nil {

@@ -15,13 +15,28 @@ type State interface {
 
 type StateMachine struct {
 	update_handlers.StateMachine
-	cache interfaces.HandlersCache
-	bot   *tgbotapi.BotAPI
+	cache     interfaces.HandlersCache
+	bot       *tgbotapi.BotAPI
+	groupsSrv *GroupsService
 }
 
-func NewStateMachine(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) *StateMachine {
-	InitStates(cache, bot)
-	return &StateMachine{cache: cache, bot: bot}
+type statesConfig struct {
+	cache         interfaces.HandlersCache
+	bot           *tgbotapi.BotAPI
+	groupsService GroupsService
+}
+
+func NewStatesConfig(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, groupsService GroupsService) *statesConfig {
+	return &statesConfig{
+		cache:         cache,
+		bot:           bot,
+		groupsService: groupsService,
+	}
+}
+
+func NewStateMachine(conf *statesConfig) *StateMachine {
+	InitStates(conf)
+	return &StateMachine{cache: conf.cache, bot: conf.bot, groupsSrv: &conf.groupsService}
 }
 
 func (machine *StateMachine) HandleState(chatId int64, message *tgbotapi.Message) error {

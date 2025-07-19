@@ -21,21 +21,14 @@ type GroupsService interface {
 	DoesGroupExist(name string) (bool, error)
 }
 
-//Will be required by init states
-type statesConfig struct {
-	cache         interfaces.HandlersCache
-	bot           *tgbotapi.BotAPI
-	groupsService GroupsService
-}
-
-func InitStates(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) {
+func InitStates(conf *statesConfig) {
 	once.Do(
 		func() {
 			states = []State{}
 			states = append(states,
-				newIdleState(cache, bot), newAdminSubmitState(cache, bot),
-				newAdminSubmittingNameState(cache, bot), newAdminSubmitingGroupState(cache, bot),
-				newAdminSubmitingProofState(cache, bot))
+				newIdleState(conf.cache, conf.bot), newAdminSubmitState(conf.cache, conf.bot),
+				newAdminSubmittingNameState(conf.cache, conf.bot), newAdminSubmitingGroupState(conf.cache, conf.bot, conf.groupsService),
+				newAdminSubmitingProofState(conf.cache, conf.bot))
 		},
 	)
 }

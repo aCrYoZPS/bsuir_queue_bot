@@ -16,16 +16,16 @@ const (
 
 type CallbacksService struct {
 	//More of a placeholder, which will contain inject google services to handle callbacks
-	sheets sheetsapi.SheetsApi
-	repo   interfaces.UsersRepository
-	cache  interfaces.HandlersCache
+	sheets     sheetsapi.SheetsApi
+	usersRepo  interfaces.UsersRepository
+	cache      interfaces.HandlersCache
 }
 
-func NewCallbackService(repo interfaces.UsersRepository, cache interfaces.HandlersCache, sheets sheetsapi.SheetsApi) *CallbacksService {
+func NewCallbackService(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache, sheets sheetsapi.SheetsApi) *CallbacksService {
 	return &CallbacksService{
-		sheets: sheets,
-		repo:   repo,
-		cache:  cache,
+		sheets:     sheets,
+		usersRepo:  usersRepo,
+		cache:      cache,
 	}
 }
 
@@ -42,7 +42,7 @@ func (serv *CallbacksService) HandleCallbacks(update *tgbotapi.Update, bot *tgbo
 	var callback_handler CallbackHandler
 	switch {
 	case strings.HasPrefix(update.CallbackQuery.Data, ADMIN_CALLBACKS):
-		callback_handler = NewAdminCallbackHandler(serv.repo, serv.cache, serv.sheets)
+		callback_handler = NewAdminCallbackHandler(serv.usersRepo, serv.cache, serv.sheets)
 	}
 	err := callback_handler.HandleCallback(update, bot)
 	if err != nil {

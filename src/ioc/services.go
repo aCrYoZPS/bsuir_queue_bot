@@ -8,6 +8,7 @@ import (
 	google_docs_auth "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/auth"
 	driveapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/drive_api"
 	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/sheets_api"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/bot"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers"
@@ -15,6 +16,17 @@ import (
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/option"
 	"google.golang.org/api/sheets/v4"
+)
+
+var useGroupsService = provider(
+	func() *iis_api.GroupsService {
+		serv := iis_api.NewGroupsService(useGroupsRepository())
+		err := serv.InitAllGroups()
+		if err != nil {
+			logging.FatalLog(err.Error())
+		}
+		return serv
+	},
 )
 
 var useGoogleClient = provider(

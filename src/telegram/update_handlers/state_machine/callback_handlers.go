@@ -3,9 +3,9 @@ package stateMachine
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
-	"fmt"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
 	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/sheets_api"
@@ -15,16 +15,16 @@ import (
 
 type AdminCallbackHandler struct {
 	CallbackHandler
-	repo   interfaces.UsersRepository
-	sheets sheetsapi.SheetsApi
-	cache  interfaces.HandlersCache
+	usersRepo  interfaces.UsersRepository
+	sheets     sheetsapi.SheetsApi
+	cache      interfaces.HandlersCache
 }
 
-func NewAdminCallbackHandler(repo interfaces.UsersRepository, cache interfaces.HandlersCache, sheets sheetsapi.SheetsApi) *AdminCallbackHandler {
+func NewAdminCallbackHandler(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache, sheets sheetsapi.SheetsApi) *AdminCallbackHandler {
 	return &AdminCallbackHandler{
-		repo:   repo,
-		cache:  cache,
-		sheets: sheets,
+		usersRepo: usersRepo,
+		cache:     cache,
+		sheets:    sheets,
 	}
 }
 
@@ -54,7 +54,7 @@ func (handler *AdminCallbackHandler) HandleCallback(update *tgbotapi.Update, bot
 		if err != nil {
 			return err
 		}
-		err = handler.repo.Add(entities.NewUser(form.Name, form.Group, chatId))
+		err = handler.usersRepo.Add(entities.NewUser(form.Name, form.Group, chatId))
 		if err != nil {
 			return err
 		}
@@ -82,7 +82,7 @@ func (handler *AdminCallbackHandler) HandleCallback(update *tgbotapi.Update, bot
 		if err != nil {
 			return err
 		}
-		msg := tgbotapi.NewMessage(form.ChatId, "Ваша заявка была отклонена. Причина: *ЗАГЛУШКА*")
+		msg := tgbotapi.NewMessage(form.ChatId, "Ваша заявка была отклонена")
 		if _, err := bot.Send(msg); err != nil {
 			return err
 		}
