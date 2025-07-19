@@ -26,64 +26,73 @@ func NewSheetsApiService(groups interfaces.GroupsRepository, lessons interfaces.
 	}
 }
 
-func (serv *SheetsApiService) CreateSheets() error {
-	groups, err := serv.groupsRepo.GetAll()
+type SheetsUrl = string
+
+func (serv *SheetsApiService) CreateSheet(groupName string) (SheetsUrl, error) {
+	existsRes, err := serv.driveApi.DoesSheetExist(groupName)
 	if err != nil {
-		return err
+		return "", err
+	}
+	if existsRes.DoesExist() {
+		sheet, err := serv.api.Spreadsheets.Get(existsRes.SpreadsheetId()).Do()
+		if err != nil {
+			return "", err
+		}
+		return sheet.SpreadsheetUrl, nil
+	}
+	newSheet := sheets.Spreadsheet{Properties: &sheets.SpreadsheetProperties{
+		Title: groupName,
+	}}
+
+	res := serv.api.Spreadsheets.Create(&newSheet)
+	sheet, err := res.Do()
+	if err != nil {
+		return "", err
 	}
 
-	// I haven't figured out a way to batch these requests :(
-	for _, group := range groups {
-		exists, err := serv.driveApi.DoesSheetExist(group.Name)
-		if err != nil {
-			return nil
-		}
-		if exists {
-			continue
-		}
-		newSheet := sheets.Spreadsheet{Properties: &sheets.SpreadsheetProperties{
-			Title: group.Name,
-		}}
-
-		res := serv.api.Spreadsheets.Create(&newSheet)
-		sheet, err := res.Do()
-		if err != nil {
-			return err
-		}
-		group.SpreadsheetId = sheet.SpreadsheetId
-		err = serv.groupsRepo.Update(&group)
-		if err != nil {
-			return err
-		}
+	group, err := serv.groupsRepo.GetByName(groupName)
+	if err != nil {
+		return "", err
 	}
-	return nil
+	group.SpreadsheetId = sheet.SpreadsheetId
+	err = serv.groupsRepo.Update(group)
+	if err != nil {
+		return "", err
+	}
+	err = serv.createLists(groupName)
+	if err != nil {
+		return "", err
+	}
+	return sheet.SpreadsheetUrl, nil
 }
 
-func (serv *SheetsApiService) CreateLists() error {
-	groups, err := serv.groupsRepo.GetAll()
+func (serv *SheetsApiService) createLists(groupName string) error {
+	group, err := serv.groupsRepo.GetByName(groupName)
 	if err != nil {
 		return err
 	}
-	for _, group := range groups {
-		update := sheets.BatchUpdateSpreadsheetRequest{}
-		lessons, err := serv.lessonsRepo.GetAll(int64(group.Id))
-		for _, lesson := range lessons {
-			updateTitle := lesson.Subject + " " + serv.formatDateToEuropean(lesson.Date)
-			if iis_api_entities.Subgroup(lesson.SubgroupNumber) != iis_api_entities.AllSubgroups {
-				updateTitle += fmt.Sprintf(" (%s)", fmt.Sprint(int(lesson.SubgroupNumber)))
-			}
-			update.Requests = append(update.Requests, &sheets.Request{
-				AddSheet: &sheets.AddSheetRequest{Properties: &sheets.SheetProperties{
-					Title: updateTitle,
-				}},
-			})
-		}
-		call := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &update)
-		_, err = call.Do()
-		if err != nil {
-			return err
-		}
+	update := sheets.BatchUpdateSpreadsheetRequest{}
+	lessons, err := serv.lessonsRepo.GetAll(int64(group.Id))
+	if err != nil {
+		return err
 	}
+	for _, lesson := range lessons {
+		updateTitle := lesson.Subject + " " + serv.formatDateToEuropean(lesson.Date)
+		if iis_api_entities.Subgroup(lesson.SubgroupNumber) != iis_api_entities.AllSubgroups {
+			updateTitle += fmt.Sprintf(" (%s)", fmt.Sprint(int(lesson.SubgroupNumber)))
+		}
+		update.Requests = append(update.Requests, &sheets.Request{
+			AddSheet: &sheets.AddSheetRequest{Properties: &sheets.SheetProperties{
+				Title: updateTitle,
+			}},
+		})
+	}
+	call := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &update)
+	_, err = call.Do()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

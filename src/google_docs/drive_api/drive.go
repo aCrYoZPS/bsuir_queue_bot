@@ -20,16 +20,16 @@ func NewDriveApiService(groups interfaces.GroupsRepository, api *drive.Service) 
 
 const SHEETS_MIME_TYPE = "application/vnd.google-apps.spreadsheet"
 
-func (serv *DriveApiService) DoesSheetExist(name string) (bool, error) {
+func (serv *DriveApiService) DoesSheetExist(name string) (SpreadsheetResult, error) {
 	files, err := serv.api.Files.List().Do()
 	if err != nil {
-		return false, err
+		return SpreadsheetResult{}, err
 	}
 	nextPage := true
 	for nextPage {
 		for _, file := range files.Files {
 			if file.MimeType == SHEETS_MIME_TYPE && file.Name == name {
-				return true, nil
+				return SpreadsheetResult{doesExist: true, spreadsheetId: file.Id}, nil
 			}
 		}
 		if files.NextPageToken == "" {
@@ -37,9 +37,9 @@ func (serv *DriveApiService) DoesSheetExist(name string) (bool, error) {
 		} else {
 			files, err = serv.api.Files.List().PageToken(files.NextPageToken).Do()
 			if err != nil {
-				return false, err
+				return SpreadsheetResult{}, err
 			}
 		}
 	}
-	return false, nil
+	return SpreadsheetResult{}, nil
 }

@@ -19,13 +19,6 @@ func main() {
 			logging.FatalLog("Error loading .env file")
 		}
 	}
-
-	srv := ioc.UseSheetsApiService()
-	err := srv.CreateSheets()
-	if err != nil {
-		logging.Error("failed to init sheets", "err", err.Error())
-	}
-
 	controller := ioc.UseBotController()
 	controller.Start()
 }

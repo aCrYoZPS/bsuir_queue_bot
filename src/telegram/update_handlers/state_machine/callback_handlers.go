@@ -5,22 +5,26 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"fmt"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
+	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/sheets_api"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type AdminCallbackHandler struct {
 	CallbackHandler
-	repo  interfaces.UsersRepository
-	cache interfaces.HandlersCache
+	repo   interfaces.UsersRepository
+	sheets sheetsapi.SheetsApi
+	cache  interfaces.HandlersCache
 }
 
-func NewAdminCallbackHandler(repo interfaces.UsersRepository, cache interfaces.HandlersCache) *AdminCallbackHandler {
+func NewAdminCallbackHandler(repo interfaces.UsersRepository, cache interfaces.HandlersCache, sheets sheetsapi.SheetsApi) *AdminCallbackHandler {
 	return &AdminCallbackHandler{
-		repo:  repo,
-		cache: cache,
+		repo:   repo,
+		cache:  cache,
+		sheets: sheets,
 	}
 }
 
@@ -55,7 +59,11 @@ func (handler *AdminCallbackHandler) HandleCallback(update *tgbotapi.Update, bot
 			return err
 		}
 
-		msg := tgbotapi.NewMessage(form.ChatId, "Ваша заявка была одобрена. Ссылка на гугл-таблицу: *ЗАГЛУШКА*")
+		url, err := handler.sheets.CreateSheet(form.Group)
+		if err != nil {
+			return err
+		}
+		msg := tgbotapi.NewMessage(form.ChatId, fmt.Sprintf("Ваша заявка была одобрена. Ссылка на гугл-таблицу: %s", url))
 		if _, err := bot.Send(msg); err != nil {
 			return err
 		}

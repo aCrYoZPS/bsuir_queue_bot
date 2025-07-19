@@ -77,6 +77,6 @@ var UseMessageService = provider(
 
 var UseCallbacksService = provider(
 	func() bot.CallbacksService {
-		return stateMachine.NewCallbackService(useUsersRepository(), useHandlersCache())
+		return stateMachine.NewCallbackService(useUsersRepository(), useHandlersCache(), UseSheetsApiService())
 	},
 )

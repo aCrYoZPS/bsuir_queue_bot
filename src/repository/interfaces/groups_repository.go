@@ -6,6 +6,7 @@ import (
 
 type GroupsRepository interface {
 	GetById(id int) (*entities.Group, error)
+	GetByName(name string) (*entities.Group, error)
 	GetAll() ([]entities.Group, error)
 	Add(group *entities.Group) error
 	AddRange(groups []entities.Group) error

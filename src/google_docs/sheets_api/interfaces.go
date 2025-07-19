@@ -1,7 +1,7 @@
 package sheetsapi
 
+type SheetUrl = string
 type SheetsApi interface {
-	CreateSheets() error
-	CreateLists() error
+	CreateSheet(groupName string) (SheetUrl, error)
 	ClearSpreadsheet(spreadsheetId string) error
 }
