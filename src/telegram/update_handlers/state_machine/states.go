@@ -28,7 +28,7 @@ func InitStates(conf *statesConfig) {
 			states = append(states,
 				newIdleState(conf.cache, conf.bot), newAdminSubmitState(conf.cache, conf.bot),
 				newAdminSubmittingNameState(conf.cache, conf.bot), newAdminSubmitingGroupState(conf.cache, conf.bot, conf.groupsService),
-				newAdminSubmitingProofState(conf.cache, conf.bot))
+				newAdminSubmitingProofState(conf.cache, conf.bot), newAdminWaitingProofState(conf.cache, conf.bot))
 		},
 	)
 }

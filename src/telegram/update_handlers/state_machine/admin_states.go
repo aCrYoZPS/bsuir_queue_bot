@@ -23,6 +23,7 @@ const (
 	ADMIN_SUBMITTING_NAME_STATE  StateName = "submitting_name"
 	ADMIN_SUBMITTING_GROUP_STATE StateName = "submitting_group"
 	ADMIN_SUBMITTING_PROOF_STATE StateName = "submitting_proof"
+	ADMIN_WAITING_STATE          StateName = "waiting"
 )
 
 type adminSubmitForm struct {
@@ -191,6 +192,11 @@ func (state *adminSubmittingProofState) Handle(chatId int64, message *tgbotapi.M
 	}
 	defer resp.Body.Close()
 
+	err = state.cache.SaveState(*interfaces.NewCachedInfo(chatId, string(ADMIN_WAITING_STATE)))
+	if err != nil {
+		return err
+	}
+
 	msg := tgbotapi.NewPhoto(chatId, tgbotapi.FileReader{Name: "rnd_name", Reader: resp.Body})
 	var buf bytes.Buffer
 	tmpl := template.Must(template.New("tmpl").Parse(infoTemplate))
@@ -198,6 +204,26 @@ func (state *adminSubmittingProofState) Handle(chatId int64, message *tgbotapi.M
 	msg.Caption = buf.String()
 	msg.ReplyMarkup = createMarkupKeyboard(form)
 	return tgutils.SendPhotoToOwners(msg, state.bot)
+}
+
+type adminWaitingState struct {
+	State
+	cache interfaces.HandlersCache
+	bot   *tgbotapi.BotAPI
+}
+
+func newAdminWaitingProofState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) *adminWaitingState {
+	return &adminWaitingState{cache: cache, bot: bot}
+}
+
+func (state *adminWaitingState) StateName() StateName {
+	return ADMIN_WAITING_STATE
+}
+
+func (state *adminWaitingState) Handle(chatId int64, message *tgbotapi.Message) error {
+	msg := tgbotapi.NewMessage(chatId, "Sorry, your last admin submit has not been proceeded yet")
+	_, err := state.bot.Send(msg)
+	return err
 }
 
 func createMarkupKeyboard(form *adminSubmitForm) *tgbotapi.InlineKeyboardMarkup {

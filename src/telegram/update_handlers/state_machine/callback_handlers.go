@@ -15,9 +15,9 @@ import (
 
 type AdminCallbackHandler struct {
 	CallbackHandler
-	usersRepo  interfaces.UsersRepository
-	sheets     sheetsapi.SheetsApi
-	cache      interfaces.HandlersCache
+	usersRepo interfaces.UsersRepository
+	sheets    sheetsapi.SheetsApi
+	cache     interfaces.HandlersCache
 }
 
 func NewAdminCallbackHandler(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache, sheets sheetsapi.SheetsApi) *AdminCallbackHandler {
@@ -40,54 +40,70 @@ func (handler *AdminCallbackHandler) HandleCallback(update *tgbotapi.Update, bot
 	command := strings.TrimPrefix(update.CallbackQuery.Data, ADMIN_CALLBACKS)
 	switch {
 	case strings.HasPrefix(command, "accept"):
-		var chatId int64
-		chatId, err := strconv.ParseInt(strings.TrimPrefix(command, "accept"), 10, 64)
-		if err != nil {
-			return err
-		}
-		info, err := handler.cache.GetInfo(chatId)
-		if err != nil {
-			return err
-		}
-		form := &adminSubmitForm{}
-		err = json.Unmarshal([]byte(info), form)
-		if err != nil {
-			return err
-		}
-		err = handler.usersRepo.Add(entities.NewUser(form.Name, form.Group, chatId))
-		if err != nil {
-			return err
-		}
-
-		url, err := handler.sheets.CreateSheet(form.Group)
-		if err != nil {
-			return err
-		}
-		msg := tgbotapi.NewMessage(form.ChatId, fmt.Sprintf("Ваша заявка была одобрена. Ссылка на гугл-таблицу: %s", url))
-		if _, err := bot.Send(msg); err != nil {
-			return err
-		}
+		handler.handleAcceptCallback(command, bot)
 	case strings.HasPrefix(command, "decline"):
-		var chatId int64
-		err := json.Unmarshal([]byte(strings.TrimPrefix(command, "decline")), &chatId)
-		if err != nil {
-			return err
-		}
-		info, err := handler.cache.GetInfo(chatId)
-		if err != nil {
-			return err
-		}
-		form := &adminSubmitForm{}
-		err = json.Unmarshal([]byte(info), &form)
-		if err != nil {
-			return err
-		}
-		msg := tgbotapi.NewMessage(form.ChatId, "Ваша заявка была отклонена")
-		if _, err := bot.Send(msg); err != nil {
-			return err
-		}
+		handler.handleDeclineCallback(command, bot)
 	default:
 		return errors.New("no such callback")
+	}
+	return nil
+}
+
+func (handler *AdminCallbackHandler) handleAcceptCallback(command string, bot *tgbotapi.BotAPI) error {
+	var chatId int64
+	chatId, err := strconv.ParseInt(strings.TrimPrefix(command, "accept"), 10, 64)
+	if err != nil {
+		return err
+	}
+	info, err := handler.cache.GetInfo(chatId)
+	if err != nil {
+		return err
+	}
+	form := &adminSubmitForm{}
+	err = json.Unmarshal([]byte(info), form)
+	if err != nil {
+		return err
+	}
+
+	err = handler.cache.SaveState(*interfaces.NewCachedInfo(chatId, string(IDLE_STATE)))
+	if err != nil {
+		return err
+	}
+	
+	err = handler.usersRepo.Add(entities.NewUser(form.Name, form.Group, chatId))
+	if err != nil {
+		return err
+	}
+
+	url, err := handler.sheets.CreateSheet(form.Group)
+	if err != nil {
+		return err
+	}
+	msg := tgbotapi.NewMessage(form.ChatId, fmt.Sprintf("Ваша заявка была одобрена. Ссылка на гугл-таблицу: %s", url))
+	if _, err := bot.Send(msg); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (handler *AdminCallbackHandler) handleDeclineCallback(command string, bot *tgbotapi.BotAPI) error {
+	var chatId int64
+	err := json.Unmarshal([]byte(strings.TrimPrefix(command, "decline")), &chatId)
+	if err != nil {
+		return err
+	}
+	info, err := handler.cache.GetInfo(chatId)
+	if err != nil {
+		return err
+	}
+	form := &adminSubmitForm{}
+	err = json.Unmarshal([]byte(info), &form)
+	if err != nil {
+		return err
+	}
+	msg := tgbotapi.NewMessage(form.ChatId, "Ваша заявка была отклонена")
+	if _, err := bot.Send(msg); err != nil {
+		return err
 	}
 	return nil
 }
