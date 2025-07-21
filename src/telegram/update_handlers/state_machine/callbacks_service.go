@@ -7,12 +7,11 @@ import (
 
 	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/sheets_api"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/admin"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-const (
-	ADMIN_CALLBACKS = "admin"
-)
 
 type CallbacksService struct {
 	//More of a placeholder, which will contain inject google services to handle callbacks
@@ -41,8 +40,8 @@ func (serv *CallbacksService) HandleCallbacks(update *tgbotapi.Update, bot *tgbo
 
 	var callback_handler CallbackHandler
 	switch {
-	case strings.HasPrefix(update.CallbackQuery.Data, ADMIN_CALLBACKS):
-		callback_handler = NewAdminCallbackHandler(serv.usersRepo, serv.cache, serv.sheets)
+	case strings.HasPrefix(update.CallbackQuery.Data, constants.ADMIN_CALLBACKS):
+		callback_handler = admin.NewAdminCallbackHandler(serv.usersRepo, serv.cache, serv.sheets)
 	}
 	err := callback_handler.HandleCallback(update, bot)
 	if err != nil {

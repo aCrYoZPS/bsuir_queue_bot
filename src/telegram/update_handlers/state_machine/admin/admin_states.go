@@ -1,4 +1,4 @@
-package stateMachine
+package admin
 
 import (
 	"bytes"
@@ -11,20 +11,12 @@ import (
 	"text/template"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 var errInvalidInput error
-var errWrongGroup error
-
-const (
-	ADMIN_SUBMIT_START_STATE     StateName = "submit"
-	ADMIN_SUBMITTING_NAME_STATE  StateName = "submitting_name"
-	ADMIN_SUBMITTING_GROUP_STATE StateName = "submitting_group"
-	ADMIN_SUBMITTING_PROOF_STATE StateName = "submitting_proof"
-	ADMIN_WAITING_STATE          StateName = "waiting"
-)
 
 type adminSubmitForm struct {
 	ChatId         int64  `json:"chatId,omitempty"`
@@ -36,21 +28,20 @@ type adminSubmitForm struct {
 const infoTemplate = "Имя: {{.Name}} \nГруппа: {{.Group}}\n{{if .AdditionalInfo}}Доп информация: {{.AdditionalInfo}} {{end}}"
 
 type adminSubmitStartState struct {
-	State
 	cache interfaces.HandlersCache
 	bot   *tgbotapi.BotAPI
 }
 
-func newAdminSubmitState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) *adminSubmitStartState {
+func NewAdminSubmitState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) *adminSubmitStartState {
 	return &adminSubmitStartState{cache: cache, bot: bot}
 }
 
-func (*adminSubmitStartState) StateName() StateName {
-	return ADMIN_SUBMIT_START_STATE
+func (*adminSubmitStartState) StateName() string {
+	return constants.ADMIN_SUBMIT_START_STATE
 }
 
 func (state *adminSubmitStartState) Handle(chatId int64, message *tgbotapi.Message) error {
-	err := state.cache.SaveState(*interfaces.NewCachedInfo(chatId, string(ADMIN_SUBMITTING_NAME_STATE)))
+	err := state.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.ADMIN_SUBMITTING_NAME_STATE))
 	if err != nil {
 		return err
 	}
@@ -60,17 +51,16 @@ func (state *adminSubmitStartState) Handle(chatId int64, message *tgbotapi.Messa
 }
 
 type adminSubmittingNameState struct {
-	State
 	cache interfaces.HandlersCache
 	bot   *tgbotapi.BotAPI
 }
 
-func newAdminSubmittingNameState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) *adminSubmittingNameState {
+func NewAdminSubmittingNameState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) *adminSubmittingNameState {
 	return &adminSubmittingNameState{cache: cache, bot: bot}
 }
 
-func (*adminSubmittingNameState) StateName() StateName {
-	return ADMIN_SUBMITTING_NAME_STATE
+func (*adminSubmittingNameState) StateName() string {
+	return constants.ADMIN_SUBMITTING_NAME_STATE
 }
 
 func (state *adminSubmittingNameState) Handle(chatId int64, message *tgbotapi.Message) error {
@@ -85,7 +75,7 @@ func (state *adminSubmittingNameState) Handle(chatId int64, message *tgbotapi.Me
 	if err != nil {
 		return err
 	}
-	err = state.cache.SaveState(*interfaces.NewCachedInfo(chatId, string(ADMIN_SUBMITTING_GROUP_STATE)))
+	err = state.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.ADMIN_SUBMITTING_GROUP_STATE))
 	if err != nil {
 		return err
 	}
@@ -94,19 +84,22 @@ func (state *adminSubmittingNameState) Handle(chatId int64, message *tgbotapi.Me
 	return err
 }
 
+type GroupsService interface {
+	DoesGroupExist(string) (bool, error)
+}
+
 type adminSubmitingGroupState struct {
-	State
 	cache interfaces.HandlersCache
 	bot   *tgbotapi.BotAPI
 	srv   GroupsService
 }
 
-func newAdminSubmitingGroupState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, srv GroupsService) *adminSubmitingGroupState {
+func NewAdminSubmitingGroupState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, srv GroupsService) *adminSubmitingGroupState {
 	return &adminSubmitingGroupState{cache: cache, bot: bot, srv: srv}
 }
 
-func (*adminSubmitingGroupState) StateName() StateName {
-	return ADMIN_SUBMITTING_GROUP_STATE
+func (*adminSubmitingGroupState) StateName() string {
+	return constants.ADMIN_SUBMITTING_GROUP_STATE
 }
 
 func (state *adminSubmitingGroupState) Handle(chatId int64, message *tgbotapi.Message) error {
@@ -141,7 +134,7 @@ func (state *adminSubmitingGroupState) Handle(chatId int64, message *tgbotapi.Me
 	if err != nil {
 		return err
 	}
-	err = state.cache.SaveState(*interfaces.NewCachedInfo(chatId, string(ADMIN_SUBMITTING_PROOF_STATE)))
+	err = state.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.ADMIN_SUBMITTING_PROOF_STATE))
 	if err != nil {
 		return err
 	}
@@ -151,17 +144,16 @@ func (state *adminSubmitingGroupState) Handle(chatId int64, message *tgbotapi.Me
 }
 
 type adminSubmittingProofState struct {
-	State
 	cache interfaces.HandlersCache
 	bot   *tgbotapi.BotAPI
 }
 
-func newAdminSubmitingProofState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) *adminSubmittingProofState {
+func NewAdminSubmitingProofState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) *adminSubmittingProofState {
 	return &adminSubmittingProofState{cache: cache, bot: bot}
 }
 
-func (state *adminSubmittingProofState) StateName() StateName {
-	return ADMIN_SUBMITTING_PROOF_STATE
+func (state *adminSubmittingProofState) StateName() string {
+	return constants.ADMIN_SUBMITTING_PROOF_STATE
 }
 
 func (state *adminSubmittingProofState) Handle(chatId int64, message *tgbotapi.Message) error {
@@ -192,7 +184,7 @@ func (state *adminSubmittingProofState) Handle(chatId int64, message *tgbotapi.M
 	}
 	defer resp.Body.Close()
 
-	err = state.cache.SaveState(*interfaces.NewCachedInfo(chatId, string(ADMIN_WAITING_STATE)))
+	err = state.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.ADMIN_WAITING_STATE))
 	if err != nil {
 		return err
 	}
@@ -207,17 +199,16 @@ func (state *adminSubmittingProofState) Handle(chatId int64, message *tgbotapi.M
 }
 
 type adminWaitingState struct {
-	State
 	cache interfaces.HandlersCache
 	bot   *tgbotapi.BotAPI
 }
 
-func newAdminWaitingProofState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) *adminWaitingState {
+func NewAdminWaitingProofState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) *adminWaitingState {
 	return &adminWaitingState{cache: cache, bot: bot}
 }
 
-func (state *adminWaitingState) StateName() StateName {
-	return ADMIN_WAITING_STATE
+func (state *adminWaitingState) StateName() string {
+	return constants.ADMIN_WAITING_STATE
 }
 
 func (state *adminWaitingState) Handle(chatId int64, message *tgbotapi.Message) error {
@@ -228,8 +219,8 @@ func (state *adminWaitingState) Handle(chatId int64, message *tgbotapi.Message) 
 
 func createMarkupKeyboard(form *adminSubmitForm) *tgbotapi.InlineKeyboardMarkup {
 	row := []tgbotapi.InlineKeyboardButton{}
-	acceptData := ADMIN_CALLBACKS + "accept" + fmt.Sprint(form.ChatId)
-	declineData := ADMIN_CALLBACKS + "decline" + fmt.Sprint(form.ChatId)
+	acceptData := constants.ADMIN_CALLBACKS + "accept" + fmt.Sprint(form.ChatId)
+	declineData := constants.ADMIN_CALLBACKS + "decline" + fmt.Sprint(form.ChatId)
 	row = append(row, tgbotapi.NewInlineKeyboardButtonData("Accept", acceptData), tgbotapi.NewInlineKeyboardButtonData("Decline", declineData))
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(row)
 	return &keyboard
