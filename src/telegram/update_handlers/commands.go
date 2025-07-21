@@ -10,15 +10,28 @@ import (
 )
 
 const (
-	HELP_COMMAND   = "/help"
-	SUBMIT_COMMAND = "/submit"
-	ASSIGN_COMMAND = "/assign"
+	HELP_COMMAND      = "/help"
+	SUBMIT_COMMAND    = "/submit"
+	ASSIGN_COMMAND    = "/assign"
+	ADD_USERS_COMMAND = "/add"
 )
 
-var commands = []tgbotapi.BotCommand{
+var userCommands = []tgbotapi.BotCommand{
 	{Command: HELP_COMMAND, Description: "Команды и информация"},
 	{Command: SUBMIT_COMMAND, Description: "Запись на сдачу лабораторной"},
 	{Command: ASSIGN_COMMAND, Description: "Отправка заявки на роль администратора группы"},
+}
+
+func GetUserCommands() []tgbotapi.BotCommand {
+	return userCommands
+}
+
+var adminCommands = []tgbotapi.BotCommand{
+	{Command: ADD_USERS_COMMAND, Description: "Добавление пользователей телеграма как членов группы (необходимо для отправления заявок)"},
+}
+
+func GetAdminCommands() []tgbotapi.BotCommand {
+	return adminCommands
 }
 
 type StateMachine interface {
@@ -30,7 +43,7 @@ type MessagesService struct {
 }
 
 func NewMessagesHandler(stateMachine StateMachine, cache interfaces.HandlersCache) *MessagesService {
-	tgbotapi.NewSetMyCommands(commands...)
+	tgbotapi.NewSetMyCommands(userCommands...)
 	return &MessagesService{cache: cache, stateMachine: stateMachine}
 }
 
@@ -42,6 +55,7 @@ func (srv *MessagesService) HandleCommands(update *tgbotapi.Update, bot *tgbotap
 				return compared == commandText
 			}
 		}
+		commands := slices.Concat(userCommands, adminCommands)
 		if !slices.ContainsFunc(commands, isCommand(update.Message.Command())) {
 			if _, err := bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Незнакомая команда")); err != nil {
 				slog.Error(err.Error())

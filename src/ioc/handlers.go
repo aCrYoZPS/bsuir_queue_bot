@@ -8,8 +8,9 @@ import (
 var useStateMachine = provider(
 	func() update_handlers.StateMachine {
 		return stateMachine.NewStateMachine(
-			stateMachine.NewStatesConfig(useHandlersCache(),
-				useTgBot(), useGroupsService()),
+			stateMachine.NewStatesConfig(
+				useHandlersCache(), useTgBot(),
+				useGroupsService(), useUsersRepository()),
 		)
 	},
 )
