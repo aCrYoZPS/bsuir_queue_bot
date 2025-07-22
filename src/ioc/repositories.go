@@ -33,6 +33,12 @@ var useMockGroupsRepository = provider(
 	},
 )
 
+var useRequestsRepository = provider(
+	func() interfaces.RequestsRepository {
+		return sqlite.NewRequestsRepository(useSqliteConnection())
+	},
+)
+
 var useHandlersCache = provider(
 	func() interfaces.HandlersCache {
 		repo := memory.NewHandlersCache()

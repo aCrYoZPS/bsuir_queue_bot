@@ -21,14 +21,16 @@ type statesConfig struct {
 	bot        *tgbotapi.BotAPI
 	groupsRepo interfaces.GroupsRepository
 	usersRepo  interfaces.UsersRepository
+	requests   interfaces.RequestsRepository
 }
 
-func NewStatesConfig(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, groupsRepo interfaces.GroupsRepository, usersRepo interfaces.UsersRepository) *statesConfig {
+func NewStatesConfig(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, groupsRepo interfaces.GroupsRepository, usersRepo interfaces.UsersRepository, requests interfaces.RequestsRepository) *statesConfig {
 	return &statesConfig{
 		cache:      cache,
 		bot:        bot,
 		groupsRepo: groupsRepo,
 		usersRepo:  usersRepo,
+		requests:   requests,
 	}
 }
 

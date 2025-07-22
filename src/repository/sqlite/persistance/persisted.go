@@ -36,7 +36,3 @@ func FromLessonEntity(lesson *entities.Lesson, date time.Time) *Lesson {
 		Date:           date,
 	}
 }
-
-type Group struct {
-	
-}

@@ -9,22 +9,22 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/admin"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/group"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-
 type CallbacksService struct {
 	//More of a placeholder, which will contain inject google services to handle callbacks
-	sheets     sheetsapi.SheetsApi
-	usersRepo  interfaces.UsersRepository
-	cache      interfaces.HandlersCache
+	sheets    sheetsapi.SheetsApi
+	usersRepo interfaces.UsersRepository
+	cache     interfaces.HandlersCache
 }
 
 func NewCallbackService(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache, sheets sheetsapi.SheetsApi) *CallbacksService {
 	return &CallbacksService{
-		sheets:     sheets,
-		usersRepo:  usersRepo,
-		cache:      cache,
+		sheets:    sheets,
+		usersRepo: usersRepo,
+		cache:     cache,
 	}
 }
 
@@ -40,8 +40,10 @@ func (serv *CallbacksService) HandleCallbacks(update *tgbotapi.Update, bot *tgbo
 
 	var callback_handler CallbackHandler
 	switch {
-	case strings.HasPrefix(update.CallbackQuery.Data, constants.ADMIN_CALLBACKS):
+	case strings.HasPrefix(update.CallbackData(), constants.ADMIN_CALLBACKS):
 		callback_handler = admin.NewAdminCallbackHandler(serv.usersRepo, serv.cache, serv.sheets)
+	case strings.HasPrefix(update.CallbackData(), constants.GROUP_CALLBACKS):
+		callback_handler = group.NewGroupCallbackHandler(serv.usersRepo, serv.cache)	
 	}
 	err := callback_handler.HandleCallback(update, bot)
 	if err != nil {

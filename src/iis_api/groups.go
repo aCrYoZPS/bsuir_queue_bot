@@ -13,12 +13,12 @@ import (
 )
 
 type GroupsService struct {
-	repo interfaces.GroupsRepository
+	interfaces.GroupsRepository
 }
 
 func NewGroupsService(repo interfaces.GroupsRepository) *GroupsService {
 	return &GroupsService{
-		repo: repo,
+		GroupsRepository: repo,
 	}
 }
 
@@ -60,9 +60,5 @@ func (serv *GroupsService) InitAllGroups() error {
 		return err
 	}
 
-	return serv.repo.AddNonPresented(data)
-}
-
-func (serv *GroupsService) DoesGroupExist(name string) (bool, error) {
-	return serv.repo.DoesGroupExist(name)
+	return serv.AddNonPresented(data)
 }

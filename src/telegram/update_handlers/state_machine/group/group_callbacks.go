@@ -1,43 +1,39 @@
-package admin
+package group
 
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
-	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/sheets_api"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-type AdminCallbackHandler struct {
+type GroupCallbackHandler struct {
 	usersRepo interfaces.UsersRepository
-	sheets    sheetsapi.SheetsApi
 	cache     interfaces.HandlersCache
 }
 
-func NewAdminCallbackHandler(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache, sheets sheetsapi.SheetsApi) *AdminCallbackHandler {
-	return &AdminCallbackHandler{
+func NewGroupCallbackHandler(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache) *GroupCallbackHandler {
+	return &GroupCallbackHandler{
 		usersRepo: usersRepo,
 		cache:     cache,
-		sheets:    sheets,
 	}
 }
 
-func (handler *AdminCallbackHandler) HandleCallback(update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
+func (handler *GroupCallbackHandler) HandleCallback(update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
 	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 	if _, err := bot.Request(callback); err != nil {
 		return err
 	}
 
-	if !strings.HasPrefix(update.CallbackQuery.Data, constants.ADMIN_CALLBACKS) {
+	if !strings.HasPrefix(update.CallbackQuery.Data, constants.GROUP_CALLBACKS) {
 		return errors.New("invalid command requested")
 	}
-	command := strings.TrimPrefix(update.CallbackQuery.Data, constants.ADMIN_CALLBACKS)
+	command := strings.TrimPrefix(update.CallbackQuery.Data, constants.GROUP_CALLBACKS)
 	var err error
 	switch {
 	case strings.HasPrefix(command, "accept"):
@@ -50,7 +46,7 @@ func (handler *AdminCallbackHandler) HandleCallback(update *tgbotapi.Update, bot
 	return err
 }
 
-func (handler *AdminCallbackHandler) handleAcceptCallback(command string, bot *tgbotapi.BotAPI) error {
+func (handler *GroupCallbackHandler) handleAcceptCallback(command string, bot *tgbotapi.BotAPI) error {
 	var chatId int64
 	chatId, err := strconv.ParseInt(strings.TrimPrefix(command, "accept"), 10, 64)
 	if err != nil {
@@ -60,7 +56,7 @@ func (handler *AdminCallbackHandler) handleAcceptCallback(command string, bot *t
 	if err != nil {
 		return err
 	}
-	form := &adminSubmitForm{}
+	form := &groupSubmitForm{}
 	err = json.Unmarshal([]byte(info), form)
 	if err != nil {
 		return err
@@ -76,18 +72,12 @@ func (handler *AdminCallbackHandler) handleAcceptCallback(command string, bot *t
 		return err
 	}
 
-	url, err := handler.sheets.CreateSheet(form.Group)
-	if err != nil {
-		return err
-	}
-	msg := tgbotapi.NewMessage(form.UserId, fmt.Sprintf("Ваша заявка была одобрена. Ссылка на гугл-таблицу: %s", url))
-	if _, err := bot.Send(msg); err != nil {
-		return err
-	}
-	return nil
+	msg := tgbotapi.NewMessage(form.UserId, "Ваша заявка была одобрена")
+	_, err = bot.Send(msg)
+	return err
 }
 
-func (handler *AdminCallbackHandler) handleDeclineCallback(command string, bot *tgbotapi.BotAPI) error {
+func (handler *GroupCallbackHandler) handleDeclineCallback(command string, bot *tgbotapi.BotAPI) error {
 	var chatId int64
 	err := json.Unmarshal([]byte(strings.TrimPrefix(command, "decline")), &chatId)
 	if err != nil {
@@ -97,16 +87,20 @@ func (handler *AdminCallbackHandler) handleDeclineCallback(command string, bot *
 	if err != nil {
 		return err
 	}
-	form := &adminSubmitForm{}
+	form := &groupSubmitForm{}
 	err = json.Unmarshal([]byte(info), &form)
 	if err != nil {
 		return err
 	}
+
 	err = handler.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.IDLE_STATE))
 	if err != nil {
 		return err
 	}
+
 	msg := tgbotapi.NewMessage(form.UserId, "Ваша заявка была отклонена")
-	_, err = bot.Send(msg)
-	return err
+	if _, err := bot.Send(msg); err != nil {
+		return err
+	}
+	return nil
 }
