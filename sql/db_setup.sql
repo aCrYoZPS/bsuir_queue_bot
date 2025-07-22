@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS lessons_requests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER, 
     lesson_id INTEGER,
+    msg_id INTEGER,
+    chat_id INTEGER,
     FOREIGN KEY (lesson_id) REFERENCES lessons(id),
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
@@ -41,7 +43,19 @@ CREATE TABLE IF NOT EXISTS users_roles (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
-CREATE TABLE IF NOT EXISTS requests (
+CREATE TABLE IF NOT EXISTS group_requests (
+    uuid   TEXT,
     msg_id INTEGER,
     chat_id INTEGER
-)
+);
+
+CREATE INDEX IF NOT EXISTS group_requests_msg_id_idx ON group_requests(msg_id);
+
+CREATE TABLE IF NOT EXISTS admin_requests (
+    uuid TEXT, 
+    msg_id INTEGER,
+    chat_id INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS admin_requests_msg_id_idx ON admin_requests(msg_id);
+

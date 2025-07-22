@@ -17,20 +17,22 @@ type StateMachine struct {
 }
 
 type statesConfig struct {
-	cache      interfaces.HandlersCache
-	bot        *tgbotapi.BotAPI
-	groupsRepo interfaces.GroupsRepository
-	usersRepo  interfaces.UsersRepository
-	requests   interfaces.RequestsRepository
+	cache         interfaces.HandlersCache
+	bot           *tgbotapi.BotAPI
+	groupsRepo    interfaces.GroupsRepository
+	usersRepo     interfaces.UsersRepository
+	requests      interfaces.RequestsRepository
+	adminRequests interfaces.AdminRequestsRepository
 }
 
-func NewStatesConfig(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, groupsRepo interfaces.GroupsRepository, usersRepo interfaces.UsersRepository, requests interfaces.RequestsRepository) *statesConfig {
+func NewStatesConfig(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, groupsRepo interfaces.GroupsRepository, usersRepo interfaces.UsersRepository, requests interfaces.RequestsRepository, adminRequests interfaces.AdminRequestsRepository) *statesConfig {
 	return &statesConfig{
-		cache:      cache,
-		bot:        bot,
-		groupsRepo: groupsRepo,
-		usersRepo:  usersRepo,
-		requests:   requests,
+		cache:         cache,
+		bot:           bot,
+		groupsRepo:    groupsRepo,
+		usersRepo:     usersRepo,
+		requests:      requests,
+		adminRequests: adminRequests,
 	}
 }
 

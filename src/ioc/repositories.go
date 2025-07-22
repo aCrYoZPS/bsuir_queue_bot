@@ -39,6 +39,12 @@ var useRequestsRepository = provider(
 	},
 )
 
+var useAdminRequestsRepository = provider(
+	func() interfaces.AdminRequestsRepository {
+		return sqlite.NewAdminRequestsRepository(useSqliteConnection())
+	},
+)
+
 var useHandlersCache = provider(
 	func() interfaces.HandlersCache {
 		repo := memory.NewHandlersCache()

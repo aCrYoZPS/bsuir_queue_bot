@@ -9,6 +9,7 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/google/uuid"
 )
 
 type GroupsRepository interface {
@@ -167,6 +168,7 @@ func (state *groupSubmitNameState) Handle(chatId int64, message *tgbotapi.Messag
 
 func (state *groupSubmitNameState) SendMessagesToAdmins(admins []entities.User, form *groupSubmitForm) error {
 	text := fmt.Sprintf("Пользователь под id @%s и именем \"%s\" хочет присоединиться к группе", form.UserName, form.Name)
+	reqUUID := uuid.NewString()
 	for _, admin := range admins {
 		msg := tgbotapi.NewMessage(admin.TgId, text)
 		msg.ReplyMarkup = createMarkupKeyboard(form)
@@ -174,7 +176,7 @@ func (state *groupSubmitNameState) SendMessagesToAdmins(admins []entities.User, 
 		if err != nil {
 			return err
 		}
-		err = state.requests.SaveRequest(interfaces.NewRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID))
+		err = state.requests.SaveRequest(interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
 		if err != nil {
 			return err
 		}

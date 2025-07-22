@@ -2,7 +2,6 @@ package sqlite
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -126,15 +125,14 @@ func (repos *GroupsRepository) Update(group *iisEntities.Group) error {
 }
 
 func (repos *GroupsRepository) DoesGroupExist(groupName string) (bool, error) {
-	query := fmt.Sprintf("SELECT 1 FROM %s WHERE name=$1", GROUPS_TABLE)
+	query := fmt.Sprintf("SELECT EXISTS (SELECT 1 FROM %s WHERE name=$1)", GROUPS_TABLE)
 	row := repos.db.QueryRow(query, groupName)
+	exists := false
 	if row.Err() != nil {
-		if errors.Is(row.Err(), sql.ErrNoRows) {
-			return false, nil
-		}
 		return false, row.Err()
 	}
-	return true, nil
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 func (repos *GroupsRepository) GetAdmins(groupName string) ([]entities.User, error) {

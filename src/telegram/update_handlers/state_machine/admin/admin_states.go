@@ -8,13 +8,15 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"text/template"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
 	stateErrors "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/errors"
-	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/google/uuid"
 )
 
 type adminSubmitForm struct {
@@ -143,12 +145,13 @@ func (state *adminSubmitingGroupState) Handle(chatId int64, message *tgbotapi.Me
 }
 
 type adminSubmittingProofState struct {
-	cache interfaces.HandlersCache
-	bot   *tgbotapi.BotAPI
+	cache    interfaces.HandlersCache
+	bot      *tgbotapi.BotAPI
+	requests interfaces.AdminRequestsRepository
 }
 
-func NewAdminSubmitingProofState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) *adminSubmittingProofState {
-	return &adminSubmittingProofState{cache: cache, bot: bot}
+func NewAdminSubmitingProofState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, requests interfaces.AdminRequestsRepository) *adminSubmittingProofState {
+	return &adminSubmittingProofState{cache: cache, bot: bot, requests: requests}
 }
 
 func (state *adminSubmittingProofState) StateName() string {
@@ -172,29 +175,18 @@ func (state *adminSubmittingProofState) Handle(chatId int64, message *tgbotapi.M
 	form.AdditionalInfo = message.Caption
 
 	maxSizeId := selectMaxSizedPhoto(message.Photo)
-	file, err := state.bot.GetFile(tgbotapi.FileConfig{FileID: maxSizeId})
+	fileBytes, err := state.getFileBytes(maxSizeId)
 	if err != nil {
 		return err
 	}
-	link := file.Link(os.Getenv("BOT_TOKEN"))
-	resp, err := http.Get(link)
-	if err != nil && err != io.EOF {
-		return err
-	}
-	defer resp.Body.Close()
 
 	err = state.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.ADMIN_WAITING_STATE))
 	if err != nil {
 		return err
 	}
 
-	msg := tgbotapi.NewPhoto(chatId, tgbotapi.FileReader{Name: "rnd_name", Reader: resp.Body})
-	var buf bytes.Buffer
-	tmpl := template.Must(template.New("tmpl").Parse(infoTemplate))
-	tmpl.Execute(&buf, form)
-	msg.Caption = buf.String()
-	msg.ReplyMarkup = createMarkupKeyboard(form)
-	return tgutils.SendPhotoToOwners(msg, state.bot)
+	msg := state.createTemplateResponse(chatId, form, fileBytes)
+	return state.sendPhotoToOwners(*msg, state.bot)
 }
 
 type adminWaitingState struct {
@@ -234,4 +226,53 @@ func selectMaxSizedPhoto(sizes []tgbotapi.PhotoSize) string {
 		}
 	}
 	return maxSizeId
+}
+
+func (state *adminSubmittingProofState) createTemplateResponse(chatId int64, form *adminSubmitForm, fileBytes []byte) *tgbotapi.PhotoConfig {
+	msg := tgbotapi.NewPhoto(chatId, tgbotapi.FileBytes{Name: "rnd_name", Bytes: fileBytes})
+	var buf bytes.Buffer
+	tmpl := template.Must(template.New("tmpl").Parse(infoTemplate))
+	tmpl.Execute(&buf, form)
+	msg.Caption = buf.String()
+	msg.ReplyMarkup = createMarkupKeyboard(form)
+	return &msg
+}
+
+func (state *adminSubmittingProofState) getFileBytes(fileId string) ([]byte, error) {
+	file, err := state.bot.GetFile(tgbotapi.FileConfig{FileID: fileId})
+	if err != nil {
+		return nil, err
+	}
+	link := file.Link(os.Getenv("BOT_TOKEN"))
+	resp, err := http.Get(link)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	bytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return bytes, nil
+}
+
+func (state *adminSubmittingProofState) sendPhotoToOwners(msg tgbotapi.PhotoConfig, bot *tgbotapi.BotAPI) error {
+	owners := strings.Split(os.Getenv("OWNERS"), ",")
+
+	for _, owner := range owners {
+		chatId, err := strconv.ParseInt(owner, 10, 64)
+		if err != nil {
+			return errors.Join(err, fmt.Errorf("invalid owner id value %s", owner))
+		}
+		msg.ChatID = chatId
+		sentMsg, err := bot.Send(msg)
+		if err != nil {
+			return err
+		}
+		err = state.requests.SaveRequest(interfaces.NewAdminRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, uuid.NewString()))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

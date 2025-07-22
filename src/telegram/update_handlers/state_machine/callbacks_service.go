@@ -15,16 +15,20 @@ import (
 
 type CallbacksService struct {
 	//More of a placeholder, which will contain inject google services to handle callbacks
-	sheets    sheetsapi.SheetsApi
-	usersRepo interfaces.UsersRepository
-	cache     interfaces.HandlersCache
+	sheets        sheetsapi.SheetsApi
+	usersRepo     interfaces.UsersRepository
+	requests      interfaces.RequestsRepository
+	cache         interfaces.HandlersCache
+	adminRequests interfaces.AdminRequestsRepository
 }
 
-func NewCallbackService(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache, sheets sheetsapi.SheetsApi) *CallbacksService {
+func NewCallbackService(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache, sheets sheetsapi.SheetsApi, requests interfaces.RequestsRepository, adminRequests interfaces.AdminRequestsRepository) *CallbacksService {
 	return &CallbacksService{
-		sheets:    sheets,
-		usersRepo: usersRepo,
-		cache:     cache,
+		sheets:        sheets,
+		usersRepo:     usersRepo,
+		cache:         cache,
+		requests:      requests,
+		adminRequests: adminRequests,
 	}
 }
 
@@ -41,9 +45,9 @@ func (serv *CallbacksService) HandleCallbacks(update *tgbotapi.Update, bot *tgbo
 	var callback_handler CallbackHandler
 	switch {
 	case strings.HasPrefix(update.CallbackData(), constants.ADMIN_CALLBACKS):
-		callback_handler = admin.NewAdminCallbackHandler(serv.usersRepo, serv.cache, serv.sheets)
+		callback_handler = admin.NewAdminCallbackHandler(serv.usersRepo, serv.cache, serv.sheets, serv.adminRequests)
 	case strings.HasPrefix(update.CallbackData(), constants.GROUP_CALLBACKS):
-		callback_handler = group.NewGroupCallbackHandler(serv.usersRepo, serv.cache)	
+		callback_handler = group.NewGroupCallbackHandler(serv.usersRepo, serv.cache, serv.requests)
 	}
 	err := callback_handler.HandleCallback(update, bot)
 	if err != nil {

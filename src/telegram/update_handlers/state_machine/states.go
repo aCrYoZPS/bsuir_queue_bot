@@ -23,9 +23,9 @@ func InitStates(conf *statesConfig) {
 			states = append(states,
 				newIdleState(conf.cache, conf.bot, conf.usersRepo), admin.NewAdminSubmitState(conf.cache, conf.bot),
 				admin.NewAdminSubmittingNameState(conf.cache, conf.bot), admin.NewAdminSubmitingGroupState(conf.cache, conf.bot, conf.groupsRepo),
-				admin.NewAdminSubmitingProofState(conf.cache, conf.bot), admin.NewAdminWaitingProofState(conf.cache, conf.bot),
+				admin.NewAdminSubmitingProofState(conf.cache, conf.bot, conf.adminRequests), admin.NewAdminWaitingProofState(conf.cache, conf.bot),
 				groups.NewGroupSubmitState(conf.cache, conf.bot, conf.groupsRepo, conf.usersRepo), groups.NewGroupSubmitNameState(conf.cache, conf.bot, conf.groupsRepo, conf.requests),
-				groups.NewGroupWaitingState(conf.cache, conf.bot))
+				groups.NewGroupSubmitGroupNameState(conf.cache, conf.bot, conf.groupsRepo), groups.NewGroupWaitingState(conf.cache, conf.bot))
 		},
 	)
 }

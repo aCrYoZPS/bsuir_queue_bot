@@ -32,24 +32,3 @@ func SendMessageToOwners(msg tgbotapi.MessageConfig, bot *tgbotapi.BotAPI) error
 
 	return nil
 }
-
-func SendPhotoToOwners(msg tgbotapi.PhotoConfig, bot *tgbotapi.BotAPI) error {
-	if owners == nil {
-		owners = strings.Split(os.Getenv("OWNERS"), ",")
-	}
-
-	for _, owner := range owners {
-		chatId, err := strconv.ParseInt(owner, 10, 64)
-		if err != nil {
-			return errors.Join(err, fmt.Errorf("invalid owner id value %s", owner))
-		}
-
-		msg.ChatID = chatId
-		_, err = bot.Send(msg)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}

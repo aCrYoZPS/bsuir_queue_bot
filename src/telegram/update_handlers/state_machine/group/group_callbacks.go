@@ -13,14 +13,16 @@ import (
 )
 
 type GroupCallbackHandler struct {
-	usersRepo interfaces.UsersRepository
-	cache     interfaces.HandlersCache
+	users    interfaces.UsersRepository
+	requests interfaces.RequestsRepository
+	cache    interfaces.HandlersCache
 }
 
-func NewGroupCallbackHandler(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache) *GroupCallbackHandler {
+func NewGroupCallbackHandler(users interfaces.UsersRepository, cache interfaces.HandlersCache, requests interfaces.RequestsRepository) *GroupCallbackHandler {
 	return &GroupCallbackHandler{
-		usersRepo: usersRepo,
-		cache:     cache,
+		users:    users,
+		cache:    cache,
+		requests: requests,
 	}
 }
 
@@ -37,16 +39,16 @@ func (handler *GroupCallbackHandler) HandleCallback(update *tgbotapi.Update, bot
 	var err error
 	switch {
 	case strings.HasPrefix(command, "accept"):
-		err = handler.handleAcceptCallback(command, bot)
+		err = handler.handleAcceptCallback(update.CallbackQuery.Message, command, bot)
 	case strings.HasPrefix(command, "decline"):
-		err = handler.handleDeclineCallback(command, bot)
+		err = handler.handleDeclineCallback(update.CallbackQuery.Message, command, bot)
 	default:
 		err = errors.New("no such callback")
 	}
 	return err
 }
 
-func (handler *GroupCallbackHandler) handleAcceptCallback(command string, bot *tgbotapi.BotAPI) error {
+func (handler *GroupCallbackHandler) handleAcceptCallback(msg *tgbotapi.Message, command string, bot *tgbotapi.BotAPI) error {
 	var chatId int64
 	chatId, err := strconv.ParseInt(strings.TrimPrefix(command, "accept"), 10, 64)
 	if err != nil {
@@ -67,17 +69,20 @@ func (handler *GroupCallbackHandler) handleAcceptCallback(command string, bot *t
 		return err
 	}
 
-	err = handler.usersRepo.Add(entities.NewUser(form.Name, form.Group, form.UserId))
+	err = handler.users.Add(entities.NewUser(form.Name, form.Group, form.UserId))
 	if err != nil {
 		return err
 	}
-
-	msg := tgbotapi.NewMessage(form.UserId, "Ваша заявка была одобрена")
-	_, err = bot.Send(msg)
+	err = handler.RemoveMarkup(msg, bot)
+	if err != nil {
+		return err
+	}
+	resp := tgbotapi.NewMessage(form.UserId, "Ваша заявка была одобрена")
+	_, err = bot.Send(resp)
 	return err
 }
 
-func (handler *GroupCallbackHandler) handleDeclineCallback(command string, bot *tgbotapi.BotAPI) error {
+func (handler *GroupCallbackHandler) handleDeclineCallback(msg *tgbotapi.Message, command string, bot *tgbotapi.BotAPI) error {
 	var chatId int64
 	err := json.Unmarshal([]byte(strings.TrimPrefix(command, "decline")), &chatId)
 	if err != nil {
@@ -98,9 +103,31 @@ func (handler *GroupCallbackHandler) handleDeclineCallback(command string, bot *
 		return err
 	}
 
-	msg := tgbotapi.NewMessage(form.UserId, "Ваша заявка была отклонена")
-	if _, err := bot.Send(msg); err != nil {
+	resp := tgbotapi.NewMessage(form.UserId, "Ваша заявка была отклонена")
+	if _, err := bot.Send(resp); err != nil {
 		return err
+	}
+	return handler.RemoveMarkup(msg, bot)
+}
+
+func (handler *GroupCallbackHandler) RemoveMarkup(msg *tgbotapi.Message, bot *tgbotapi.BotAPI) error {
+	request, err := handler.requests.GetByMsg(int64(msg.MessageID), msg.Chat.ID)
+	if err != nil {
+		return err
+	}
+	requests, err := handler.requests.GetByUUID(request.UUID)
+	if err != nil {
+		return err
+	}
+	for _, request := range requests {
+		err = handler.requests.DeleteRequest(request.MsgId)
+		if err != nil {
+			return err
+		}
+		_, err := bot.Send(tgbotapi.NewEditMessageReplyMarkup(request.ChatId, int(request.MsgId), tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
