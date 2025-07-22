@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
     tg_id INTEGER,
     group_id INTEGER,
     full_name TEXT NOT NULL, 
+    CONSTRAINT tg_id_ak UNIQUE (tg_id),
     FOREIGN KEY (group_id) REFERENCES groups(id)
 );
 
@@ -39,3 +40,8 @@ CREATE TABLE IF NOT EXISTS users_roles (
     role_name TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+CREATE TABLE IF NOT EXISTS requests (
+    msg_id INTEGER,
+    chat_id INTEGER
+)

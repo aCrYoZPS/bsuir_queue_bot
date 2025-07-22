@@ -10,7 +10,7 @@ var useStateMachine = provider(
 		return stateMachine.NewStateMachine(
 			stateMachine.NewStatesConfig(
 				useHandlersCache(), useTgBot(),
-				useGroupsService(), useUsersRepository()),
+				useGroupsRepository(), useUsersRepository()),
 		)
 	},
 )

@@ -2,10 +2,8 @@ package stateMachine
 
 import (
 	"errors"
-	"slices"
 	"strings"
 
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
@@ -40,15 +38,8 @@ func (state *idleState) Handle(chatId int64, message *tgbotapi.Message) error {
 			return err
 		}
 	case update_handlers.HELP_COMMAND:
-		user, err := state.usersRepo.GetByTgId(message.From.ID)
-		if err != nil {
-			return err
-		}
 		var commands []tgbotapi.BotCommand
 		commands = append(commands, update_handlers.GetUserCommands()...)
-		if slices.Contains(user.Roles, entities.Admin) {
-			commands = append(commands, update_handlers.GetAdminCommands()...)
-		}
 		builder := strings.Builder{}
 		for _, command := range commands {
 			builder.WriteString(command.Command)
@@ -56,12 +47,23 @@ func (state *idleState) Handle(chatId int64, message *tgbotapi.Message) error {
 			builder.WriteString(command.Description)
 			builder.WriteByte('\n')
 		}
-		_, err = state.bot.Send(tgbotapi.NewMessage(chatId, builder.String()))
+		_, err := state.bot.Send(tgbotapi.NewMessage(chatId, builder.String()))
 		if err != nil {
 			return err
 		}
-	case update_handlers.ADD_USERS_COMMAND:
-		//TODO
+	case update_handlers.JOIN_GROUP_COMMAND:
+		err := state.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.GROUP_SUBMIT_START_STATE))
+		if err != nil {
+			return err
+		}
+		currentState, err = getStateByName(constants.GROUP_SUBMIT_START_STATE)
+		if err != nil {
+			return err
+		}
+		err = currentState.Handle(chatId, message)
+		if err != nil {
+			return err
+		}
 	default:
 		return errors.Join(errors.ErrUnsupported, errors.New("answers are only to commands"))
 	}

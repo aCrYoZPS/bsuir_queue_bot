@@ -13,6 +13,11 @@ const (
 )
 
 const (
+	GROUP_SUBMIT_START_STATE = "group_submit"
+	GROUP_SUBMIT_NAME_STATE  = "group_wait"
+)
+
+const (
 	SELECT_SUBJECT_STATE = "subject"
 	SELECT_DATE_STATE    = "date"
 )

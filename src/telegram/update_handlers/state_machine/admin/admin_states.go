@@ -12,14 +12,13 @@ import (
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
+	stateErrors "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/errors"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-var errInvalidInput error
-
 type adminSubmitForm struct {
-	ChatId         int64  `json:"chatId,omitempty"`
+	UserId         int64  `json:"userId,omitempty"`
 	Name           string `json:"name,omitempty"`
 	Group          string `json:"group,omitempty"`
 	AdditionalInfo string `json:"info,omitempty"`
@@ -67,7 +66,7 @@ func (state *adminSubmittingNameState) Handle(chatId int64, message *tgbotapi.Me
 	if message.Text == "" {
 		return errors.New("no text in message")
 	}
-	info, err := json.Marshal(&adminSubmitForm{ChatId: message.Chat.ID, Name: message.Text})
+	info, err := json.Marshal(&adminSubmitForm{UserId: message.From.ID, Name: message.Text})
 	if err != nil {
 		return err
 	}
@@ -104,7 +103,7 @@ func (*adminSubmitingGroupState) StateName() string {
 
 func (state *adminSubmitingGroupState) Handle(chatId int64, message *tgbotapi.Message) error {
 	if message.Text == "" {
-		return errors.Join(errInvalidInput, errors.New("no text in message"))
+		return stateErrors.NewInvalidInput("No text in message")
 	}
 	exists, err := state.srv.DoesGroupExist(message.Text)
 	if err != nil {
@@ -158,7 +157,7 @@ func (state *adminSubmittingProofState) StateName() string {
 
 func (state *adminSubmittingProofState) Handle(chatId int64, message *tgbotapi.Message) error {
 	if message.Photo == nil {
-		return errors.Join(errInvalidInput, errors.New("no photo"))
+		return stateErrors.NewInvalidInput("No photo in message")
 	}
 	info, err := state.cache.GetInfo(chatId)
 	if err != nil {
@@ -219,8 +218,8 @@ func (state *adminWaitingState) Handle(chatId int64, message *tgbotapi.Message) 
 
 func createMarkupKeyboard(form *adminSubmitForm) *tgbotapi.InlineKeyboardMarkup {
 	row := []tgbotapi.InlineKeyboardButton{}
-	acceptData := constants.ADMIN_CALLBACKS + "accept" + fmt.Sprint(form.ChatId)
-	declineData := constants.ADMIN_CALLBACKS + "decline" + fmt.Sprint(form.ChatId)
+	acceptData := constants.ADMIN_CALLBACKS + "accept" + fmt.Sprint(form.UserId)
+	declineData := constants.ADMIN_CALLBACKS + "decline" + fmt.Sprint(form.UserId)
 	row = append(row, tgbotapi.NewInlineKeyboardButtonData("Accept", acceptData), tgbotapi.NewInlineKeyboardButtonData("Decline", declineData))
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(row)
 	return &keyboard

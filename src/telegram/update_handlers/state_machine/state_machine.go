@@ -9,36 +9,32 @@ import (
 
 type StateName string
 
-type GroupsService interface {
-	DoesGroupExist(name string) (bool, error)
-}
-
 type StateMachine struct {
 	update_handlers.StateMachine
 	cache     interfaces.HandlersCache
 	bot       *tgbotapi.BotAPI
-	groupsSrv *GroupsService
+	usersRepo interfaces.UsersRepository
 }
 
 type statesConfig struct {
-	cache         interfaces.HandlersCache
-	bot           *tgbotapi.BotAPI
-	groupsService GroupsService
-	usersRepo     interfaces.UsersRepository
+	cache      interfaces.HandlersCache
+	bot        *tgbotapi.BotAPI
+	groupsRepo interfaces.GroupsRepository
+	usersRepo  interfaces.UsersRepository
 }
 
-func NewStatesConfig(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, groupsService GroupsService, usersRepo interfaces.UsersRepository) *statesConfig {
+func NewStatesConfig(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, groupsRepo interfaces.GroupsRepository, usersRepo interfaces.UsersRepository) *statesConfig {
 	return &statesConfig{
-		cache:         cache,
-		bot:           bot,
-		groupsService: groupsService,
-		usersRepo:     usersRepo,
+		cache:      cache,
+		bot:        bot,
+		groupsRepo: groupsRepo,
+		usersRepo:  usersRepo,
 	}
 }
 
 func NewStateMachine(conf *statesConfig) *StateMachine {
 	InitStates(conf)
-	return &StateMachine{cache: conf.cache, bot: conf.bot, groupsSrv: &conf.groupsService}
+	return &StateMachine{cache: conf.cache, bot: conf.bot, usersRepo: conf.usersRepo}
 }
 
 func (machine *StateMachine) HandleState(chatId int64, message *tgbotapi.Message) error {

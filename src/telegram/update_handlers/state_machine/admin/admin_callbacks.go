@@ -70,7 +70,7 @@ func (handler *AdminCallbackHandler) handleAcceptCallback(command string, bot *t
 		return err
 	}
 
-	err = handler.usersRepo.Add(entities.NewUser(form.Name, form.Group, chatId))
+	err = handler.usersRepo.Add(entities.NewUser(form.Name, form.Group, form.UserId))
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (handler *AdminCallbackHandler) handleAcceptCallback(command string, bot *t
 	if err != nil {
 		return err
 	}
-	msg := tgbotapi.NewMessage(form.ChatId, fmt.Sprintf("Ваша заявка была одобрена. Ссылка на гугл-таблицу: %s", url))
+	msg := tgbotapi.NewMessage(form.UserId, fmt.Sprintf("Ваша заявка была одобрена. Ссылка на гугл-таблицу: %s", url))
 	if _, err := bot.Send(msg); err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func (handler *AdminCallbackHandler) handleDeclineCallback(command string, bot *
 	if err != nil {
 		return err
 	}
-	msg := tgbotapi.NewMessage(form.ChatId, "Ваша заявка была отклонена")
+	msg := tgbotapi.NewMessage(form.UserId, "Ваша заявка была отклонена")
 	if _, err := bot.Send(msg); err != nil {
 		return err
 	}

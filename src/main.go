@@ -19,6 +19,7 @@ func main() {
 			logging.FatalLog("Error loading .env file")
 		}
 	}
+	
 	controller := ioc.UseBotController()
 	controller.Start()
 }
