@@ -73,7 +73,7 @@ var UseDriveApiService = provider(
 var UseSheetsApiService = provider(
 	func() sheetsapi.SheetsApi {
 		return sheetsapi.NewSheetsApiService(
-			useMockGroupsRepository(), useLessonsRepository(),
+			useGroupsRepository(),
 			UseDriveApiService(), useSheetsApi(),
 		)
 	},
@@ -87,11 +87,16 @@ var UseMessageService = provider(
 	},
 )
 
+var useLessonsService = provider(
+	func() *iis_api.LessonsService {
+		return iis_api.NewLessonsService(useLessonsRepository(), UseSheetsApiService())
+	},
+)
+
 var UseCallbacksService = provider(
 	func() bot.CallbacksService {
 		return stateMachine.NewCallbackService(
-			useUsersRepository(), useHandlersCache(),
-			UseSheetsApiService(), useRequestsRepository(),
-			useAdminRequestsRepository())
+			useUsersRepository(), useHandlersCache(), useRequestsRepository(),
+			useAdminRequestsRepository(), useLessonsService())
 	},
 )

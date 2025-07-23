@@ -8,25 +8,25 @@ import (
 	"strings"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
-	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/sheets_api"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
+	adminInterfaces "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/admin/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type AdminCallbackHandler struct {
 	usersRepo interfaces.UsersRepository
-	sheets    sheetsapi.SheetsApi
 	requests  interfaces.AdminRequestsRepository
 	cache     interfaces.HandlersCache
+	lessons   adminInterfaces.LessonsService
 }
 
-func NewAdminCallbackHandler(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache, sheets sheetsapi.SheetsApi, requests interfaces.AdminRequestsRepository) *AdminCallbackHandler {
+func NewAdminCallbackHandler(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache, requests interfaces.AdminRequestsRepository, lessons adminInterfaces.LessonsService) *AdminCallbackHandler {
 	return &AdminCallbackHandler{
 		usersRepo: usersRepo,
 		cache:     cache,
-		sheets:    sheets,
 		requests:  requests,
+		lessons:   lessons,
 	}
 }
 
@@ -78,7 +78,7 @@ func (handler *AdminCallbackHandler) handleAcceptCallback(msg *tgbotapi.Message,
 		return err
 	}
 
-	url, err := handler.sheets.CreateSheet(form.Group)
+	url, err := handler.lessons.AddGroupLessons(form.Group)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,8 @@ func (handler *AdminCallbackHandler) handleAcceptCallback(msg *tgbotapi.Message,
 	if _, err := bot.Send(resp); err != nil {
 		return err
 	}
-	return nil
+	err = handler.RemoveMarkup(msg, bot)
+	return err
 }
 
 func (handler *AdminCallbackHandler) handleDeclineCallback(msg *tgbotapi.Message, command string, bot *tgbotapi.BotAPI) error {

@@ -64,6 +64,19 @@ func (state *idleState) Handle(chatId int64, message *tgbotapi.Message) error {
 		if err != nil {
 			return err
 		}
+	case update_handlers.SUBMIT_COMMAND:
+		err := state.cache.SaveInfo(chatId, constants.LABWORK_SUBMIT_START_STATE)	
+		if err != nil {
+			return err
+		}
+		currentState, err := getStateByName(constants.LABWORK_SUBMIT_START_STATE)
+		if err != nil {
+			return err
+		}
+		err = currentState.Handle(chatId, message)
+		if err != nil {
+			return err
+		}
 	default:
 		return errors.Join(errors.ErrUnsupported, errors.New("answers are only to commands"))
 	}

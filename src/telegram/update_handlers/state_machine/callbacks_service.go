@@ -2,12 +2,11 @@ package stateMachine
 
 import (
 	"log/slog"
-	"slices"
 	"strings"
 
-	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/sheets_api"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/admin"
+	adminInterfaces "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/admin/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/group"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -15,20 +14,22 @@ import (
 
 type CallbacksService struct {
 	//More of a placeholder, which will contain inject google services to handle callbacks
-	sheets        sheetsapi.SheetsApi
 	usersRepo     interfaces.UsersRepository
 	requests      interfaces.RequestsRepository
 	cache         interfaces.HandlersCache
 	adminRequests interfaces.AdminRequestsRepository
+	lessons       adminInterfaces.LessonsService
 }
 
-func NewCallbackService(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache, sheets sheetsapi.SheetsApi, requests interfaces.RequestsRepository, adminRequests interfaces.AdminRequestsRepository) *CallbacksService {
+func NewCallbackService(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache,
+	requests interfaces.RequestsRepository, adminRequests interfaces.AdminRequestsRepository,
+	lessons adminInterfaces.LessonsService) *CallbacksService {
 	return &CallbacksService{
-		sheets:        sheets,
 		usersRepo:     usersRepo,
 		cache:         cache,
 		requests:      requests,
 		adminRequests: adminRequests,
+		lessons:       lessons,
 	}
 }
 
@@ -45,7 +46,7 @@ func (serv *CallbacksService) HandleCallbacks(update *tgbotapi.Update, bot *tgbo
 	var callback_handler CallbackHandler
 	switch {
 	case strings.HasPrefix(update.CallbackData(), constants.ADMIN_CALLBACKS):
-		callback_handler = admin.NewAdminCallbackHandler(serv.usersRepo, serv.cache, serv.sheets, serv.adminRequests)
+		callback_handler = admin.NewAdminCallbackHandler(serv.usersRepo, serv.cache, serv.adminRequests, serv.lessons)
 	case strings.HasPrefix(update.CallbackData(), constants.GROUP_CALLBACKS):
 		callback_handler = group.NewGroupCallbackHandler(serv.usersRepo, serv.cache, serv.requests)
 	}
@@ -53,21 +54,4 @@ func (serv *CallbacksService) HandleCallbacks(update *tgbotapi.Update, bot *tgbo
 	if err != nil {
 		slog.Error(err.Error())
 	}
-}
-
-var disciplines = []string{"ООП", "АВС", "ИГИ", "МЧА"}
-
-const CHUNK_SIZE = 4
-
-func createDisciplinesKeyboard() *tgbotapi.InlineKeyboardMarkup {
-	markup := [][]tgbotapi.InlineKeyboardButton{}
-	for chunk := range slices.Chunk(disciplines, CHUNK_SIZE) {
-		row := []tgbotapi.InlineKeyboardButton{}
-		for _, discipline := range chunk {
-			row = append(row, tgbotapi.NewInlineKeyboardButtonData(discipline, discipline))
-		}
-		markup = append(markup, row)
-	}
-	keyboard := tgbotapi.NewInlineKeyboardMarkup(markup...)
-	return &keyboard
 }

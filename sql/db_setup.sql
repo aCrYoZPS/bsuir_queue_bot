@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS lessons (
     FOREIGN KEY (group_id) REFERENCES groups(id)
 );
 
+CREATE INDEX IF NOT EXISTS lessons_group_id_idx ON lessons(group_id);
+
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tg_id INTEGER,

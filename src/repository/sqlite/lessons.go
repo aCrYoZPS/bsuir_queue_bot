@@ -18,6 +18,8 @@ const (
 	QUERY_TIMEOUT = 10 * time.Second
 )
 
+var _ interfaces.LessonsRepository = (*LessonsRepository)(nil)
+
 type LessonsRepository struct {
 	interfaces.LessonsRepository
 	db *sql.DB
@@ -27,7 +29,6 @@ func NewLessonsRepository(db *sql.DB) interfaces.LessonsRepository {
 	repo := &LessonsRepository{
 		db: db,
 	}
-
 	return repo
 }
 
@@ -47,12 +48,12 @@ func (repo *LessonsRepository) AddRange(lessons []entities.Lesson) error {
 	return err
 }
 
-func (repo *LessonsRepository) GetAll(groupId int64) ([]persistance.Lesson, error) {
+func (repo *LessonsRepository) GetAll(groupName string) ([]persistance.Lesson, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), QUERY_TIMEOUT)
 	defer cancel()
 
-	query := fmt.Sprintf("SELECT group_id, lesson_type, subgroup_number, date, time FROM %s WHERE group_id = %s LIMIT 4", LESSONS_TABLE, fmt.Sprint(groupId))
-	rows, err := repo.db.QueryContext(ctx, query)
+	query := fmt.Sprintf("SELECT group_id, lesson_type, subgroup_number, date, time FROM %s WHERE $1 in (SELECT name from %s) LIMIT 4", LESSONS_TABLE, GROUPS_TABLE)
+	rows, err := repo.db.QueryContext(ctx, query, groupName)
 	if err != nil {
 		return nil, err
 	}
@@ -86,6 +87,30 @@ func (repo *LessonsRepository) GetNext(subject string, groupId int64) ([]persist
 		}
 	}
 	return lessons, nil
+}
+
+func (repo *LessonsRepository) GetSubjects(groupId int64) ([]string, error) {
+	query := fmt.Sprintf("SELECT DISTINCT subject FROM %s WHERE group_id=$1 ORDER BY subject", LESSONS_TABLE)
+	rows, err := repo.db.Query(query, groupId)
+	if err != nil {
+		return nil, err
+	}
+	subjects := []string{}
+	var subject string
+	for rows.Next() {
+		err := rows.Scan(&subject)
+		if err != nil {
+			return nil, err
+		}
+		if rows.Err() != nil {
+			return nil, rows.Err()
+		}
+		subjects = append(subjects, subject)
+	}
+	if len(subjects) == 0 {
+		return nil, nil
+	}
+	return subjects, nil
 }
 
 func (repo *LessonsRepository) getSortedLessons(labworks []entities.Lesson) []persistance.Lesson {

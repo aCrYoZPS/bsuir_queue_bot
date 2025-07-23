@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
@@ -53,12 +54,18 @@ func (repo *UsersRepository) GetByTgId(tgId int64) (*entities.User, error) {
 	query := fmt.Sprintf("SELECT %[1]s.id, %[1]s.tg_id, %[1]s.group_id, %[1]s.full_name, %[2]s.role_name FROM %[1]s INNER JOIN %[2]s ON %[1]s.id = %[2]s.user_id WHERE %[1]s.tg_id = $1", USERS_TABLE, ROLES_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query, tgId)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	user := &entities.User{}
 	for rows.Next() {
 		var roleName string
-		rows.Scan(&user.Id, &user.TgId, &user.GroupId, &user.FullName, &roleName)
+		err = rows.Scan(&user.Id, &user.TgId, &user.GroupId, &user.FullName, &roleName)
+		if err != nil {
+			return nil, err
+		}
 		user.Roles = append(user.Roles, entities.RoleFromString(roleName))
 	}
 	if rows.Err() != nil {

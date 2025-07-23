@@ -32,3 +32,14 @@ func SendMessageToOwners(msg tgbotapi.MessageConfig, bot *tgbotapi.BotAPI) error
 
 	return nil
 }
+
+func SelectMaxSizedPhoto(sizes []tgbotapi.PhotoSize) string {
+	maxSize := 0
+	maxSizeId := ""
+	for _, photo := range sizes {
+		if photo.FileSize > maxSize {
+			maxSizeId = photo.FileID
+		}
+	}
+	return maxSizeId
+}

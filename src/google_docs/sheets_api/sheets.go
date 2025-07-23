@@ -7,20 +7,19 @@ import (
 	driveapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/drive_api"
 	iis_api_entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
 	"google.golang.org/api/sheets/v4"
 )
 
 type SheetsApiService struct {
 	groupsRepo  interfaces.GroupsRepository
-	lessonsRepo interfaces.LessonsRepository
 	driveApi    driveapi.DriveApi
 	api         *sheets.Service
 }
 
-func NewSheetsApiService(groups interfaces.GroupsRepository, lessons interfaces.LessonsRepository, driveApi driveapi.DriveApi, api *sheets.Service) *SheetsApiService {
+func NewSheetsApiService(groups interfaces.GroupsRepository, driveApi driveapi.DriveApi, api *sheets.Service) *SheetsApiService {
 	return &SheetsApiService{
 		groupsRepo:  groups,
-		lessonsRepo: lessons,
 		driveApi:    driveApi,
 		api:         api,
 	}
@@ -59,23 +58,15 @@ func (serv *SheetsApiService) CreateSheet(groupName string) (SheetsUrl, error) {
 	if err != nil {
 		return "", err
 	}
-	err = serv.createLists(groupName)
-	if err != nil {
-		return "", err
-	}
 	return sheet.SpreadsheetUrl, nil
 }
 
-func (serv *SheetsApiService) createLists(groupName string) error {
+func (serv *SheetsApiService) CreateLists(groupName string, lessons []persistance.Lesson) error {
 	group, err := serv.groupsRepo.GetByName(groupName)
 	if err != nil {
 		return err
 	}
 	update := sheets.BatchUpdateSpreadsheetRequest{}
-	lessons, err := serv.lessonsRepo.GetAll(int64(group.Id))
-	if err != nil {
-		return err
-	}
 	for _, lesson := range lessons {
 		updateTitle := lesson.Subject + " " + serv.formatDateToEuropean(lesson.Date)
 		if iis_api_entities.Subgroup(lesson.SubgroupNumber) != iis_api_entities.AllSubgroups {
@@ -112,6 +103,11 @@ func (serv *SheetsApiService) ClearSpreadsheet(spreadsheetId string) error {
 	_, err = call.Do()
 	return err
 }
+
+func (serv *SheetsApiService) AddLabwork(subject string, groupName string, requestedDate time.Time, sentProofTime time.Time) error {
+	return nil
+}
+
 
 func (serv *SheetsApiService) formatDateToEuropean(date time.Time) string {
 	return fmt.Sprint(date.Day()) + "." + fmt.Sprint(date.Month()) + "." + fmt.Sprint(date.Year())

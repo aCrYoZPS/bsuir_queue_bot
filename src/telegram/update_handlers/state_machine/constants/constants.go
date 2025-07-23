@@ -27,6 +27,13 @@ const (
 )
 
 const (
-	SELECT_SUBJECT_STATE = "subject"
-	SELECT_DATE_STATE    = "date"
+	LABWORK_SUBMIT_START_STATE   = "lab_submit"
+	LABWORK_SUBMIT_WAITING_STATE = "lab_wait"
+	LABWORK_SUBMIT_PROOF_STATE   = "lab_proof_submit"
+)
+
+const (
+	LABWORK_DISCIPLINE_CALLBACKS = "lab"
+	LABWORK_TIME_CALLBACKS = "labt"
+	LABWORK_CONSIDERATION_CALLBACKS = "labc"
 )
