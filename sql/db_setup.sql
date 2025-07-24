@@ -66,7 +66,11 @@ CREATE TABLE IF NOT EXISTS states(
     state TEXT
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS states_chat_id_idx ON states(chat_id);
+
 CREATE TABLE IF NOT EXISTS info(
     chat_id INTEGER,
     json TEXT
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS info_chat_id_idx ON info(chat_id);

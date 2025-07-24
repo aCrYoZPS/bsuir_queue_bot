@@ -121,7 +121,7 @@ func NewLabworkSubmitWaitingState(bot *tgbotapi.BotAPI) *labworkSubmitWaitingSta
 }
 
 func (*labworkSubmitWaitingState) StateName() string {
-	return constants.LABWORK_SUBMIT_START_STATE
+	return constants.LABWORK_SUBMIT_WAITING_STATE
 }
 
 func (state *labworkSubmitWaitingState) Handle(chatId int64, message *tgbotapi.Message) error {

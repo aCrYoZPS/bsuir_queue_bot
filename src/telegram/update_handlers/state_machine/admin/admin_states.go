@@ -18,6 +18,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/uuid"
 )
+
 type adminSubmitForm struct {
 	UserId         int64  `json:"userId,omitempty"`
 	Name           string `json:"name,omitempty"`

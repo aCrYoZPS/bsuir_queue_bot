@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -28,13 +29,13 @@ const (
 )
 
 func (cache *HandlersCache) SaveState(info interfaces.CachedInfo) error {
-	query := fmt.Sprintf("INSERT INTO %s (chat_id, state) VALUES ($1, $2)", STATES_TABLE)
+	query := fmt.Sprintf("INSERT OR REPLACE INTO %s (chat_id, state) VALUES ($1, $2)", STATES_TABLE)
 	_, err := cache.db.Exec(query, info.ChatId(), info.State())
 	return err
 }
 
 func (cache *HandlersCache) GetState(chatId int64) (*interfaces.CachedInfo, error) {
-	query := fmt.Sprintf("SELECT FROM %s state WHERE chat_id=$1", STATES_TABLE)
+	query := fmt.Sprintf("SELECT state FROM %s WHERE chat_id=$1", STATES_TABLE)
 	row := cache.db.QueryRow(query, chatId)
 	if row.Err() != nil {
 		return nil, row.Err()
@@ -42,6 +43,9 @@ func (cache *HandlersCache) GetState(chatId int64) (*interfaces.CachedInfo, erro
 	state := ""
 	err := row.Scan(&state)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return interfaces.NewCachedInfo(chatId, state), nil
+		}
 		return nil, err
 	}
 	return interfaces.NewCachedInfo(chatId, state), nil
@@ -61,13 +65,13 @@ func (cache *HandlersCache) ReleaseLock(chatId int64) {
 }
 
 func (cache *HandlersCache) SaveInfo(chatId int64, json string) error {
-	query := fmt.Sprintf("INSERT INTO %s (chat_id, json) VALUES ($1, $2)", INFO_TABLE)
+	query := fmt.Sprintf("INSERT OR REPLACE INTO %s (chat_id, json) VALUES ($1, $2)", INFO_TABLE)
 	_, err := cache.db.Exec(query, chatId, json)
 	return err
 }
 
 func (cache *HandlersCache) GetInfo(chatId int64) (string, error) {
-	query := fmt.Sprintf("SELECT FROM %s json WHERE chat_id=$1", INFO_TABLE)
+	query := fmt.Sprintf("SELECT json FROM %s WHERE chat_id=$1", INFO_TABLE)
 	row := cache.db.QueryRow(query, chatId)
 	if row.Err() != nil {
 		return "", row.Err()
