@@ -4,6 +4,7 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/labworks"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -23,15 +24,18 @@ type statesConfig struct {
 	usersRepo     interfaces.UsersRepository
 	requests      interfaces.RequestsRepository
 	adminRequests interfaces.AdminRequestsRepository
+	labworks      labworks.LabworksService
 }
 
-func NewStatesConfig(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, groupsRepo interfaces.GroupsRepository, usersRepo interfaces.UsersRepository, requests interfaces.RequestsRepository, adminRequests interfaces.AdminRequestsRepository) *statesConfig {
+func NewStatesConfig(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, groupsRepo interfaces.GroupsRepository, usersRepo interfaces.UsersRepository,
+	requests interfaces.RequestsRepository, adminRequests interfaces.AdminRequestsRepository, labworks labworks.LabworksService) *statesConfig {
 	return &statesConfig{
 		cache:         cache,
 		bot:           bot,
 		groupsRepo:    groupsRepo,
 		usersRepo:     usersRepo,
 		requests:      requests,
+		labworks:      labworks,
 		adminRequests: adminRequests,
 	}
 }

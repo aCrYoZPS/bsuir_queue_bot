@@ -61,3 +61,12 @@ CREATE TABLE IF NOT EXISTS admin_requests (
 
 CREATE INDEX IF NOT EXISTS admin_requests_msg_id_idx ON admin_requests(msg_id);
 
+CREATE TABLE IF NOT EXISTS states(
+    chat_id INTEGER,
+    state TEXT
+);
+
+CREATE TABLE IF NOT EXISTS info(
+    chat_id INTEGER,
+    json TEXT
+);

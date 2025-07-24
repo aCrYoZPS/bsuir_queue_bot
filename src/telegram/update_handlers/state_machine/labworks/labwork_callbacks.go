@@ -20,10 +20,10 @@ import (
 var errNoLessons = errors.New("no lessons for given subject")
 
 type SheetsService interface {
-	AddLabwork(subject, groupName string, requestedDate, sentProofTime time.Time) error
+	AddLabwork(*LabworkRequest) error
 }
 
-type labworkRequest struct {
+type LabworkRequest struct {
 	RequestedDate  time.Time `json:"requested_time,omitempty"`
 	SentProofTime  time.Time `json:"sent_prof,omitempty"`
 	DisciplineName string    `json:"discipline,omitempty"`
@@ -117,7 +117,7 @@ func (handler *LabworksCallbackHandler) handleDisciplineCallback(message *tgbota
 	if lessons == nil {
 		return errNoLessons
 	}
-	json, err := json.Marshal(&labworkRequest{DisciplineName: discipline, GroupName: user.GroupName, FullName: user.GroupName, TgId: user.TgId})
+	json, err := json.Marshal(&LabworkRequest{DisciplineName: discipline, GroupName: user.GroupName, FullName: user.GroupName, TgId: user.TgId})
 	if err != nil {
 		return err
 	}
@@ -190,7 +190,7 @@ func (handler *LabworksCallbackHandler) handleTimeCallback(msg *tgbotapi.Message
 	if err != nil {
 		return err
 	}
-	info := labworkRequest{}
+	info := LabworkRequest{}
 	err = json.Unmarshal([]byte(jsonedInfo), &info)
 	if err != nil {
 		return err
@@ -222,7 +222,7 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(msg *tgbotapi.Messa
 	if err != nil {
 		return err
 	}
-	form := &labworkRequest{}
+	form := &LabworkRequest{}
 	err = json.Unmarshal([]byte(info), form)
 	if err != nil {
 		return err
@@ -233,7 +233,7 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(msg *tgbotapi.Messa
 		return err
 	}
 
-	err = handler.sheets.AddLabwork(form.DisciplineName, form.GroupName, form.RequestedDate, form.SentProofTime)
+	err = handler.sheets.AddLabwork(form)
 	if err != nil {
 		return err
 	}
@@ -252,7 +252,7 @@ func (handler *LabworksCallbackHandler) handleDeclineCallback(msg *tgbotapi.Mess
 	if err != nil {
 		return err
 	}
-	form := &labworkRequest{}
+	form := &LabworkRequest{}
 	err = json.Unmarshal([]byte(info), &form)
 	if err != nil {
 		return err

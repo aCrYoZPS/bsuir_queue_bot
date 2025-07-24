@@ -160,7 +160,7 @@ func (state *labworkSubmitProofState) Handle(chatId int64, message *tgbotapi.Mes
 	if err != nil {
 		return err
 	}
-	req := &labworkRequest{}
+	req := &LabworkRequest{}
 	err = json.Unmarshal([]byte(jsonString), req)
 	if err != nil {
 		return err
@@ -188,7 +188,7 @@ func (state *labworkSubmitProofState) Handle(chatId int64, message *tgbotapi.Mes
 	return err
 }
 
-func (state *labworkSubmitProofState) handleDocumentType(admins []entities.User, message *tgbotapi.Message, form *labworkRequest) error {
+func (state *labworkSubmitProofState) handleDocumentType(admins []entities.User, message *tgbotapi.Message, form *LabworkRequest) error {
 	var err error
 	switch {
 	case message.Photo != nil:
@@ -201,7 +201,7 @@ func (state *labworkSubmitProofState) handleDocumentType(admins []entities.User,
 	return err
 }
 
-func (state *labworkSubmitProofState) handlePhotoProof(admins []entities.User, message *tgbotapi.Message, form *labworkRequest) error {
+func (state *labworkSubmitProofState) handlePhotoProof(admins []entities.User, message *tgbotapi.Message, form *LabworkRequest) error {
 	maxSizeId := tgutils.SelectMaxSizedPhoto(message.Photo)
 	fileBytes, err := state.GetFileBytes(maxSizeId)
 	if err != nil {
@@ -212,7 +212,7 @@ func (state *labworkSubmitProofState) handlePhotoProof(admins []entities.User, m
 	return nil
 }
 
-func (state *labworkSubmitProofState) handleDocumentProof(admins []entities.User, message *tgbotapi.Message, form *labworkRequest) error {
+func (state *labworkSubmitProofState) handleDocumentProof(admins []entities.User, message *tgbotapi.Message, form *LabworkRequest) error {
 	maxSizeId := tgutils.SelectMaxSizedPhoto(message.Photo)
 	fileBytes, err := state.GetFileBytes(maxSizeId)
 	if err != nil {
@@ -247,7 +247,7 @@ func (state *labworkSubmitProofState) GetFileBytes(fileId string) ([]byte, error
 
 const adminSendingTmpl = "Предмет %s\nЛабораторная:%sДата:%sОтправил: %s\n"
 
-func (state *labworkSubmitProofState) SendPhotosToAdmins(admins []entities.User, photo *tgbotapi.PhotoConfig, form *labworkRequest) error {
+func (state *labworkSubmitProofState) SendPhotosToAdmins(admins []entities.User, photo *tgbotapi.PhotoConfig, form *LabworkRequest) error {
 	text := fmt.Sprintf(adminSendingTmpl, form.DisciplineName, fmt.Sprint(form.LabworkNumber),
 		fmt.Sprintf("%d.%d.%d", form.RequestedDate.Day(), form.RequestedDate.Month(), form.RequestedDate.Year()), form.FullName)
 	photo.ReplyMarkup = createMarkupKeyboard(form)
@@ -267,7 +267,7 @@ func (state *labworkSubmitProofState) SendPhotosToAdmins(admins []entities.User,
 	return nil
 }
 
-func (state *labworkSubmitProofState) SendDocumentsToAdmins(admins []entities.User, msg *tgbotapi.DocumentConfig, form *labworkRequest) error {
+func (state *labworkSubmitProofState) SendDocumentsToAdmins(admins []entities.User, msg *tgbotapi.DocumentConfig, form *LabworkRequest) error {
 	text := fmt.Sprintf(adminSendingTmpl, form.DisciplineName, fmt.Sprint(form.LabworkNumber),
 		fmt.Sprintf("%d.%d.%d", form.RequestedDate.Day(), form.RequestedDate.Month(), form.RequestedDate.Year()), form.FullName)
 	msg.ReplyMarkup = createMarkupKeyboard(form)
@@ -287,7 +287,7 @@ func (state *labworkSubmitProofState) SendDocumentsToAdmins(admins []entities.Us
 	return nil
 }
 
-func createMarkupKeyboard(form *labworkRequest) *tgbotapi.InlineKeyboardMarkup {
+func createMarkupKeyboard(form *LabworkRequest) *tgbotapi.InlineKeyboardMarkup {
 	row := []tgbotapi.InlineKeyboardButton{}
 	acceptData := constants.LABWORK_CONSIDERATION_CALLBACKS + "accept" + fmt.Sprint(form.TgId)
 	declineData := constants.LABWORK_CONSIDERATION_CALLBACKS + "decline" + fmt.Sprint(form.TgId)
