@@ -99,7 +99,9 @@ func (serv *SheetsApiService) createLessonName(lesson persistance.Lesson) string
 }
 
 func (serv *SheetsApiService) formatDateToEuropean(date time.Time) string {
-	return fmt.Sprint(date.Day()) + "." + fmt.Sprint(date.Month()) + "." + fmt.Sprint(date.Year())
+	zeroPrependedDay := fmt.Sprint(date.Day()/10) + fmt.Sprint(date.Day()%10)
+	zeroPrependedMonth := fmt.Sprint(int(date.Month())/10) + fmt.Sprint(int(date.Month())%10)
+	return zeroPrependedDay + "." + zeroPrependedMonth + "." + fmt.Sprint(date.Year())
 }
 
 func parseLessonName(name string) (subject string, date time.Time) {
@@ -229,14 +231,3 @@ func (serv *SheetsApiService) formatDateTimeToEuropean(dateTime time.Time) strin
 	time := zeroPrependedHour + ":" + zeroPrependedMinutes + ":" + zeroPrependedSeconds
 	return date + " " + time
 }
-
-// &sheets.BatchUpdateValuesRequest{
-
-// 		Data: []*sheets.ValueRange{
-// 			{
-// 				MajorDimension: "ROWS",
-// 				Range:          "Sheet1!A1:B5",
-// 				Values:         [][]any{{req.FullName, req.LabworkNumber, req.SentProofTime}},
-// 			},
-// 		},
-// 	})

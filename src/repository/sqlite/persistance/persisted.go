@@ -17,9 +17,7 @@ type Lesson struct {
 
 func ToLessonEntity(lesson *Lesson) *entities.Lesson {
 	return &entities.Lesson{
-		GroupInfo: struct {
-			GroupId int64 "json:\"id\""
-		}{lesson.GroupId},
+		GroupId:        lesson.GroupId,
 		Subject:        lesson.Subject,
 		SubgroupNumber: entities.Subgroup(lesson.SubgroupNumber),
 		StartTime:      entities.TimeOnly(lesson.Time),
@@ -28,7 +26,7 @@ func ToLessonEntity(lesson *Lesson) *entities.Lesson {
 
 func FromLessonEntity(lesson *entities.Lesson, date time.Time) *Lesson {
 	return &Lesson{
-		GroupId:        lesson.GroupInfo.GroupId,
+		GroupId:        lesson.GroupId,
 		LessonType:     lesson.LessonType,
 		Subject:        lesson.Subject,
 		SubgroupNumber: int8(lesson.SubgroupNumber),

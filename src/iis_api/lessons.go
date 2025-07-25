@@ -2,18 +2,14 @@ package iis_api
 
 import (
 	"encoding/json"
-	_ "encoding/json"
 	"fmt"
 	"net/http"
-	_ "os"
-	_ "time"
+	"slices"
 
 	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/sheets_api"
-	_ "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 	iis_api_entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
-	_ "github.com/aCrYoZPS/bsuir_queue_bot/src/utils"
 )
 
 // That'll probably be turned into service class, which contains injected repository. Commented it out to compile project, for now
@@ -31,7 +27,12 @@ func NewLessonsService(repos interfaces.LessonsRepository, sheetsApi sheetsapi.S
 }
 
 type schedulesResponse struct {
-	Json map[string]any `json:"schedules" binding:"required"`
+	Monday    []*iis_api_entities.Lesson `json:"Понедельник" `
+	Tuesday   []*iis_api_entities.Lesson `json:"Вторник"`
+	Wednesday []*iis_api_entities.Lesson `json:"Среда"`
+	Thursday  []*iis_api_entities.Lesson `json:"Четверг"`
+	Friday    []*iis_api_entities.Lesson `json:"Пятница"`
+	Saturday  []*iis_api_entities.Lesson `json:"Суббота"`
 }
 
 func (serv *LessonsService) AddGroupLessons(groupName string) (url string, err error) {
@@ -39,23 +40,27 @@ func (serv *LessonsService) AddGroupLessons(groupName string) (url string, err e
 	if err != nil {
 		return "", err
 	}
-	totalLessons, err := serv.getLessonEntities(responseJson)
-	if err != nil {
-		return "", err
-	}
-	err = serv.AddRange(totalLessons)
-	if err != nil {
-		return "", err
-	}
 	lessons, err := serv.GetAll(groupName)
 	if err != nil {
 		return "", err
 	}
-	url, err = serv.CreateFilledSheet(groupName, lessons)
+	if len(lessons) != 0 {
+		return serv.CreateFilledSheet(groupName, lessons)
+	}
+	totalLessons := serv.getTotalLessons(responseJson)
+	err = serv.AddRange(totalLessons)
 	if err != nil {
 		return "", err
 	}
-	return url, nil
+	lessons, err = serv.GetAll(groupName)
+	if err != nil {
+		return "", err
+	}
+	return serv.CreateFilledSheet(groupName, lessons)
+}
+
+func (serv *LessonsService) getTotalLessons(responseJson *schedulesResponse) []*iis_api_entities.Lesson {
+	return slices.Concat(responseJson.Monday, responseJson.Tuesday, responseJson.Wednesday, responseJson.Thursday, responseJson.Friday, responseJson.Saturday)
 }
 
 func (serv *LessonsService) CreateFilledSheet(groupName string, lessons []persistance.Lesson) (url string, err error) {
@@ -83,26 +88,21 @@ func (serv *LessonsService) getSchedulesJson(groupName string) (*schedulesRespon
 		return nil, err
 	}
 	responseJson := &schedulesResponse{}
-	err = json.NewDecoder(resp.Body).Decode(responseJson)
+	groupId := int64(0)
+	err = json.NewDecoder(resp.Body).Decode(&struct {
+		GroupInfo struct{ Id *int64 } `json:"studentGroupDto"`
+		Resp      *schedulesResponse  `json:"schedules"`
+	}{struct{ Id *int64 }{&groupId}, responseJson})
 	if err != nil {
 		return nil, err
 	}
+	serv.assignGroupId(groupId, responseJson)
 	return responseJson, nil
 }
 
-func (serv *LessonsService) getLessonEntities(responseJson *schedulesResponse) ([]iis_api_entities.Lesson, error) {
-	totalLessons := []iis_api_entities.Lesson{}
-	for _, value := range responseJson.Json {
-		schedule, err := json.Marshal(value)
-		if err != nil {
-			return nil, err
-		}
-		lessons := []iis_api_entities.Lesson{}
-		err = json.Unmarshal(schedule, &lessons)
-		if err != nil {
-			return nil, err
-		}
-		totalLessons = append(totalLessons, lessons...)
+func (serv *LessonsService) assignGroupId(groupId int64, resp *schedulesResponse) {
+	allLessons := slices.Concat(resp.Monday, resp.Tuesday, resp.Wednesday, resp.Thursday, resp.Friday, resp.Saturday)
+	for i := range allLessons {
+		allLessons[i].GroupId = groupId
 	}
-	return totalLessons, nil
 }

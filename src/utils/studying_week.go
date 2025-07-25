@@ -14,8 +14,12 @@ func CalculateWeek(date time.Time) int8 {
 
 type Week = int8
 
-// Returns value from 0 to 3, to measure distance in weeks between labworks.
+// Returns value from 1 to 4, to measure distance in weeks between labworks.
 // Doesn't handle cases, where week is unpresent in slice of weeks
-func CalculateWeeksDistance(weeks []Week, current Week) time.Duration {
-	return time.Duration(weeks[(slices.Index(weeks, current)+1)%len(weeks)] - current)
+func CalculateWeeksDistance(weeks []Week, current Week) int8 {
+	dist := (weeks[(slices.Index(weeks, current)+1)%len(weeks)] - current)
+	if dist == 0 {
+		return 4
+	}
+	return dist
 }

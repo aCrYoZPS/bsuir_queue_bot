@@ -32,7 +32,6 @@ func (repos *GroupsRepository) GetAll() ([]iisEntities.Group, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	defer rows.Close()
 
 	groups := make([]iisEntities.Group, 0)
@@ -103,7 +102,7 @@ func (repos *GroupsRepository) GetById(id int) (*iisEntities.Group, error) {
 }
 
 func (repos *GroupsRepository) GetByName(name string) (*iisEntities.Group, error) {
-	row := repos.db.QueryRow(fmt.Sprintf("SELECT * FROM %s WHERE name=$1", name), GROUPS_TABLE)
+	row := repos.db.QueryRow(fmt.Sprintf("SELECT id, name, faculty_id, spreadsheet_id, admin_id FROM %s WHERE name=$1", GROUPS_TABLE), name)
 	group := &iisEntities.Group{}
 
 	err := row.Scan(&group.Id, &group.Name, &group.FacultyId, &group.SpreadsheetId, &group.AdminId)
