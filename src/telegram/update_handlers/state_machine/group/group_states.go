@@ -149,7 +149,7 @@ func (state *groupSubmitNameState) Handle(chatId int64, message *tgbotapi.Messag
 		return err
 	}
 
-	err = state.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.IDLE_STATE))
+	err = state.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.GROUP_WAITING_STATE))
 	if err != nil {
 		return err
 	}

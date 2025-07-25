@@ -48,7 +48,7 @@ func (filter *BloomFilter) Check(item string) bool {
 	return true
 }
 
-func NewOptimalBloomFiltet(numElements int, falsePositiveRate float64) *BloomFilter {
+func NewOptimalBloomFilter(numElements int, falsePositiveRate float64) *BloomFilter {
 	m, k := optimalParams(numElements, falsePositiveRate)
 	return NewBloomFilter(m, k)
 }

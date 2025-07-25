@@ -7,8 +7,7 @@ import (
 
 type SheetUrl = string
 type SheetsApi interface {
-	CreateSheet(groupName string) (SheetUrl, error)
+	CreateSheet(groupName string, lessons []persistance.Lesson) (SheetUrl, error)
 	ClearSpreadsheet(spreadsheetId string) error
-	CreateLists(groupName string, lessons []persistance.Lesson) error
 	AddLabwork(*labworks.LabworkRequest) error
 }

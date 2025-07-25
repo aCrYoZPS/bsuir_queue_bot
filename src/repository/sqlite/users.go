@@ -176,13 +176,13 @@ func (repo *UsersRepository) Update(user *entities.User) error {
 		return err
 	}
 
-	query = fmt.Sprintf("DELETE FROM %s WHERE id=$1", ROLES_TABLE)
+	query = fmt.Sprintf("DELETE FROM %s WHERE user_id=$1", ROLES_TABLE)
 	_, err = tx.ExecContext(ctx, query, user.Id)
 	if err != nil {
 		return err
 	}
 
-	query = fmt.Sprintf("INSERT INTO %s (id,role_name) values ($1, $2)", ROLES_TABLE)
+	query = fmt.Sprintf("INSERT INTO %s (user_id,role_name) values ($1, $2)", ROLES_TABLE)
 	for _, role := range user.Roles {
 		_, err = tx.ExecContext(ctx, query, user.Id, role.ToString())
 		if err != nil {

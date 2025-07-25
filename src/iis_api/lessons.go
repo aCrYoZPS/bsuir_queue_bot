@@ -64,11 +64,7 @@ func (serv *LessonsService) getTotalLessons(responseJson *schedulesResponse) []*
 }
 
 func (serv *LessonsService) CreateFilledSheet(groupName string, lessons []persistance.Lesson) (url string, err error) {
-	url, err = serv.sheetsApi.CreateSheet(groupName)
-	if err != nil {
-		return "", err
-	}
-	err = serv.sheetsApi.CreateLists(groupName, lessons)
+	url, err = serv.sheetsApi.CreateSheet(groupName, lessons)
 	if err != nil {
 		return "", err
 	}

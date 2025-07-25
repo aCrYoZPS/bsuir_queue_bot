@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -13,6 +14,8 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
+
+var ErrAlreadyAdmin = errors.New("the user is already admin to the group")
 
 type AdminCallbackHandler struct {
 	usersRepo interfaces.UsersRepository
@@ -73,7 +76,7 @@ func (handler *AdminCallbackHandler) handleAcceptCallback(msg *tgbotapi.Message,
 		return err
 	}
 
-	err = handler.usersRepo.Add(entities.NewUser(form.Name, form.Group, form.UserId))
+	err = handler.addAdmin(form)
 	if err != nil {
 		return err
 	}
@@ -88,6 +91,19 @@ func (handler *AdminCallbackHandler) handleAcceptCallback(msg *tgbotapi.Message,
 		return err
 	}
 	err = handler.RemoveMarkup(msg, bot)
+	return err
+}
+
+func (handler *AdminCallbackHandler) addAdmin(form *adminSubmitForm) error {
+	user, err := handler.usersRepo.GetByTgId(form.UserId)
+	if err != nil {
+		return err
+	}
+	if slices.Contains(user.Roles, entities.Admin) {
+		return ErrAlreadyAdmin
+	}
+	user.Roles = append(user.Roles, entities.Admin)
+	err = handler.usersRepo.Update(user)
 	return err
 }
 

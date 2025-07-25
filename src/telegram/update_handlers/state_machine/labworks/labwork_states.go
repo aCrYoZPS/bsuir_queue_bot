@@ -21,6 +21,8 @@ import (
 	"github.com/google/uuid"
 )
 
+var errNoLabworks = errors.New("no labworks found")
+
 type LabworksService interface {
 	GetSubjects(groupId int64) ([]string, error)
 	GetNext(subject string, groupId int64) ([]persistance.Lesson, error)
@@ -54,24 +56,23 @@ func (state *labworkSubmitStartState) Handle(chatId int64, message *tgbotapi.Mes
 		_, err := state.bot.Send(tgbotapi.NewMessage(chatId, "Вы ещё не присоединились к какой-либо группе"))
 		return err
 	}
+	replyMarkup, err := state.createDisciplinesKeyboard(chatId, message.From.ID)
+	if err != nil {
+		if errors.Is(err, errNoLabworks) {
+			return nil
+		}
+		return err
+	}
 	resp := tgbotapi.NewMessage(chatId, "Выберите предмет и дату пары")
-	replyMarkup, err := state.createDisciplinesKeyboard(message.From.ID)
-	if err != nil {
-		return err
-	}
 	resp.ReplyMarkup = replyMarkup
-	err = state.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.LABWORK_SUBMIT_WAITING_STATE))
-	if err != nil {
-		return err
-	}
-	_, err = state.bot.Send(resp)
+	err = state.TransitionAndSend(resp, interfaces.NewCachedInfo(chatId, constants.LABWORK_SUBMIT_WAITING_STATE))
 	return err
 }
 
 const CHUNK_SIZE = 4
 
-func (state *labworkSubmitStartState) createDisciplinesKeyboard(userTgId int64) (*tgbotapi.InlineKeyboardMarkup, error) {
-	markup := [][]tgbotapi.InlineKeyboardButton{}
+func (state *labworkSubmitStartState) createDisciplinesKeyboard(chatId, userTgId int64) (*tgbotapi.InlineKeyboardMarkup, error) {
+	markup := [][]tgbotapi.InlineKeyboardButton{{}}
 	user, err := state.users.GetByTgId(userTgId)
 	if err != nil {
 		return nil, err
@@ -79,6 +80,14 @@ func (state *labworkSubmitStartState) createDisciplinesKeyboard(userTgId int64) 
 	disciplines, err := state.labworks.GetSubjects(user.GroupId)
 	if err != nil {
 		return nil, err
+	}
+	if len(disciplines) == 0 {
+		newState := interfaces.NewCachedInfo(chatId, constants.IDLE_STATE)
+		err = state.TransitionAndSend(tgbotapi.NewMessage(chatId, "Больше не осталось лабораторных. Отдохните"), newState)
+		if err != nil {
+			return nil, err
+		}
+		return nil, errNoLabworks
 	}
 	for chunk := range slices.Chunk(disciplines, CHUNK_SIZE) {
 		row := []tgbotapi.InlineKeyboardButton{}
@@ -89,6 +98,15 @@ func (state *labworkSubmitStartState) createDisciplinesKeyboard(userTgId int64) 
 	}
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(markup...)
 	return &keyboard, nil
+}
+
+func (state *labworkSubmitStartState) TransitionAndSend(msg tgbotapi.MessageConfig, newState *interfaces.CachedInfo) error {
+	err := state.cache.SaveState(*newState)
+	if err != nil {
+		return err
+	}
+	_, err = state.bot.Send(msg)
+	return err
 }
 
 func createLabworkDisciplineCallback(userTgId int64, discipline string) string {

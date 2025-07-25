@@ -8,10 +8,12 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
 
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
 	stateErrors "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/errors"
@@ -29,12 +31,13 @@ type adminSubmitForm struct {
 const infoTemplate = "Имя: {{.Name}} \nГруппа: {{.Group}}\n{{if .AdditionalInfo}}Доп информация: {{.AdditionalInfo}} {{end}}"
 
 type adminSubmitStartState struct {
-	cache interfaces.HandlersCache
-	bot   *tgbotapi.BotAPI
+	cache           interfaces.HandlersCache
+	usersRepository interfaces.UsersRepository
+	bot             *tgbotapi.BotAPI
 }
 
-func NewAdminSubmitState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) *adminSubmitStartState {
-	return &adminSubmitStartState{cache: cache, bot: bot}
+func NewAdminSubmitState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, usersRepository interfaces.UsersRepository) *adminSubmitStartState {
+	return &adminSubmitStartState{cache: cache, bot: bot, usersRepository: usersRepository}
 }
 
 func (*adminSubmitStartState) StateName() string {
@@ -42,11 +45,31 @@ func (*adminSubmitStartState) StateName() string {
 }
 
 func (state *adminSubmitStartState) Handle(chatId int64, message *tgbotapi.Message) error {
-	err := state.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.ADMIN_SUBMITTING_NAME_STATE))
+	isAdmin, err := state.checkIfAdmin(message.From.ID)
 	if err != nil {
 		return err
 	}
-	msg := tgbotapi.NewMessage(chatId, "Введите ваши фамилию и имя (Пример формата: Иван Иванов)")
+	if isAdmin {
+		err = state.TransitionAndSend(interfaces.NewCachedInfo(chatId, constants.IDLE_STATE), tgbotapi.NewMessage(chatId, "Вы уже админ группы"))
+		return err
+	}
+	err = state.TransitionAndSend(interfaces.NewCachedInfo(chatId, constants.ADMIN_SUBMITTING_NAME_STATE), tgbotapi.NewMessage(chatId, "Введите ваши фамилию и имя (Пример формата: Иванов Иван)"))
+	return err
+}
+
+func (state *adminSubmitStartState) checkIfAdmin(tgId int64) (bool, error) {
+	user, err := state.usersRepository.GetById(tgId)
+	if err != nil {
+		return false, err
+	}
+	return slices.Contains(user.Roles, entities.Admin), nil
+}
+
+func (state *adminSubmitStartState) TransitionAndSend(newState *interfaces.CachedInfo, msg tgbotapi.MessageConfig) error {
+	err := state.cache.SaveState(*newState)
+	if err != nil {
+		return err
+	}
 	_, err = state.bot.Send(msg)
 	return err
 }
@@ -160,7 +183,8 @@ func (state *adminSubmittingProofState) StateName() string {
 
 func (state *adminSubmittingProofState) Handle(chatId int64, message *tgbotapi.Message) error {
 	if message.Photo == nil {
-		return stateErrors.NewInvalidInput("No photo in message")
+		_, err := state.bot.Send(tgbotapi.NewMessage(chatId, "Отправьте фото как часть сообщения"))
+		return err
 	}
 	info, err := state.cache.GetInfo(chatId)
 	if err != nil {

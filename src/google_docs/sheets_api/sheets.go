@@ -34,7 +34,7 @@ func NewSheetsApiService(groups interfaces.GroupsRepository, driveApi driveapi.D
 
 type SheetsUrl = string
 
-func (serv *SheetsApiService) CreateSheet(groupName string) (SheetsUrl, error) {
+func (serv *SheetsApiService) CreateSheet(groupName string, lessons []persistance.Lesson) (SheetsUrl, error) {
 	existsRes, err := serv.driveApi.DoesSheetExist(groupName)
 	if err != nil {
 		return "", err
@@ -55,7 +55,10 @@ func (serv *SheetsApiService) CreateSheet(groupName string) (SheetsUrl, error) {
 	if err != nil {
 		return "", err
 	}
-
+	err = serv.createLists(groupName, lessons)
+	if err != nil {
+		return "", err
+	}
 	group, err := serv.groupsRepo.GetByName(groupName)
 	if err != nil {
 		return "", err
@@ -68,7 +71,7 @@ func (serv *SheetsApiService) CreateSheet(groupName string) (SheetsUrl, error) {
 	return spreadsheet.SpreadsheetUrl, nil
 }
 
-func (serv *SheetsApiService) CreateLists(groupName string, lessons []persistance.Lesson) error {
+func (serv *SheetsApiService) createLists(groupName string, lessons []persistance.Lesson) error {
 	group, err := serv.groupsRepo.GetByName(groupName)
 	if err != nil {
 		return err
@@ -90,7 +93,6 @@ func (serv *SheetsApiService) CreateLists(groupName string, lessons []persistanc
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 

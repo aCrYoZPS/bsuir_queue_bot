@@ -149,7 +149,7 @@ func (repo *LessonsRepository) getSortedLessons(lessons []*entities.Lesson) []pe
 		return nil
 	}
 	storedLessons := make([]persistance.Lesson, 0, len(lessons)*3)
-	filter := datastructures.NewOptimalBloomFiltet(len(lessons), 0.01)
+	filter := datastructures.NewOptimalBloomFilter(len(lessons), 0.01)
 	for _, lesson := range lessons {
 		if lesson.LessonType != entities.Labwork {
 			continue

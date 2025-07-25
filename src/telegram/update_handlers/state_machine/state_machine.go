@@ -69,6 +69,5 @@ func (machine *StateMachine) HandleState(chatId int64, message *tgbotapi.Message
 			return err
 		}
 	}
-
 	return state.Handle(chatId, message)
 }
