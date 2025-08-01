@@ -1,6 +1,7 @@
 package stateMachine
 
 import (
+	"context"
 	"errors"
 	"strings"
 
@@ -21,11 +22,11 @@ func newIdleState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, usersRep
 	return &idleState{cache: cache, bot: bot, usersRepo: usersRepo}
 }
 
-func (state *idleState) Handle(chatId int64, message *tgbotapi.Message) error {
+func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	var currentState State
 	switch message.Text {
 	case update_handlers.ASSIGN_COMMAND:
-		err := state.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.ADMIN_SUBMIT_START_STATE))
+		err := state.cache.SaveState(*interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMIT_START_STATE))
 		if err != nil {
 			return err
 		}
@@ -33,7 +34,7 @@ func (state *idleState) Handle(chatId int64, message *tgbotapi.Message) error {
 		if err != nil {
 			return err
 		}
-		err = currentState.Handle(chatId, message)
+		err = currentState.Handle(ctx, message)
 		if err != nil {
 			return err
 		}
@@ -47,12 +48,12 @@ func (state *idleState) Handle(chatId int64, message *tgbotapi.Message) error {
 			builder.WriteString(command.Description)
 			builder.WriteByte('\n')
 		}
-		_, err := state.bot.Send(tgbotapi.NewMessage(chatId, builder.String()))
+		_, err := state.bot.Send(tgbotapi.NewMessage(message.Chat.ID, builder.String()))
 		if err != nil {
 			return err
 		}
 	case update_handlers.JOIN_GROUP_COMMAND:
-		err := state.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.GROUP_SUBMIT_START_STATE))
+		err := state.cache.SaveState(*interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_SUBMIT_START_STATE))
 		if err != nil {
 			return err
 		}
@@ -60,12 +61,12 @@ func (state *idleState) Handle(chatId int64, message *tgbotapi.Message) error {
 		if err != nil {
 			return err
 		}
-		err = currentState.Handle(chatId, message)
+		err = currentState.Handle(ctx, message)
 		if err != nil {
 			return err
 		}
 	case update_handlers.SUBMIT_COMMAND:
-		err := state.cache.SaveInfo(chatId, constants.LABWORK_SUBMIT_START_STATE)	
+		err := state.cache.SaveInfo(message.Chat.ID, constants.LABWORK_SUBMIT_START_STATE)	
 		if err != nil {
 			return err
 		}
@@ -73,7 +74,7 @@ func (state *idleState) Handle(chatId int64, message *tgbotapi.Message) error {
 		if err != nil {
 			return err
 		}
-		err = currentState.Handle(chatId, message)
+		err = currentState.Handle(ctx, message)
 		if err != nil {
 			return err
 		}

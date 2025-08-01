@@ -1,6 +1,8 @@
 package stateMachine
 
 import (
+	"context"
+
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
@@ -45,14 +47,14 @@ func NewStateMachine(conf *statesConfig) *StateMachine {
 	return &StateMachine{cache: conf.cache, bot: conf.bot, usersRepo: conf.usersRepo}
 }
 
-func (machine *StateMachine) HandleState(chatId int64, message *tgbotapi.Message) error {
-	mu := machine.cache.AcquireLock(chatId)
+func (machine *StateMachine) HandleState(ctx context.Context, message *tgbotapi.Message) error {
+	mu := machine.cache.AcquireLock(message.Chat.ID)
 	mu.Lock()
 
 	defer mu.Unlock()
-	defer machine.cache.ReleaseLock(chatId)
+	defer machine.cache.ReleaseLock(message.Chat.ID)
 
-	info, err := machine.cache.GetState(chatId)
+	info, err := machine.cache.GetState(message.Chat.ID)
 	if err != nil {
 		return err
 	}
@@ -69,5 +71,5 @@ func (machine *StateMachine) HandleState(chatId int64, message *tgbotapi.Message
 			return err
 		}
 	}
-	return state.Handle(chatId, message)
+	return state.Handle(ctx, message)
 }

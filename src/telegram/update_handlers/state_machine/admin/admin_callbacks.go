@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -33,7 +34,7 @@ func NewAdminCallbackHandler(usersRepo interfaces.UsersRepository, cache interfa
 	}
 }
 
-func (handler *AdminCallbackHandler) HandleCallback(update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
+func (handler *AdminCallbackHandler) HandleCallback(ctx context.Context, update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
 	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 	if _, err := bot.Request(callback); err != nil {
 		return err

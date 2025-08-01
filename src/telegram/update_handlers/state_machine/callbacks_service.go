@@ -1,6 +1,7 @@
 package stateMachine
 
 import (
+	"context"
 	"log/slog"
 	"strings"
 
@@ -34,14 +35,25 @@ func NewCallbackService(usersRepo interfaces.UsersRepository, cache interfaces.H
 }
 
 type CallbackHandler interface {
-	HandleCallback(update *tgbotapi.Update, bot *tgbotapi.BotAPI) error
+	HandleCallback(ctx context.Context, update *tgbotapi.Update, bot *tgbotapi.BotAPI) error
 }
 
 func (serv *CallbacksService) HandleCallbacks(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
+	ctx, cancel := context.WithTimeout(context.Background(), constants.DEFAULT_TIMEOUT)
+	defer cancel()
 	if update.CallbackQuery == nil {
 		slog.Error("no callback in update")
 		return
 	}
+	msg := update.CallbackQuery.Message
+	if msg == nil {
+		return
+	}
+	mu := serv.cache.AcquireLock(msg.Chat.ID)
+	mu.Lock()
+
+	defer mu.Unlock()
+	defer serv.cache.ReleaseLock(msg.Chat.ID)
 
 	var callback_handler CallbackHandler
 	switch {
@@ -50,7 +62,8 @@ func (serv *CallbacksService) HandleCallbacks(update *tgbotapi.Update, bot *tgbo
 	case strings.HasPrefix(update.CallbackData(), constants.GROUP_CALLBACKS):
 		callback_handler = group.NewGroupCallbackHandler(serv.usersRepo, serv.cache, serv.requests)
 	}
-	err := callback_handler.HandleCallback(update, bot)
+
+	err := callback_handler.HandleCallback(ctx, update, bot)
 	if err != nil {
 		slog.Error(err.Error())
 	}

@@ -33,12 +33,12 @@ func (controller *BotController) Start() {
 	for update := range updates {
 		if update.Message != nil {
 			if update.Message.Command() != "" {
-				controller.msgSrv.HandleCommands(&update, controller.bot)
+				go controller.msgSrv.HandleCommands(&update, controller.bot)
 			} else {
-				controller.msgSrv.HandleMessages(&update, controller.bot)
+				go controller.msgSrv.HandleMessages(&update, controller.bot)
 			}
 		} else if update.CallbackQuery != nil {
-			controller.callbackSrv.HandleCallbacks(&update, controller.bot)
+			go controller.callbackSrv.HandleCallbacks(&update, controller.bot)
 		}
 	}
 }

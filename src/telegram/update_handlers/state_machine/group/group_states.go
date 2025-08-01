@@ -1,6 +1,7 @@
 package group
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -42,21 +43,21 @@ func (*groupSubmitStartState) StateName() string {
 	return constants.GROUP_SUBMIT_START_STATE
 }
 
-func (state *groupSubmitStartState) Handle(chatId int64, message *tgbotapi.Message) error {
+func (state *groupSubmitStartState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	user, err := state.users.GetByTgId(message.From.ID)
 	if err != nil {
 		return err
 	}
 	if user.Id == 0 {
-		msg := tgbotapi.NewMessage(chatId, "Вы уже член группы")
+		msg := tgbotapi.NewMessage(message.Chat.ID, "Вы уже член группы")
 		_, err := state.bot.Send(msg)
 		return err
 	}
-	err = state.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.GROUP_SUBMIT_GROUPNAME_STATE))
+	err = state.cache.SaveState(*interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_SUBMIT_GROUPNAME_STATE))
 	if err != nil {
 		return err
 	}
-	msg := tgbotapi.NewMessage(chatId, "Введите номер группы,в которую хотите вступить")
+	msg := tgbotapi.NewMessage(message.Chat.ID, "Введите номер группы,в которую хотите вступить")
 	_, err = state.bot.Send(msg)
 	if err != nil {
 		return err
@@ -78,14 +79,14 @@ func (*groupSubmitGroupNameState) StateName() string {
 	return constants.GROUP_SUBMIT_GROUPNAME_STATE
 }
 
-func (state *groupSubmitGroupNameState) Handle(chatId int64, message *tgbotapi.Message) error {
+func (state *groupSubmitGroupNameState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	groupName := message.Text
 	groupExists, err := state.groups.DoesGroupExist(groupName)
 	if err != nil {
 		return err
 	}
 	if !groupExists {
-		msg := tgbotapi.NewMessage(chatId, "Данная группа не найдена")
+		msg := tgbotapi.NewMessage(message.Chat.ID, "Данная группа не найдена")
 		_, err := state.bot.Send(msg)
 		return err
 	}
@@ -93,12 +94,12 @@ func (state *groupSubmitGroupNameState) Handle(chatId int64, message *tgbotapi.M
 	if err != nil {
 		return err
 	}
-	state.cache.SaveInfo(chatId, string(form))
-	err = state.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.GROUP_SUBMIT_NAME_STATE))
+	state.cache.SaveInfo(message.Chat.ID, string(form))
+	err = state.cache.SaveState(*interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_SUBMIT_NAME_STATE))
 	if err != nil {
 		return err
 	}
-	_, err = state.bot.Send(tgbotapi.NewMessage(chatId, "Введите ваши фамилию и имя (Пример формата: Иван Иванов)"))
+	_, err = state.bot.Send(tgbotapi.NewMessage(message.Chat.ID, "Введите ваши фамилию и имя (Пример формата: Иван Иванов)"))
 	return err
 }
 
@@ -122,15 +123,15 @@ func (state *groupSubmitNameState) StateName() string {
 	return constants.GROUP_SUBMIT_NAME_STATE
 }
 
-func (state *groupSubmitNameState) Handle(chatId int64, message *tgbotapi.Message) error {
+func (state *groupSubmitNameState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	name := message.Text
 	fullName := strings.Fields(name)
 	if len(fullName) != 2 {
-		_, err := state.bot.Send(tgbotapi.NewMessage(chatId, "Введите фамилию и имя как в предоставленном образце"))
+		_, err := state.bot.Send(tgbotapi.NewMessage(message.Chat.ID, "Введите фамилию и имя как в предоставленном образце"))
 		return err
 	}
 
-	info, err := state.cache.GetInfo(chatId)
+	info, err := state.cache.GetInfo(message.Chat.ID)
 	if err != nil {
 		return err
 	}
@@ -144,12 +145,12 @@ func (state *groupSubmitNameState) Handle(chatId int64, message *tgbotapi.Messag
 	if err != nil {
 		return err
 	}
-	err = state.cache.SaveInfo(chatId, string(data))
+	err = state.cache.SaveInfo(message.Chat.ID, string(data))
 	if err != nil {
 		return err
 	}
 
-	err = state.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.GROUP_WAITING_STATE))
+	err = state.cache.SaveState(*interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_WAITING_STATE))
 	if err != nil {
 		return err
 	}
@@ -158,30 +159,38 @@ func (state *groupSubmitNameState) Handle(chatId int64, message *tgbotapi.Messag
 	if err != nil {
 		return err
 	}
-	err = state.SendMessagesToAdmins(admins, form)
+
+	err = state.SendMessagesToAdmins(ctx, admins, form)
 	if err != nil {
 		return nil
 	}
-	_, err = state.bot.Send(tgbotapi.NewMessage(chatId, "Ваша заявка была отправлена администратору"))
+	_, err = state.bot.Send(tgbotapi.NewMessage(message.Chat.ID, "Ваша заявка была отправлена администратору"))
 	return err
 }
 
-func (state *groupSubmitNameState) SendMessagesToAdmins(admins []entities.User, form *groupSubmitForm) error {
-	text := fmt.Sprintf("Пользователь под id @%s и именем \"%s\" хочет присоединиться к группе", form.UserName, form.Name)
-	reqUUID := uuid.NewString()
-	for _, admin := range admins {
-		msg := tgbotapi.NewMessage(admin.TgId, text)
-		msg.ReplyMarkup = createMarkupKeyboard(form)
-		sentMsg, err := state.bot.Send(msg)
-		if err != nil {
-			return err
+func (state *groupSubmitNameState) SendMessagesToAdmins(ctx context.Context, admins []entities.User, form *groupSubmitForm) error {
+	errRes := make(chan error, 1)
+	go func(chan error) {
+		text := fmt.Sprintf("Пользователь под id @%s и именем \"%s\" хочет присоединиться к группе", form.UserName, form.Name)
+		reqUUID := uuid.NewString()
+		for _, admin := range admins {
+			msg := tgbotapi.NewMessage(admin.TgId, text)
+			msg.ReplyMarkup = createMarkupKeyboard(form)
+			sentMsg, err := state.bot.Send(msg)
+			if err != nil {
+				errRes <- err
+			}
+			err = state.requests.SaveRequest(interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
+			errRes <- err
 		}
-		err = state.requests.SaveRequest(interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
-		if err != nil {
-			return err
-		}
+	}(errRes)
+	var err error
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("failed to send messages to group admins: %v", ctx.Err())
+	case err = <-errRes:
+		return err
 	}
-	return nil
 }
 
 type groupWaitingState struct {
@@ -197,9 +206,19 @@ func (*groupWaitingState) StateName() string {
 	return constants.GROUP_WAITING_STATE
 }
 
-func (state *groupWaitingState) Handle(chatId int64, message *tgbotapi.Message) error {
-	_, err := state.bot.Send(tgbotapi.NewMessage(chatId, "Ваша заявка всё ещё рассматривается, подождите"))
-	return err
+func (state *groupWaitingState) Handle(ctx context.Context, message *tgbotapi.Message) error {
+	errRes := make(chan error, 1)
+	go func(chan error) {
+		_, err := state.bot.Send(tgbotapi.NewMessage(message.Chat.ID, "Ваша заявка всё ещё рассматривается, подождите"))
+		errRes <- err
+	}(errRes)
+	var err error
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("failed to send waiting message: %v", ctx.Err())
+	case err = <-errRes:
+	    return err	
+	}
 }
 
 func createMarkupKeyboard(form *groupSubmitForm) *tgbotapi.InlineKeyboardMarkup {

@@ -2,6 +2,7 @@ package admin
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -44,16 +45,16 @@ func (*adminSubmitStartState) StateName() string {
 	return constants.ADMIN_SUBMIT_START_STATE
 }
 
-func (state *adminSubmitStartState) Handle(chatId int64, message *tgbotapi.Message) error {
+func (state *adminSubmitStartState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	isAdmin, err := state.checkIfAdmin(message.From.ID)
 	if err != nil {
 		return err
 	}
 	if isAdmin {
-		err = state.TransitionAndSend(interfaces.NewCachedInfo(chatId, constants.IDLE_STATE), tgbotapi.NewMessage(chatId, "Вы уже админ группы"))
+		err = state.TransitionAndSend(interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE), tgbotapi.NewMessage(message.Chat.ID, "Вы уже админ группы"))
 		return err
 	}
-	err = state.TransitionAndSend(interfaces.NewCachedInfo(chatId, constants.ADMIN_SUBMITTING_NAME_STATE), tgbotapi.NewMessage(chatId, "Введите ваши фамилию и имя (Пример формата: Иванов Иван)"))
+	err = state.TransitionAndSend(interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_NAME_STATE), tgbotapi.NewMessage(message.Chat.ID, "Введите ваши фамилию и имя (Пример формата: Иванов Иван)"))
 	return err
 }
 
@@ -87,7 +88,7 @@ func (*adminSubmittingNameState) StateName() string {
 	return constants.ADMIN_SUBMITTING_NAME_STATE
 }
 
-func (state *adminSubmittingNameState) Handle(chatId int64, message *tgbotapi.Message) error {
+func (state *adminSubmittingNameState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	if message.Text == "" {
 		return errors.New("no text in message")
 	}
@@ -95,15 +96,15 @@ func (state *adminSubmittingNameState) Handle(chatId int64, message *tgbotapi.Me
 	if err != nil {
 		return err
 	}
-	err = state.cache.SaveInfo(chatId, string(info))
+	err = state.cache.SaveInfo(message.Chat.ID, string(info))
 	if err != nil {
 		return err
 	}
-	err = state.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.ADMIN_SUBMITTING_GROUP_STATE))
+	err = state.cache.SaveState(*interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_GROUP_STATE))
 	if err != nil {
 		return err
 	}
-	msg := tgbotapi.NewMessage(chatId, "Введите ваш номер группы, указанный в ИИСе")
+	msg := tgbotapi.NewMessage(message.Chat.ID, "Введите ваш номер группы, указанный в ИИСе")
 	_, err = state.bot.Send(msg)
 	return err
 }
@@ -126,7 +127,7 @@ func (*adminSubmitingGroupState) StateName() string {
 	return constants.ADMIN_SUBMITTING_GROUP_STATE
 }
 
-func (state *adminSubmitingGroupState) Handle(chatId int64, message *tgbotapi.Message) error {
+func (state *adminSubmitingGroupState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	if message.Text == "" {
 		return stateErrors.NewInvalidInput("No text in message")
 	}
@@ -135,11 +136,11 @@ func (state *adminSubmitingGroupState) Handle(chatId int64, message *tgbotapi.Me
 		return err
 	}
 	if !exists {
-		msg := tgbotapi.NewMessage(chatId, "Введите номер существующей группы")
+		msg := tgbotapi.NewMessage(message.Chat.ID, "Введите номер существующей группы")
 		_, err := state.bot.Send(msg)
 		return err
 	}
-	info, err := state.cache.GetInfo(chatId)
+	info, err := state.cache.GetInfo(message.Chat.ID)
 	if err != nil {
 		return err
 	}
@@ -154,15 +155,15 @@ func (state *adminSubmitingGroupState) Handle(chatId int64, message *tgbotapi.Me
 	if err != nil {
 		return err
 	}
-	err = state.cache.SaveInfo(chatId, string(marshalledInfo))
+	err = state.cache.SaveInfo(message.Chat.ID, string(marshalledInfo))
 	if err != nil {
 		return err
 	}
-	err = state.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.ADMIN_SUBMITTING_PROOF_STATE))
+	err = state.cache.SaveState(*interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_PROOF_STATE))
 	if err != nil {
 		return err
 	}
-	msg := tgbotapi.NewMessage(chatId, "Предоставьте доказательство вверенных группой полномочий (в виде фото, с дополнительной текстовой информацией по усмотрению)")
+	msg := tgbotapi.NewMessage(message.Chat.ID, "Предоставьте доказательство вверенных группой полномочий (в виде фото, с дополнительной текстовой информацией по усмотрению)")
 	_, err = state.bot.Send(msg)
 	return err
 }
@@ -181,12 +182,12 @@ func (state *adminSubmittingProofState) StateName() string {
 	return constants.ADMIN_SUBMITTING_PROOF_STATE
 }
 
-func (state *adminSubmittingProofState) Handle(chatId int64, message *tgbotapi.Message) error {
+func (state *adminSubmittingProofState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	if message.Photo == nil {
-		_, err := state.bot.Send(tgbotapi.NewMessage(chatId, "Отправьте фото как часть сообщения"))
+		_, err := state.bot.Send(tgbotapi.NewMessage(message.Chat.ID, "Отправьте фото как часть сообщения"))
 		return err
 	}
-	info, err := state.cache.GetInfo(chatId)
+	info, err := state.cache.GetInfo(message.Chat.ID)
 	if err != nil {
 		return err
 	}
@@ -204,12 +205,12 @@ func (state *adminSubmittingProofState) Handle(chatId int64, message *tgbotapi.M
 		return err
 	}
 
-	err = state.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.ADMIN_WAITING_STATE))
+	err = state.cache.SaveState(*interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_WAITING_STATE))
 	if err != nil {
 		return err
 	}
 
-	msg := state.createTemplateResponse(chatId, form, fileBytes)
+	msg := state.createTemplateResponse(message.Chat.ID, form, fileBytes)
 	return state.sendPhotoToOwners(*msg, state.bot)
 }
 
@@ -226,8 +227,8 @@ func (state *adminWaitingState) StateName() string {
 	return constants.ADMIN_WAITING_STATE
 }
 
-func (state *adminWaitingState) Handle(chatId int64, message *tgbotapi.Message) error {
-	msg := tgbotapi.NewMessage(chatId, "Sorry, your last admin submit has not been proceeded yet")
+func (state *adminWaitingState) Handle(ctx context.Context, message *tgbotapi.Message) error {
+	msg := tgbotapi.NewMessage(message.From.ID, "Sorry, your last admin submit has not been proceeded yet")
 	_, err := state.bot.Send(msg)
 	return err
 }

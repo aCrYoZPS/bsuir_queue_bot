@@ -1,6 +1,7 @@
 package group
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"strconv"
@@ -26,7 +27,7 @@ func NewGroupCallbackHandler(users interfaces.UsersRepository, cache interfaces.
 	}
 }
 
-func (handler *GroupCallbackHandler) HandleCallback(update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
+func (handler *GroupCallbackHandler) HandleCallback(ctx context.Context, update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
 	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 	if _, err := bot.Request(callback); err != nil {
 		return err

@@ -1,11 +1,13 @@
 package update_handlers
 
 import (
+	"context"
 	"log/slog"
 	"slices"
 	"strings"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -28,7 +30,7 @@ func GetUserCommands() []tgbotapi.BotCommand {
 }
 
 type StateMachine interface {
-	HandleState(chatId int64, message *tgbotapi.Message) error
+	HandleState(ctx context.Context, message *tgbotapi.Message) error
 }
 type MessagesService struct {
 	cache        interfaces.HandlersCache
@@ -41,6 +43,8 @@ func NewMessagesHandler(stateMachine StateMachine, cache interfaces.HandlersCach
 }
 
 func (srv *MessagesService) HandleCommands(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
+	ctx, cancel := context.WithTimeout(context.Background(), constants.DEFAULT_TIMEOUT)
+	defer cancel()
 	if update.Message.Command() != "" {
 		isCommand := func(compared string) func(command tgbotapi.BotCommand) bool {
 			return func(command tgbotapi.BotCommand) bool {
@@ -54,7 +58,7 @@ func (srv *MessagesService) HandleCommands(update *tgbotapi.Update, bot *tgbotap
 			}
 			return
 		}
-		err := srv.stateMachine.HandleState(update.Message.Chat.ID, update.Message)
+		err := srv.stateMachine.HandleState(ctx, update.Message)
 		if err != nil {
 			slog.Error(err.Error())
 			return
@@ -63,7 +67,9 @@ func (srv *MessagesService) HandleCommands(update *tgbotapi.Update, bot *tgbotap
 }
 
 func (srv *MessagesService) HandleMessages(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
-	err := srv.stateMachine.HandleState(update.Message.Chat.ID, update.Message)
+	ctx, cancel := context.WithTimeout(context.Background(), constants.DEFAULT_TIMEOUT)
+	defer cancel()
+	err := srv.stateMachine.HandleState(ctx, update.Message)
 	if err != nil {
 		slog.Error(err.Error())
 	}

@@ -1,6 +1,7 @@
 package stateMachine
 
 import (
+	"context"
 	"errors"
 	"slices"
 	"sync"
@@ -13,7 +14,7 @@ import (
 
 type State interface {
 	StateName() string
-	Handle(chatId int64, message *tgbotapi.Message) error
+	Handle(ctx context.Context, message *tgbotapi.Message) error
 }
 
 var once sync.Once
