@@ -26,7 +26,7 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 	var currentState State
 	switch message.Text {
 	case update_handlers.ASSIGN_COMMAND:
-		err := state.cache.SaveState(*interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMIT_START_STATE))
+		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMIT_START_STATE))
 		if err != nil {
 			return err
 		}
@@ -53,7 +53,7 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 			return err
 		}
 	case update_handlers.JOIN_GROUP_COMMAND:
-		err := state.cache.SaveState(*interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_SUBMIT_START_STATE))
+		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_SUBMIT_START_STATE))
 		if err != nil {
 			return err
 		}
@@ -66,7 +66,7 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 			return err
 		}
 	case update_handlers.SUBMIT_COMMAND:
-		err := state.cache.SaveInfo(message.Chat.ID, constants.LABWORK_SUBMIT_START_STATE)	
+		err := state.cache.SaveInfo(ctx, message.Chat.ID, constants.LABWORK_SUBMIT_START_STATE)	
 		if err != nil {
 			return err
 		}

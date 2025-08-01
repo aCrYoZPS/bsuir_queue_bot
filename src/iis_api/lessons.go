@@ -1,6 +1,7 @@
 package iis_api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -35,43 +36,43 @@ type schedulesResponse struct {
 	Saturday  []*iis_api_entities.Lesson `json:"Суббота"`
 }
 
-func (serv *LessonsService) AddGroupLessons(groupName string) (url string, err error) {
-	responseJson, err := serv.getSchedulesJson(groupName)
+func (serv *LessonsService) AddGroupLessons(ctx context.Context, groupName string) (url string, err error) {
+	responseJson, err := serv.getSchedulesJson(ctx, groupName)
 	if err != nil {
 		return "", err
 	}
-	lessons, err := serv.GetAll(groupName)
+	lessons, err := serv.GetAll(ctx, groupName)
 	if err != nil {
 		return "", err
 	}
 	if len(lessons) != 0 {
-		return serv.CreateFilledSheet(groupName, lessons)
+		return serv.CreateFilledSheet(ctx, groupName, lessons)
 	}
 	totalLessons := serv.getTotalLessons(responseJson)
-	err = serv.AddRange(totalLessons)
+	err = serv.AddRange(ctx,totalLessons)
 	if err != nil {
 		return "", err
 	}
-	lessons, err = serv.GetAll(groupName)
+	lessons, err = serv.GetAll(ctx,groupName)
 	if err != nil {
 		return "", err
 	}
-	return serv.CreateFilledSheet(groupName, lessons)
+	return serv.CreateFilledSheet(ctx, groupName, lessons)
 }
 
 func (serv *LessonsService) getTotalLessons(responseJson *schedulesResponse) []*iis_api_entities.Lesson {
 	return slices.Concat(responseJson.Monday, responseJson.Tuesday, responseJson.Wednesday, responseJson.Thursday, responseJson.Friday, responseJson.Saturday)
 }
 
-func (serv *LessonsService) CreateFilledSheet(groupName string, lessons []persistance.Lesson) (url string, err error) {
-	url, err = serv.sheetsApi.CreateSheet(groupName, lessons)
+func (serv *LessonsService) CreateFilledSheet(ctx context.Context, groupName string, lessons []persistance.Lesson) (url string, err error) {
+	url, err = serv.sheetsApi.CreateSheet(ctx, groupName, lessons)
 	if err != nil {
 		return "", err
 	}
 	return url, nil
 }
 
-func (serv *LessonsService) getSchedulesJson(groupName string) (*schedulesResponse, error) {
+func (serv *LessonsService) getSchedulesJson(ctx context.Context, groupName string) (*schedulesResponse, error) {
 	iisApiUrl := fmt.Sprintf("https://iis.bsuir.by/api/v1/schedule?studentGroup=%s", groupName)
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", iisApiUrl, nil)
@@ -79,7 +80,7 @@ func (serv *LessonsService) getSchedulesJson(groupName string) (*schedulesRespon
 		return nil, err
 	}
 	req.Header.Add("Accept", "application/json")
-	resp, err := client.Do(req)
+	resp, err := client.Do(req.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}

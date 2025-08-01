@@ -47,22 +47,22 @@ func (handler *AdminCallbackHandler) HandleCallback(ctx context.Context, update 
 	var err error
 	switch {
 	case strings.HasPrefix(command, "accept"):
-		err = handler.handleAcceptCallback(update.CallbackQuery.Message, command, bot)
+		err = handler.handleAcceptCallback(ctx, update.CallbackQuery.Message, command, bot)
 	case strings.HasPrefix(command, "decline"):
-		err = handler.handleDeclineCallback(update.CallbackQuery.Message, command, bot)
+		err = handler.handleDeclineCallback(ctx, update.CallbackQuery.Message, command, bot)
 	default:
 		err = errors.New("no such callback")
 	}
 	return err
 }
 
-func (handler *AdminCallbackHandler) handleAcceptCallback(msg *tgbotapi.Message, command string, bot *tgbotapi.BotAPI) error {
+func (handler *AdminCallbackHandler) handleAcceptCallback(ctx context.Context, msg *tgbotapi.Message, command string, bot *tgbotapi.BotAPI) error {
 	var chatId int64
 	chatId, err := strconv.ParseInt(strings.TrimPrefix(command, "accept"), 10, 64)
 	if err != nil {
 		return err
 	}
-	info, err := handler.cache.GetInfo(chatId)
+	info, err := handler.cache.GetInfo(ctx, chatId)
 	if err != nil {
 		return err
 	}
@@ -72,17 +72,17 @@ func (handler *AdminCallbackHandler) handleAcceptCallback(msg *tgbotapi.Message,
 		return err
 	}
 
-	err = handler.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.IDLE_STATE))
+	err = handler.cache.SaveState(ctx, *interfaces.NewCachedInfo(chatId, constants.IDLE_STATE))
 	if err != nil {
 		return err
 	}
 
-	err = handler.addAdmin(form)
+	err = handler.addAdmin(ctx, form)
 	if err != nil {
 		return err
 	}
 
-	url, err := handler.lessons.AddGroupLessons(form.Group)
+	url, err := handler.lessons.AddGroupLessons(ctx, form.Group)
 	if err != nil {
 		return err
 	}
@@ -91,12 +91,12 @@ func (handler *AdminCallbackHandler) handleAcceptCallback(msg *tgbotapi.Message,
 	if _, err := bot.Send(resp); err != nil {
 		return err
 	}
-	err = handler.RemoveMarkup(msg, bot)
+	err = handler.RemoveMarkup(ctx, msg, bot)
 	return err
 }
 
-func (handler *AdminCallbackHandler) addAdmin(form *adminSubmitForm) error {
-	user, err := handler.usersRepo.GetByTgId(form.UserId)
+func (handler *AdminCallbackHandler) addAdmin(ctx context.Context,form *adminSubmitForm) error {
+	user, err := handler.usersRepo.GetByTgId(ctx, form.UserId)
 	if err != nil {
 		return err
 	}
@@ -104,17 +104,17 @@ func (handler *AdminCallbackHandler) addAdmin(form *adminSubmitForm) error {
 		return ErrAlreadyAdmin
 	}
 	user.Roles = append(user.Roles, entities.Admin)
-	err = handler.usersRepo.Update(user)
+	err = handler.usersRepo.Update(ctx, user)
 	return err
 }
 
-func (handler *AdminCallbackHandler) handleDeclineCallback(msg *tgbotapi.Message, command string, bot *tgbotapi.BotAPI) error {
+func (handler *AdminCallbackHandler) handleDeclineCallback(ctx context.Context, msg *tgbotapi.Message, command string, bot *tgbotapi.BotAPI) error {
 	var chatId int64
 	err := json.Unmarshal([]byte(strings.TrimPrefix(command, "decline")), &chatId)
 	if err != nil {
 		return err
 	}
-	info, err := handler.cache.GetInfo(chatId)
+	info, err := handler.cache.GetInfo(ctx, chatId)
 	if err != nil {
 		return err
 	}
@@ -123,11 +123,11 @@ func (handler *AdminCallbackHandler) handleDeclineCallback(msg *tgbotapi.Message
 	if err != nil {
 		return err
 	}
-	err = handler.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.IDLE_STATE))
+	err = handler.cache.SaveState(ctx, *interfaces.NewCachedInfo(chatId, constants.IDLE_STATE))
 	if err != nil {
 		return err
 	}
-	err = handler.RemoveMarkup(msg, bot)
+	err = handler.RemoveMarkup(ctx, msg, bot)
 	if err != nil {
 		return err
 	}
@@ -136,17 +136,17 @@ func (handler *AdminCallbackHandler) handleDeclineCallback(msg *tgbotapi.Message
 	return err
 }
 
-func (handler *AdminCallbackHandler) RemoveMarkup(msg *tgbotapi.Message, bot *tgbotapi.BotAPI) error {
-	request, err := handler.requests.GetByMsg(int64(msg.MessageID), msg.Chat.ID)
+func (handler *AdminCallbackHandler) RemoveMarkup(ctx context.Context, msg *tgbotapi.Message, bot *tgbotapi.BotAPI) error {
+	request, err := handler.requests.GetByMsg(ctx, int64(msg.MessageID), msg.Chat.ID)
 	if err != nil {
 		return err
 	}
-	requests, err := handler.requests.GetByUUID(request.UUID)
+	requests, err := handler.requests.GetByUUID(ctx, request.UUID)
 	if err != nil {
 		return err
 	}
 	for _, request := range requests {
-		err = handler.requests.DeleteRequest(request.MsgId)
+		err = handler.requests.DeleteRequest(ctx, request.MsgId)
 		if err != nil {
 			return err
 		}

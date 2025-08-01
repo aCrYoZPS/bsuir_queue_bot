@@ -1,10 +1,13 @@
 package driveapi
 
 import (
+	"context"
+
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"google.golang.org/api/drive/v3"
 )
 
+var _ DriveApi = (*DriveApiService)(nil)
 type DriveApiService struct {
 	DriveApi
 	groupsRepo interfaces.GroupsRepository
@@ -20,8 +23,8 @@ func NewDriveApiService(groups interfaces.GroupsRepository, api *drive.Service) 
 
 const SHEETS_MIME_TYPE = "application/vnd.google-apps.spreadsheet"
 
-func (serv *DriveApiService) DoesSheetExist(name string) (SpreadsheetResult, error) {
-	files, err := serv.api.Files.List().Do()
+func (serv *DriveApiService) DoesSheetExist(ctx context.Context, name string) (SpreadsheetResult, error) {
+	files, err := serv.api.Files.List().Context(ctx).Do()
 	if err != nil {
 		return SpreadsheetResult{}, err
 	}

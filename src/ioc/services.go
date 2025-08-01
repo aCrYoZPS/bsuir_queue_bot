@@ -9,6 +9,7 @@ import (
 	driveapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/drive_api"
 	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/sheets_api"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/ioc/constants"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/bot"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers"
@@ -20,8 +21,10 @@ import (
 
 var useGroupsService = provider(
 	func() *iis_api.GroupsService {
+		ctx, cancel := context.WithTimeout(context.Background(), constants.INIT_TIMEOUT)
+		defer cancel()
 		serv := iis_api.NewGroupsService(useGroupsRepository())
-		err := serv.InitAllGroups()
+		err := serv.InitAllGroups(ctx)
 		if err != nil {
 			logging.FatalLog(err.Error())
 		}

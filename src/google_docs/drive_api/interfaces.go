@@ -1,5 +1,7 @@
 package driveapi
 
+import "context"
+
 type SpreadsheetResult struct {
 	doesExist     bool
 	spreadsheetId string
@@ -14,5 +16,5 @@ func (res *SpreadsheetResult) SpreadsheetId() string {
 }
 
 type DriveApi interface {
-	DoesSheetExist(name string) (SpreadsheetResult, error)
+	DoesSheetExist(ctx context.Context, name string) (SpreadsheetResult, error)
 }

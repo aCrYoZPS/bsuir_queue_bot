@@ -1,6 +1,7 @@
 package interfaces
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -32,10 +33,10 @@ func NewCachedInfo(ChatId int64, State string) *CachedInfo {
 }
 
 type HandlersCache interface {
-	SaveState(CachedInfo) error
-	GetState(chatId int64) (*CachedInfo, error)
-	SaveInfo(chatId int64, json string) error
-	GetInfo(chatId int64) (string, error)
-	AcquireLock(chatId int64) *sync.Mutex
-	ReleaseLock(chatId int64)
+	SaveState(context.Context, CachedInfo) error
+	GetState(ctx context.Context, chatId int64) (*CachedInfo, error)
+	SaveInfo(ctx context.Context, chatId int64, json string) error
+	GetInfo(ctx context.Context, chatId int64) (string, error)
+	AcquireLock(ctx context.Context, chatId int64) *sync.Mutex
+	ReleaseLock(ctx context.Context, chatId int64)
 }

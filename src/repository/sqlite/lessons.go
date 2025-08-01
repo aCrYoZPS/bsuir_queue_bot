@@ -36,15 +36,13 @@ func NewLessonsRepository(db *sql.DB) interfaces.LessonsRepository {
 
 const savedFormat = time.RFC3339
 
-func (repo *LessonsRepository) AddRange(lessons []*entities.Lesson) error {
-	ctx, cancel := context.WithTimeout(context.Background(), QUERY_TIMEOUT)
-	defer cancel()
+func (repo *LessonsRepository) AddRange(ctx context.Context, lessons []*entities.Lesson) error {
 	tx, err := repo.db.BeginTx(ctx, nil)
 	defer tx.Rollback()
 	if err != nil {
 		return err
 	}
-	storedLessons := repo.getSortedLessons(lessons)
+	storedLessons := repo.getSortedLessons(ctx, lessons)
 	for _, lesson := range storedLessons {
 		storedDate := lesson.Date.Format(savedFormat)
 		storedTime := lesson.Time.Format(savedFormat)
@@ -55,10 +53,7 @@ func (repo *LessonsRepository) AddRange(lessons []*entities.Lesson) error {
 	return err
 }
 
-func (repo *LessonsRepository) GetAll(groupName string) ([]persistance.Lesson, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), QUERY_TIMEOUT)
-	defer cancel()
-
+func (repo *LessonsRepository) GetAll(ctx context.Context, groupName string) ([]persistance.Lesson, error) {
 	query := fmt.Sprintf("SELECT group_id, lesson_type, subject, subgroup_number, date, time FROM %s WHERE $1 in (SELECT name from %s)", LESSONS_TABLE, GROUPS_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query, groupName)
 	if err != nil {
@@ -90,10 +85,7 @@ func (repo *LessonsRepository) GetAll(groupName string) ([]persistance.Lesson, e
 	return lessons, nil
 }
 
-func (repo *LessonsRepository) GetNext(subject string, groupId int64) ([]persistance.Lesson, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), QUERY_TIMEOUT)
-	defer cancel()
-
+func (repo *LessonsRepository) GetNext(ctx context.Context, subject string, groupId int64) ([]persistance.Lesson, error) {
 	date := time.Now().UTC().Unix()
 	query := fmt.Sprintf("SELECT group_id, lesson_type, subject, subgroup_number, date, time FROM %s ORDER BY date-%[2]s WHERE date-%[2]s > 0 AND subject=%s AND group_id = %s LIMIT 4", LESSONS_TABLE, fmt.Sprint(date), subject, fmt.Sprint(groupId))
 	rows, err := repo.db.QueryContext(ctx, query)
@@ -120,7 +112,7 @@ func (repo *LessonsRepository) GetNext(subject string, groupId int64) ([]persist
 	return lessons, nil
 }
 
-func (repo *LessonsRepository) GetSubjects(groupId int64) ([]string, error) {
+func (repo *LessonsRepository) GetSubjects(ctx context.Context, groupId int64) ([]string, error) {
 	query := fmt.Sprintf("SELECT DISTINCT subject FROM %s WHERE group_id=$1 ORDER BY subject", LESSONS_TABLE)
 	rows, err := repo.db.Query(query, groupId)
 	if err != nil {
@@ -144,44 +136,53 @@ func (repo *LessonsRepository) GetSubjects(groupId int64) ([]string, error) {
 	return subjects, nil
 }
 
-func (repo *LessonsRepository) getSortedLessons(lessons []*entities.Lesson) []persistance.Lesson {
-	if len(lessons) == 0 {
-		return nil
-	}
-	storedLessons := make([]persistance.Lesson, 0, len(lessons)*3)
-	filter := datastructures.NewOptimalBloomFilter(len(lessons), 0.01)
-	for _, lesson := range lessons {
-		if lesson.LessonType != entities.Labwork {
-			continue
+func (repo *LessonsRepository) getSortedLessons(ctx context.Context, lessons []*entities.Lesson) []persistance.Lesson {
+	resChan := make(chan []persistance.Lesson, 1)
+	go func(chan []persistance.Lesson) {
+		if len(lessons) == 0 {
+			resChan <- nil
 		}
-		checkedName := createCheckedName(lesson)
-		exists := filter.Check(checkedName)
-		if exists {
-			notFalsePositive := slices.ContainsFunc(lessons, areLessonsEqual(lesson))
-			if notFalsePositive {
+		storedLessons := make([]persistance.Lesson, 0, len(lessons)*3)
+		filter := datastructures.NewOptimalBloomFilter(len(lessons), 0.01)
+		for _, lesson := range lessons {
+			if lesson.LessonType != entities.Labwork {
 				continue
 			}
-		}
-		filter.Add(checkedName)
+			checkedName := createCheckedName(lesson)
+			exists := filter.Check(checkedName)
+			if exists {
+				notFalsePositive := slices.ContainsFunc(lessons, areLessonsEqual(lesson))
+				if notFalsePositive {
+					continue
+				}
+			}
+			filter.Add(checkedName)
 
-		startDate, endDate := time.Time(lesson.StartDate), time.Time(lesson.EndDate)
-		currentDate := startDate
-		for !currentDate.Equal(endDate) {
-			addedTime := time.Hour * 24 * 7 * time.Duration(utils.CalculateWeeksDistance(lesson.WeekNumber, utils.CalculateWeek(startDate)))
-			currentDate = currentDate.Add(addedTime)
-			storedLesson := *persistance.FromLessonEntity(lesson, currentDate)
-			storedLessons = append(storedLessons, storedLesson)
+			startDate, endDate := time.Time(lesson.StartDate), time.Time(lesson.EndDate)
+			currentDate := startDate
+			for !currentDate.Equal(endDate) {
+				addedTime := time.Hour * 24 * 7 * time.Duration(utils.CalculateWeeksDistance(lesson.WeekNumber, utils.CalculateWeek(startDate)))
+				currentDate = currentDate.Add(addedTime)
+				storedLesson := *persistance.FromLessonEntity(lesson, currentDate)
+				storedLessons = append(storedLessons, storedLesson)
+			}
 		}
+
+		sort.Slice(storedLessons, func(i, j int) bool {
+			if !storedLessons[i].Date.Equal(storedLessons[j].Date) {
+				return storedLessons[i].Date.Before(storedLessons[j].Date)
+			}
+			return storedLessons[i].Time.Before(storedLessons[j].Time)
+		})
+		resChan <- storedLessons
+	}(resChan)
+
+	select {
+	case res := <-resChan:
+		return res
+	case <-ctx.Done():
+		return nil
 	}
-
-	sort.Slice(storedLessons, func(i, j int) bool {
-		if !storedLessons[i].Date.Equal(storedLessons[j].Date) {
-			return storedLessons[i].Date.Before(storedLessons[j].Date)
-		}
-		return storedLessons[i].Time.Before(storedLessons[j].Time)
-	})
-
-	return storedLessons
 }
 
 func createCheckedName(storedLesson *entities.Lesson) string {

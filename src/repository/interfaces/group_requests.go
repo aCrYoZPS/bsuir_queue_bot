@@ -1,6 +1,10 @@
 package interfaces
 
-import "github.com/google/uuid"
+import (
+	"context"
+
+	"github.com/google/uuid"
+)
 
 type GroupRequest struct {
 	UUID   string
@@ -26,8 +30,8 @@ func WithUUID(uuid string) func(req *GroupRequest) {
 }
 
 type RequestsRepository interface {
-	SaveRequest(*GroupRequest) error
-	DeleteRequest(msgId int64) error
-	GetByUUID(uuid string) ([]GroupRequest, error)
-	GetByMsg(msgId, chatId int64) (*GroupRequest, error)
+	SaveRequest(context.Context, *GroupRequest) error
+	DeleteRequest(ctx context.Context, msgId int64) error
+	GetByUUID(ctx context.Context,uuid string) ([]GroupRequest, error)
+	GetByMsg(ctx context.Context,msgId, chatId int64) (*GroupRequest, error)
 }

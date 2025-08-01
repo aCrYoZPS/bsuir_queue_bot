@@ -1,6 +1,8 @@
 package mocks
 
 import (
+	"context"
+
 	iis_api_entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 )
@@ -18,7 +20,7 @@ func NewGroupsRepositoryMock() *GroupsRepositoryMock {
 	return &GroupsRepositoryMock{}
 }
 
-func (*GroupsRepositoryMock) GetAll() ([]iis_api_entities.Group, error) {
+func (*GroupsRepositoryMock) GetAll(ctx context.Context) ([]iis_api_entities.Group, error) {
 	return MockGroups, nil
 }
 

@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -15,6 +16,7 @@ const GROUPS_TABLE = "groups"
 
 var _ interfaces.GroupsRepository = (*GroupsRepository)(nil)
 
+
 type GroupsRepository struct {
 	db *sql.DB
 }
@@ -27,8 +29,8 @@ func NewGroupsRepository(db *sql.DB) (interfaces.GroupsRepository, error) {
 	return repo, nil
 }
 
-func (repos *GroupsRepository) GetAll() ([]iisEntities.Group, error) {
-	rows, err := repos.db.Query(fmt.Sprintf("SELECT * FROM %s", GROUPS_TABLE))
+func (repos *GroupsRepository) GetAll(ctx context.Context,) ([]iisEntities.Group, error) {
+	rows, err := repos.db.QueryContext(ctx, fmt.Sprintf("SELECT * FROM %s", GROUPS_TABLE))
 	if err != nil {
 		return nil, err
 	}
@@ -47,8 +49,8 @@ func (repos *GroupsRepository) GetAll() ([]iisEntities.Group, error) {
 	return groups, nil
 }
 
-func (repos *GroupsRepository) Add(group *iisEntities.Group) error {
-	_, err := repos.db.Exec(fmt.Sprintf("INSERT INTO %s (name, faculty_id, spreadsheet_id, admin_id) VALUES ($1, $2, $3, $4)", GROUPS_TABLE),
+func (repos *GroupsRepository) Add(ctx context.Context,group *iisEntities.Group) error {
+	_, err := repos.db.ExecContext(ctx, fmt.Sprintf("INSERT INTO %s (name, faculty_id, spreadsheet_id, admin_id) VALUES ($1, $2, $3, $4)", GROUPS_TABLE),
 		group.Name, group.FacultyId, group.SpreadsheetId, group.AdminId)
 	if err != nil {
 		return err
@@ -57,7 +59,7 @@ func (repos *GroupsRepository) Add(group *iisEntities.Group) error {
 	return nil
 }
 
-func (repos *GroupsRepository) AddRange(groups []iisEntities.Group) error {
+func (repos *GroupsRepository) AddRange(ctx context.Context,groups []iisEntities.Group) error {
 	query := fmt.Sprintf("INSERT INTO %s (name, faculty_id, spreadsheet_id, admin_id) VALUES ", GROUPS_TABLE)
 	args := []any{}
 	placeholders := []string{}
@@ -74,14 +76,14 @@ func (repos *GroupsRepository) AddRange(groups []iisEntities.Group) error {
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(args...)
+	_, err = stmt.ExecContext(ctx, args...)
 	return err
 }
 
-func (repos *GroupsRepository) AddNonPresented(groups []iisEntities.Group) error {
+func (repos *GroupsRepository) AddNonPresented(ctx context.Context,groups []iisEntities.Group) error {
 	query := fmt.Sprintf("INSERT INTO %s (name, faculty_id, spreadsheet_id, admin_id) VALUES ($1, $2, $3, $4)", GROUPS_TABLE)
 	for _, group := range groups {
-		_, err := repos.db.Exec(query, group.Name, group.FacultyId, group.SpreadsheetId, group.AdminId)
+		_, err := repos.db.ExecContext(ctx, query, group.Name, group.FacultyId, group.SpreadsheetId, group.AdminId)
 		if err, ok := err.(sqlite3.Error); ok && err.ExtendedCode != sqlite3.ErrConstraintUnique {
 			return err
 		}
@@ -89,8 +91,8 @@ func (repos *GroupsRepository) AddNonPresented(groups []iisEntities.Group) error
 	return nil
 }
 
-func (repos *GroupsRepository) GetById(id int) (*iisEntities.Group, error) {
-	row := repos.db.QueryRow(fmt.Sprintf("SELECT * FROM %s WHERE id=$1", GROUPS_TABLE), id)
+func (repos *GroupsRepository) GetById(ctx context.Context,id int) (*iisEntities.Group, error) {
+	row := repos.db.QueryRowContext(ctx, fmt.Sprintf("SELECT * FROM %s WHERE id=$1", GROUPS_TABLE), id)
 	g := &iisEntities.Group{}
 
 	err := row.Scan(&g.Id, &g.Name, &g.FacultyId, &g.SpreadsheetId, &g.AdminId)
@@ -101,8 +103,8 @@ func (repos *GroupsRepository) GetById(id int) (*iisEntities.Group, error) {
 	return g, nil
 }
 
-func (repos *GroupsRepository) GetByName(name string) (*iisEntities.Group, error) {
-	row := repos.db.QueryRow(fmt.Sprintf("SELECT id, name, faculty_id, spreadsheet_id, admin_id FROM %s WHERE name=$1", GROUPS_TABLE), name)
+func (repos *GroupsRepository) GetByName(ctx context.Context,name string) (*iisEntities.Group, error) {
+	row := repos.db.QueryRowContext(ctx,fmt.Sprintf("SELECT id, name, faculty_id, spreadsheet_id, admin_id FROM %s WHERE name=$1", GROUPS_TABLE), name)
 	group := &iisEntities.Group{}
 
 	err := row.Scan(&group.Id, &group.Name, &group.FacultyId, &group.SpreadsheetId, &group.AdminId)
@@ -112,20 +114,20 @@ func (repos *GroupsRepository) GetByName(name string) (*iisEntities.Group, error
 	return group, nil
 }
 
-func (repos *GroupsRepository) Delete(id int) error {
-	_, err := repos.db.Exec("DELETE FROM groups WHERE id=$1", id)
+func (repos *GroupsRepository) Delete(ctx context.Context,id int) error {
+	_, err := repos.db.ExecContext(ctx,"DELETE FROM groups WHERE id=$1", id)
 	return err
 }
 
-func (repos *GroupsRepository) Update(group *iisEntities.Group) error {
-	_, err := repos.db.Exec("UPDATE groups SET name=$1, faculty_id=$2, spreadsheet_id=$3, admin_id=$4 WHERE id=$5",
+func (repos *GroupsRepository) Update(ctx context.Context,group *iisEntities.Group) error {
+	_, err := repos.db.ExecContext(ctx, "UPDATE groups SET name=$1, faculty_id=$2, spreadsheet_id=$3, admin_id=$4 WHERE id=$5",
 		group.Name, group.FacultyId, group.SpreadsheetId, group.AdminId, group.Id)
 	return err
 }
 
-func (repos *GroupsRepository) DoesGroupExist(groupName string) (bool, error) {
+func (repos *GroupsRepository) DoesGroupExist(ctx context.Context, groupName string) (bool, error) {
 	query := fmt.Sprintf("SELECT EXISTS (SELECT 1 FROM %s WHERE name=$1)", GROUPS_TABLE)
-	row := repos.db.QueryRow(query, groupName)
+	row := repos.db.QueryRowContext(ctx, query, groupName)
 	exists := false
 	if row.Err() != nil {
 		return false, row.Err()
@@ -134,9 +136,9 @@ func (repos *GroupsRepository) DoesGroupExist(groupName string) (bool, error) {
 	return exists, err
 }
 
-func (repos *GroupsRepository) GetAdmins(groupName string) ([]entities.User, error) {
+func (repos *GroupsRepository) GetAdmins(ctx context.Context, groupName string) ([]entities.User, error) {
 	query := fmt.Sprintf("SELECT us.id, us.tg_id, us.group_id, us.full_name FROM %s AS us INNER JOIN %s AS gr ON gr.id=us.group_id WHERE gr.name=$1", USERS_TABLE, GROUPS_TABLE)
-	rows, err := repos.db.Query(query, groupName)
+	rows, err := repos.db.QueryContext(ctx,query, groupName)
 	if err != nil {
 		return nil, err
 	}

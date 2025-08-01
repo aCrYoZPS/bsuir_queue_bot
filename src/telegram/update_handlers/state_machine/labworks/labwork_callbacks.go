@@ -1,6 +1,7 @@
 package labworks
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,7 +21,7 @@ import (
 var errNoLessons = errors.New("no lessons for given subject")
 
 type SheetsService interface {
-	AddLabwork(*LabworkRequest) error
+	AddLabwork(context.Context, *LabworkRequest) error
 }
 
 type LabworkRequest struct {
@@ -52,7 +53,7 @@ func NewLabworksCallbackHandler(bot *tgbotapi.BotAPI, cache interfaces.HandlersC
 	}
 }
 
-func (handler *LabworksCallbackHandler) HandleCallback(update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
+func (handler *LabworksCallbackHandler) HandleCallback(ctx context.Context, update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
 	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 	if _, err := bot.Request(callback); err != nil {
 		return err
@@ -62,10 +63,10 @@ func (handler *LabworksCallbackHandler) HandleCallback(update *tgbotapi.Update, 
 		if discipline == "" || userTgId == 0 {
 			return errors.New("invalid command requested")
 		}
-		err := handler.handleDisciplineCallback(update.CallbackQuery.Message, discipline)
+		err := handler.handleDisciplineCallback(ctx, update.CallbackQuery.Message, discipline)
 		if err != nil {
 			if errors.Is(err, errNoLessons) {
-				err := handler.cache.SaveState(*interfaces.NewCachedInfo(update.CallbackQuery.Message.Chat.ID, constants.IDLE_STATE))
+				err := handler.cache.SaveState(ctx, *interfaces.NewCachedInfo(update.CallbackQuery.Message.Chat.ID, constants.IDLE_STATE))
 				if err != nil {
 					return err
 				}
@@ -81,7 +82,7 @@ func (handler *LabworksCallbackHandler) HandleCallback(update *tgbotapi.Update, 
 		if date.Equal(time.Time{}) || userTgId == 0 {
 			return errors.New("invalid callback values")
 		}
-		err := handler.handleTimeCallback(update.CallbackQuery.Message, date)
+		err := handler.handleTimeCallback(ctx, update.CallbackQuery.Message, date)
 		if err != nil {
 			return err
 		}
@@ -92,9 +93,9 @@ func (handler *LabworksCallbackHandler) HandleCallback(update *tgbotapi.Update, 
 		var err error
 		switch {
 		case strings.HasPrefix(command, "accept"):
-			err = handler.handleAcceptCallback(update.CallbackQuery.Message, command, bot)
+			err = handler.handleAcceptCallback(ctx, update.CallbackQuery.Message, command, bot)
 		case strings.HasPrefix(command, "decline"):
-			err = handler.handleDeclineCallback(update.CallbackQuery.Message, command, bot)
+			err = handler.handleDeclineCallback(ctx, update.CallbackQuery.Message, command, bot)
 		default:
 			err = errors.New("no such callback")
 		}
@@ -105,12 +106,12 @@ func (handler *LabworksCallbackHandler) HandleCallback(update *tgbotapi.Update, 
 	return errors.New("invalid callback header")
 }
 
-func (handler *LabworksCallbackHandler) handleDisciplineCallback(message *tgbotapi.Message, discipline string) error {
-	user, err := handler.users.GetByTgId(message.From.ID)
+func (handler *LabworksCallbackHandler) handleDisciplineCallback(ctx context.Context, message *tgbotapi.Message, discipline string) error {
+	user, err := handler.users.GetByTgId(ctx, message.From.ID)
 	if err != nil {
 		return err
 	}
-	lessons, err := handler.labworks.GetNext(discipline, user.GroupId)
+	lessons, err := handler.labworks.GetNext(ctx, discipline, user.GroupId)
 	if err != nil {
 		return err
 	}
@@ -121,7 +122,7 @@ func (handler *LabworksCallbackHandler) handleDisciplineCallback(message *tgbota
 	if err != nil {
 		return err
 	}
-	err = handler.cache.SaveInfo(message.Chat.ID, string(json))
+	err = handler.cache.SaveInfo(ctx, message.Chat.ID, string(json))
 	if err != nil {
 		return err
 	}
@@ -185,8 +186,8 @@ func parseLabworkTimeCallback(callback string) (date time.Time, userTgId int64) 
 	return date, userTgId
 }
 
-func (handler *LabworksCallbackHandler) handleTimeCallback(msg *tgbotapi.Message, date time.Time) error {
-	jsonedInfo, err := handler.cache.GetInfo(msg.Chat.ID)
+func (handler *LabworksCallbackHandler) handleTimeCallback(ctx context.Context, msg *tgbotapi.Message, date time.Time) error {
+	jsonedInfo, err := handler.cache.GetInfo(ctx, msg.Chat.ID)
 	if err != nil {
 		return err
 	}
@@ -200,11 +201,11 @@ func (handler *LabworksCallbackHandler) handleTimeCallback(msg *tgbotapi.Message
 	if err != nil {
 		return err
 	}
-	err = handler.cache.SaveInfo(msg.Chat.ID, string(infoBytes))
+	err = handler.cache.SaveInfo(ctx, msg.Chat.ID, string(infoBytes))
 	if err != nil {
 		return err
 	}
-	err = handler.cache.SaveState(*interfaces.NewCachedInfo(msg.Chat.ID, constants.LABWORK_SUBMIT_PROOF_STATE))
+	err = handler.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.LABWORK_SUBMIT_PROOF_STATE))
 	if err != nil {
 		return err
 	}
@@ -212,13 +213,13 @@ func (handler *LabworksCallbackHandler) handleTimeCallback(msg *tgbotapi.Message
 	return err
 }
 
-func (handler *LabworksCallbackHandler) handleAcceptCallback(msg *tgbotapi.Message, command string, bot *tgbotapi.BotAPI) error {
+func (handler *LabworksCallbackHandler) handleAcceptCallback(ctx context.Context, msg *tgbotapi.Message, command string, bot *tgbotapi.BotAPI) error {
 	var chatId int64
 	chatId, err := strconv.ParseInt(strings.TrimPrefix(command, "accept"), 10, 64)
 	if err != nil {
 		return err
 	}
-	info, err := handler.cache.GetInfo(chatId)
+	info, err := handler.cache.GetInfo(ctx, chatId)
 	if err != nil {
 		return err
 	}
@@ -228,27 +229,27 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(msg *tgbotapi.Messa
 		return err
 	}
 
-	err = handler.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.IDLE_STATE))
+	err = handler.cache.SaveState(ctx, *interfaces.NewCachedInfo(chatId, constants.IDLE_STATE))
 	if err != nil {
 		return err
 	}
 
-	err = handler.sheets.AddLabwork(form)
+	err = handler.sheets.AddLabwork(ctx, form)
 	if err != nil {
 		return err
 	}
 
-	err = handler.RemoveMarkup(msg, bot)
+	err = handler.RemoveMarkup(ctx, msg, bot)
 	return err
 }
 
-func (handler *LabworksCallbackHandler) handleDeclineCallback(msg *tgbotapi.Message, command string, bot *tgbotapi.BotAPI) error {
+func (handler *LabworksCallbackHandler) handleDeclineCallback(ctx context.Context,msg *tgbotapi.Message, command string, bot *tgbotapi.BotAPI) error {
 	var chatId int64
 	err := json.Unmarshal([]byte(strings.TrimPrefix(command, "decline")), &chatId)
 	if err != nil {
 		return err
 	}
-	info, err := handler.cache.GetInfo(chatId)
+	info, err := handler.cache.GetInfo(ctx, chatId)
 	if err != nil {
 		return err
 	}
@@ -257,11 +258,11 @@ func (handler *LabworksCallbackHandler) handleDeclineCallback(msg *tgbotapi.Mess
 	if err != nil {
 		return err
 	}
-	err = handler.cache.SaveState(*interfaces.NewCachedInfo(chatId, constants.IDLE_STATE))
+	err = handler.cache.SaveState(ctx, *interfaces.NewCachedInfo(chatId, constants.IDLE_STATE))
 	if err != nil {
 		return err
 	}
-	err = handler.RemoveMarkup(msg, bot)
+	err = handler.RemoveMarkup(ctx, msg, bot)
 	if err != nil {
 		return err
 	}
@@ -270,17 +271,17 @@ func (handler *LabworksCallbackHandler) handleDeclineCallback(msg *tgbotapi.Mess
 	return err
 }
 
-func (handler *LabworksCallbackHandler) RemoveMarkup(msg *tgbotapi.Message, bot *tgbotapi.BotAPI) error {
-	request, err := handler.requests.GetByMsg(int64(msg.MessageID), msg.Chat.ID)
+func (handler *LabworksCallbackHandler) RemoveMarkup(ctx context.Context, msg *tgbotapi.Message, bot *tgbotapi.BotAPI) error {
+	request, err := handler.requests.GetByMsg(ctx, int64(msg.MessageID), msg.Chat.ID)
 	if err != nil {
 		return err
 	}
-	requests, err := handler.requests.GetByUUID(request.UUID)
+	requests, err := handler.requests.GetByUUID(ctx, request.UUID)
 	if err != nil {
 		return err
 	}
 	for _, request := range requests {
-		err = handler.requests.DeleteRequest(request.MsgId)
+		err = handler.requests.DeleteRequest(ctx, request.MsgId)
 		if err != nil {
 			return err
 		}

@@ -25,12 +25,12 @@ import (
 var errNoLabworks = errors.New("no labworks found")
 
 type LabworksService interface {
-	GetSubjects(groupId int64) ([]string, error)
-	GetNext(subject string, groupId int64) ([]persistance.Lesson, error)
+	GetSubjects(ctx context.Context, groupId int64) ([]string, error)
+	GetNext(ctx context.Context, subject string, groupId int64) ([]persistance.Lesson, error)
 }
 
 type UsersService interface {
-	GetByTgId(id int64) (*entities.User, error)
+	GetByTgId(ctx context.Context, id int64) (*entities.User, error)
 }
 
 type labworkSubmitStartState struct {
@@ -49,7 +49,7 @@ func (*labworkSubmitStartState) StateName() string {
 }
 
 func (state *labworkSubmitStartState) Handle(ctx context.Context, message *tgbotapi.Message) error {
-	user, err := state.users.GetByTgId(message.From.ID)
+	user, err := state.users.GetByTgId(ctx, message.From.ID)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func (state *labworkSubmitStartState) Handle(ctx context.Context, message *tgbot
 		_, err := state.bot.Send(tgbotapi.NewMessage(message.Chat.ID, "Вы ещё не присоединились к какой-либо группе"))
 		return err
 	}
-	replyMarkup, err := state.createDisciplinesKeyboard(message.Chat.ID, message.From.ID)
+	replyMarkup, err := state.createDisciplinesKeyboard(ctx, message.Chat.ID, message.From.ID)
 	if err != nil {
 		if errors.Is(err, errNoLabworks) {
 			return nil
@@ -66,25 +66,25 @@ func (state *labworkSubmitStartState) Handle(ctx context.Context, message *tgbot
 	}
 	resp := tgbotapi.NewMessage(message.Chat.ID, "Выберите предмет и дату пары")
 	resp.ReplyMarkup = replyMarkup
-	err = state.TransitionAndSend(resp, interfaces.NewCachedInfo(message.Chat.ID, constants.LABWORK_SUBMIT_WAITING_STATE))
+	err = state.TransitionAndSend(ctx, resp, interfaces.NewCachedInfo(message.Chat.ID, constants.LABWORK_SUBMIT_WAITING_STATE))
 	return err
 }
 
 const CHUNK_SIZE = 4
 
-func (state *labworkSubmitStartState) createDisciplinesKeyboard(chatId, userTgId int64) (*tgbotapi.InlineKeyboardMarkup, error) {
+func (state *labworkSubmitStartState) createDisciplinesKeyboard(ctx context.Context, chatId, userTgId int64) (*tgbotapi.InlineKeyboardMarkup, error) {
 	markup := [][]tgbotapi.InlineKeyboardButton{{}}
-	user, err := state.users.GetByTgId(userTgId)
+	user, err := state.users.GetByTgId(ctx, userTgId)
 	if err != nil {
 		return nil, err
 	}
-	disciplines, err := state.labworks.GetSubjects(user.GroupId)
+	disciplines, err := state.labworks.GetSubjects(ctx, user.GroupId)
 	if err != nil {
 		return nil, err
 	}
 	if len(disciplines) == 0 {
 		newState := interfaces.NewCachedInfo(chatId, constants.IDLE_STATE)
-		err = state.TransitionAndSend(tgbotapi.NewMessage(chatId, "Больше не осталось лабораторных. Отдохните"), newState)
+		err = state.TransitionAndSend(ctx, tgbotapi.NewMessage(chatId, "Больше не осталось лабораторных. Отдохните"), newState)
 		if err != nil {
 			return nil, err
 		}
@@ -101,8 +101,8 @@ func (state *labworkSubmitStartState) createDisciplinesKeyboard(chatId, userTgId
 	return &keyboard, nil
 }
 
-func (state *labworkSubmitStartState) TransitionAndSend(msg tgbotapi.MessageConfig, newState *interfaces.CachedInfo) error {
-	err := state.cache.SaveState(*newState)
+func (state *labworkSubmitStartState) TransitionAndSend(ctx context.Context, msg tgbotapi.MessageConfig, newState *interfaces.CachedInfo) error {
+	err := state.cache.SaveState(ctx, *newState)
 	if err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func (state *labworkSubmitWaitingState) Handle(ctx context.Context, message *tgb
 }
 
 type GroupsService interface {
-	GetAdmins(groupName string) ([]entities.User, error)
+	GetAdmins(ctx context.Context, groupName string) ([]entities.User, error)
 }
 
 type labworkSubmitProofState struct {
@@ -184,7 +184,7 @@ func (state *labworkSubmitProofState) Handle(ctx context.Context, message *tgbot
 		_, err := state.bot.Send(tgbotapi.NewMessage(message.Chat.ID, "Введите корректный номер группы"))
 		return err
 	}
-	jsonString, err := state.cache.GetInfo(message.Chat.ID)
+	jsonString, err := state.cache.GetInfo(ctx, message.Chat.ID)
 	if err != nil {
 		return err
 	}
@@ -200,15 +200,15 @@ func (state *labworkSubmitProofState) Handle(ctx context.Context, message *tgbot
 	if err != nil {
 		return err
 	}
-	err = state.cache.SaveInfo(message.Chat.ID, string(jsonedReq))
+	err = state.cache.SaveInfo(ctx, message.Chat.ID, string(jsonedReq))
 	if err != nil {
 		return err
 	}
-	err = state.cache.SaveState(*interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE))
+	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE))
 	if err != nil {
 		return err
 	}
-	admins, err := state.groups.GetAdmins(req.GroupName)
+	admins, err := state.groups.GetAdmins(ctx, req.GroupName)
 	if err != nil {
 		return err
 	}
@@ -220,7 +220,7 @@ func (state *labworkSubmitProofState) handleDocumentType(ctx context.Context, ad
 	var err error
 	switch {
 	case message.Photo != nil:
-		err = state.handlePhotoProof(admins, message, form)
+		err = state.handlePhotoProof(ctx, admins, message, form)
 	case message.Document != nil:
 		err = state.handleDocumentProof(ctx, admins, message, form)
 	default:
@@ -229,14 +229,14 @@ func (state *labworkSubmitProofState) handleDocumentType(ctx context.Context, ad
 	return err
 }
 
-func (state *labworkSubmitProofState) handlePhotoProof(admins []entities.User, message *tgbotapi.Message, form *LabworkRequest) error {
+func (state *labworkSubmitProofState) handlePhotoProof(ctx context.Context, admins []entities.User, message *tgbotapi.Message, form *LabworkRequest) error {
 	maxSizeId := tgutils.SelectMaxSizedPhoto(message.Photo)
 	fileBytes, err := state.GetFileBytes(maxSizeId)
 	if err != nil {
 		return err
 	}
 	msg := tgbotapi.NewPhoto(message.Chat.ID, tgbotapi.FileBytes{Name: "rnd_name", Bytes: fileBytes})
-	state.SendPhotosToAdmins(admins, &msg, form)
+	state.SendPhotosToAdmins(ctx, admins, &msg, form)
 	return nil
 }
 
@@ -275,7 +275,7 @@ func (state *labworkSubmitProofState) GetFileBytes(fileId string) ([]byte, error
 
 const adminSendingTmpl = "Предмет %s\nЛабораторная:%sДата:%sОтправил: %s\n"
 
-func (state *labworkSubmitProofState) SendPhotosToAdmins(admins []entities.User, photo *tgbotapi.PhotoConfig, form *LabworkRequest) error {
+func (state *labworkSubmitProofState) SendPhotosToAdmins(ctx context.Context, admins []entities.User, photo *tgbotapi.PhotoConfig, form *LabworkRequest) error {
 	text := fmt.Sprintf(adminSendingTmpl, form.DisciplineName, fmt.Sprint(form.LabworkNumber),
 		fmt.Sprintf("%d.%d.%d", form.RequestedDate.Day(), form.RequestedDate.Month(), form.RequestedDate.Year()), form.FullName)
 	photo.ReplyMarkup = createMarkupKeyboard(form)
@@ -287,7 +287,7 @@ func (state *labworkSubmitProofState) SendPhotosToAdmins(admins []entities.User,
 		if err != nil {
 			return err
 		}
-		err = state.requests.SaveRequest(interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
+		err = state.requests.SaveRequest(ctx, interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
 		if err != nil {
 			return err
 		}
@@ -309,7 +309,7 @@ func (state *labworkSubmitProofState) SendDocumentsToAdmins(ctx context.Context,
 			if err != nil {
 				errRes <- err
 			}
-			err = state.requests.SaveRequest(interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
+			err = state.requests.SaveRequest(ctx, interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
 			if err != nil {
 				errRes <- err
 			}

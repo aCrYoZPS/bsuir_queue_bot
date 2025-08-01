@@ -46,28 +46,28 @@ func (*adminSubmitStartState) StateName() string {
 }
 
 func (state *adminSubmitStartState) Handle(ctx context.Context, message *tgbotapi.Message) error {
-	isAdmin, err := state.checkIfAdmin(message.From.ID)
+	isAdmin, err := state.checkIfAdmin(ctx, message.From.ID)
 	if err != nil {
 		return err
 	}
 	if isAdmin {
-		err = state.TransitionAndSend(interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE), tgbotapi.NewMessage(message.Chat.ID, "Вы уже админ группы"))
+		err = state.TransitionAndSend(ctx, interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE), tgbotapi.NewMessage(message.Chat.ID, "Вы уже админ группы"))
 		return err
 	}
-	err = state.TransitionAndSend(interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_NAME_STATE), tgbotapi.NewMessage(message.Chat.ID, "Введите ваши фамилию и имя (Пример формата: Иванов Иван)"))
+	err = state.TransitionAndSend(ctx, interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_NAME_STATE), tgbotapi.NewMessage(message.Chat.ID, "Введите ваши фамилию и имя (Пример формата: Иванов Иван)"))
 	return err
 }
 
-func (state *adminSubmitStartState) checkIfAdmin(tgId int64) (bool, error) {
-	user, err := state.usersRepository.GetById(tgId)
+func (state *adminSubmitStartState) checkIfAdmin(ctx context.Context, tgId int64) (bool, error) {
+	user, err := state.usersRepository.GetById(ctx, tgId)
 	if err != nil {
 		return false, err
 	}
 	return slices.Contains(user.Roles, entities.Admin), nil
 }
 
-func (state *adminSubmitStartState) TransitionAndSend(newState *interfaces.CachedInfo, msg tgbotapi.MessageConfig) error {
-	err := state.cache.SaveState(*newState)
+func (state *adminSubmitStartState) TransitionAndSend(ctx context.Context, newState *interfaces.CachedInfo, msg tgbotapi.MessageConfig) error {
+	err := state.cache.SaveState(ctx, *newState)
 	if err != nil {
 		return err
 	}
@@ -96,11 +96,11 @@ func (state *adminSubmittingNameState) Handle(ctx context.Context, message *tgbo
 	if err != nil {
 		return err
 	}
-	err = state.cache.SaveInfo(message.Chat.ID, string(info))
+	err = state.cache.SaveInfo(ctx, message.Chat.ID, string(info))
 	if err != nil {
 		return err
 	}
-	err = state.cache.SaveState(*interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_GROUP_STATE))
+	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_GROUP_STATE))
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func (state *adminSubmittingNameState) Handle(ctx context.Context, message *tgbo
 }
 
 type GroupsService interface {
-	DoesGroupExist(string) (bool, error)
+	DoesGroupExist(ctx context.Context,groupname string) (bool, error)
 }
 
 type adminSubmitingGroupState struct {
@@ -131,7 +131,7 @@ func (state *adminSubmitingGroupState) Handle(ctx context.Context, message *tgbo
 	if message.Text == "" {
 		return stateErrors.NewInvalidInput("No text in message")
 	}
-	exists, err := state.srv.DoesGroupExist(message.Text)
+	exists, err := state.srv.DoesGroupExist(ctx, message.Text)
 	if err != nil {
 		return err
 	}
@@ -140,7 +140,7 @@ func (state *adminSubmitingGroupState) Handle(ctx context.Context, message *tgbo
 		_, err := state.bot.Send(msg)
 		return err
 	}
-	info, err := state.cache.GetInfo(message.Chat.ID)
+	info, err := state.cache.GetInfo(ctx, message.Chat.ID)
 	if err != nil {
 		return err
 	}
@@ -155,11 +155,11 @@ func (state *adminSubmitingGroupState) Handle(ctx context.Context, message *tgbo
 	if err != nil {
 		return err
 	}
-	err = state.cache.SaveInfo(message.Chat.ID, string(marshalledInfo))
+	err = state.cache.SaveInfo(ctx, message.Chat.ID, string(marshalledInfo))
 	if err != nil {
 		return err
 	}
-	err = state.cache.SaveState(*interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_PROOF_STATE))
+	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_PROOF_STATE))
 	if err != nil {
 		return err
 	}
@@ -187,7 +187,7 @@ func (state *adminSubmittingProofState) Handle(ctx context.Context, message *tgb
 		_, err := state.bot.Send(tgbotapi.NewMessage(message.Chat.ID, "Отправьте фото как часть сообщения"))
 		return err
 	}
-	info, err := state.cache.GetInfo(message.Chat.ID)
+	info, err := state.cache.GetInfo(ctx, message.Chat.ID)
 	if err != nil {
 		return err
 	}
@@ -205,13 +205,13 @@ func (state *adminSubmittingProofState) Handle(ctx context.Context, message *tgb
 		return err
 	}
 
-	err = state.cache.SaveState(*interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_WAITING_STATE))
+	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_WAITING_STATE))
 	if err != nil {
 		return err
 	}
 
 	msg := state.createTemplateResponse(message.Chat.ID, form, fileBytes)
-	return state.sendPhotoToOwners(*msg, state.bot)
+	return state.sendPhotoToOwners(ctx, *msg, state.bot)
 }
 
 type adminWaitingState struct {
@@ -281,7 +281,7 @@ func (state *adminSubmittingProofState) getFileBytes(fileId string) ([]byte, err
 	return bytes, nil
 }
 
-func (state *adminSubmittingProofState) sendPhotoToOwners(msg tgbotapi.PhotoConfig, bot *tgbotapi.BotAPI) error {
+func (state *adminSubmittingProofState) sendPhotoToOwners(ctx context.Context, msg tgbotapi.PhotoConfig, bot *tgbotapi.BotAPI) error {
 	owners := strings.Split(os.Getenv("OWNERS"), ",")
 
 	for _, owner := range owners {
@@ -294,7 +294,7 @@ func (state *adminSubmittingProofState) sendPhotoToOwners(msg tgbotapi.PhotoConf
 		if err != nil {
 			return err
 		}
-		err = state.requests.SaveRequest(interfaces.NewAdminRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, uuid.NewString()))
+		err = state.requests.SaveRequest(ctx, interfaces.NewAdminRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, uuid.NewString()))
 		if err != nil {
 			return err
 		}

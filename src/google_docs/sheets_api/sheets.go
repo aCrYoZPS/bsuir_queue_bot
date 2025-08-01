@@ -1,6 +1,7 @@
 package sheetsapi
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -34,13 +35,13 @@ func NewSheetsApiService(groups interfaces.GroupsRepository, driveApi driveapi.D
 
 type SheetsUrl = string
 
-func (serv *SheetsApiService) CreateSheet(groupName string, lessons []persistance.Lesson) (SheetsUrl, error) {
-	existsRes, err := serv.driveApi.DoesSheetExist(groupName)
+func (serv *SheetsApiService) CreateSheet(ctx context.Context, groupName string, lessons []persistance.Lesson) (SheetsUrl, error) {
+	existsRes, err := serv.driveApi.DoesSheetExist(ctx, groupName)
 	if err != nil {
 		return "", err
 	}
 	if existsRes.DoesExist() {
-		sheet, err := serv.api.Spreadsheets.Get(existsRes.SpreadsheetId()).Do()
+		sheet, err := serv.api.Spreadsheets.Get(existsRes.SpreadsheetId()).Context(ctx).Do()
 		if err != nil {
 			return "", err
 		}
@@ -51,28 +52,28 @@ func (serv *SheetsApiService) CreateSheet(groupName string, lessons []persistanc
 	}}
 
 	res := serv.api.Spreadsheets.Create(&newSpreadsheet)
-	spreadsheet, err := res.Do()
+	spreadsheet, err := res.Context(ctx).Do()
 	if err != nil {
 		return "", err
 	}
-	err = serv.createLists(groupName, lessons)
+	err = serv.createLists(ctx, groupName, lessons)
 	if err != nil {
 		return "", err
 	}
-	group, err := serv.groupsRepo.GetByName(groupName)
+	group, err := serv.groupsRepo.GetByName(ctx, groupName)
 	if err != nil {
 		return "", err
 	}
 	group.SpreadsheetId = spreadsheet.SpreadsheetId
-	err = serv.groupsRepo.Update(group)
+	err = serv.groupsRepo.Update(ctx, group)
 	if err != nil {
 		return "", err
 	}
 	return spreadsheet.SpreadsheetUrl, nil
 }
 
-func (serv *SheetsApiService) createLists(groupName string, lessons []persistance.Lesson) error {
-	group, err := serv.groupsRepo.GetByName(groupName)
+func (serv *SheetsApiService) createLists(ctx context.Context, groupName string, lessons []persistance.Lesson) error {
+	group, err := serv.groupsRepo.GetByName(ctx, groupName)
 	if err != nil {
 		return err
 	}
@@ -89,7 +90,7 @@ func (serv *SheetsApiService) createLists(groupName string, lessons []persistanc
 		})
 	}
 	call := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &update)
-	_, err = call.Do()
+	_, err = call.Context(ctx).Do()
 	if err != nil {
 		return err
 	}
@@ -132,7 +133,7 @@ func parseLessonName(name string) (subject string, date time.Time) {
 	return subject, date
 }
 
-func (serv *SheetsApiService) ClearSpreadsheet(spreadsheetId string) error {
+func (serv *SheetsApiService) ClearSpreadsheet(ctx context.Context, spreadsheetId string) error {
 	getSpreadsheetRequest := sheets.SpreadsheetsGetCall{}
 	spreadsheet, err := getSpreadsheetRequest.Do()
 	if err != nil {
@@ -145,17 +146,17 @@ func (serv *SheetsApiService) ClearSpreadsheet(spreadsheetId string) error {
 		})
 	}
 	call := serv.api.Spreadsheets.BatchUpdate(spreadsheetId, &deleteSheetsRequest)
-	_, err = call.Do()
+	_, err = call.Context(ctx).Do()
 	return err
 }
 
-func (serv *SheetsApiService) AddLabwork(req *labworks.LabworkRequest) error {
-	group, err := serv.groupsRepo.GetByName(req.GroupName)
+func (serv *SheetsApiService) AddLabwork(ctx context.Context, req *labworks.LabworkRequest) error {
+	group, err := serv.groupsRepo.GetByName(ctx, req.GroupName)
 	if err != nil {
 		return err
 	}
 	spreadsheetId := group.SpreadsheetId
-	spreadsheet, err := serv.api.Spreadsheets.Get(spreadsheetId).Do()
+	spreadsheet, err := serv.api.Spreadsheets.Get(spreadsheetId).Context(ctx).Do()
 	if err != nil {
 		return err
 	}
@@ -163,19 +164,19 @@ func (serv *SheetsApiService) AddLabwork(req *labworks.LabworkRequest) error {
 		titleSubject, titleDate := parseLessonName(sheet.Properties.Title)
 		if titleSubject == req.DisciplineName && req.RequestedDate.Equal(titleDate) {
 			if sheet.Tables == nil {
-				err = serv.createTable(sheet)
+				err = serv.createTable(ctx,sheet)
 				if err != nil {
 					return err
 				}
 			}
-			err = serv.appendToSheet(spreadsheetId, sheet, req)
+			err = serv.appendToSheet(ctx, spreadsheetId, sheet, req)
 			return err
 		}
 	}
 	return errors.New("no such labwork found")
 }
 
-func (serv *SheetsApiService) createTable(sheet *sheets.Sheet) error {
+func (serv *SheetsApiService) createTable(ctx context.Context, sheet *sheets.Sheet) error {
 	_, err := serv.api.Spreadsheets.BatchUpdate("", &sheets.BatchUpdateSpreadsheetRequest{
 		Requests: []*sheets.Request{{
 			UpdateTable: &sheets.UpdateTableRequest{
@@ -210,17 +211,17 @@ func (serv *SheetsApiService) createTable(sheet *sheets.Sheet) error {
 			},
 		},
 		}},
-	).Do()
+	).Context(ctx).Do()
 	return err
 }
 
-func (serv *SheetsApiService) appendToSheet(spreadsheetId string, sheet *sheets.Sheet, req *labworks.LabworkRequest) error {
+func (serv *SheetsApiService) appendToSheet(ctx context.Context, spreadsheetId string, sheet *sheets.Sheet, req *labworks.LabworkRequest) error {
 	tableSearchRange := fmt.Sprintf("'%s'!A1:B5", sheet.Properties.Title)
 	_, err := serv.api.Spreadsheets.Values.Append(spreadsheetId, tableSearchRange, &sheets.ValueRange{
 		Range:          tableSearchRange,
 		MajorDimension: "ROWS",
 		Values:         [][]any{{req.FullName, req.LabworkNumber, serv.formatDateTimeToEuropean(req.SentProofTime)}},
-	}).Do()
+	}).Context(ctx).Do()
 	return err
 }
 

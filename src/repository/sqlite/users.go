@@ -26,9 +26,7 @@ func NewUsersRepository(db *sql.DB) *UsersRepository {
 	}
 }
 
-func (repo *UsersRepository) GetById(id int64) (*entities.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), QUERY_TIMEOUT)
-	defer cancel()
+func (repo *UsersRepository) GetById(ctx context.Context, id int64) (*entities.User, error) {
 	query := fmt.Sprintf(`SELECT %[1]s.id, %[1]s.tg_id, %[1]s.group_id, %[1]s.full_name, %[3]s.name, %[2]s.role_name FROM %[1]s 
 						INNER JOIN %[2]s ON %[1]s.id = %[2]s.user_id 
 						INNER JOIN %[3]s ON %[1]s.group_id=%[3]s.id WHERE %[1]s.id = $1`, USERS_TABLE, ROLES_TABLE, GROUPS_TABLE)
@@ -48,9 +46,7 @@ func (repo *UsersRepository) GetById(id int64) (*entities.User, error) {
 	return user, nil
 }
 
-func (repo *UsersRepository) GetByTgId(tgId int64) (*entities.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), QUERY_TIMEOUT)
-	defer cancel()
+func (repo *UsersRepository) GetByTgId(ctx context.Context, tgId int64) (*entities.User, error) {
 	query := fmt.Sprintf("SELECT %[1]s.id, %[1]s.tg_id, %[1]s.group_id, %[1]s.full_name, %[2]s.role_name FROM %[1]s INNER JOIN %[2]s ON %[1]s.id = %[2]s.user_id WHERE %[1]s.tg_id = $1", USERS_TABLE, ROLES_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query, tgId)
 	if err != nil {
@@ -74,9 +70,7 @@ func (repo *UsersRepository) GetByTgId(tgId int64) (*entities.User, error) {
 	return user, nil
 }
 
-func (repo *UsersRepository) GetAll() ([]entities.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), QUERY_TIMEOUT)
-	defer cancel()
+func (repo *UsersRepository) GetAll(ctx context.Context) ([]entities.User, error) {
 	query := fmt.Sprintf("SELECT %[1]s.id, %[1]s.tg_id, %[1]s.group_id, %[1]s.full_name, %[2]s.role_name FROM %[1]s INNER JOIN %[2]s ON %[1]s.id = %[2]s.user_id", USERS_TABLE, ROLES_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query)
 	if err != nil {
@@ -105,9 +99,7 @@ func (repo *UsersRepository) GetAll() ([]entities.User, error) {
 	return users, nil
 }
 
-func (repo *UsersRepository) Add(user *entities.User) error {
-	ctx, cancel := context.WithTimeout(context.Background(), QUERY_TIMEOUT)
-	defer cancel()
+func (repo *UsersRepository) Add(ctx context.Context,user *entities.User) error {
 	tx, err := repo.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -135,9 +127,7 @@ func (repo *UsersRepository) Add(user *entities.User) error {
 	return nil
 }
 
-func (repo *UsersRepository) AddRange(users []entities.User) error {
-	ctx, cancel := context.WithTimeout(context.Background(), QUERY_TIMEOUT)
-	defer cancel()
+func (repo *UsersRepository) AddRange(ctx context.Context, users []entities.User) error {
 	tx, err := repo.db.BeginTx(ctx, nil)
 	defer tx.Rollback()
 	if err != nil {
@@ -161,9 +151,7 @@ func (repo *UsersRepository) AddRange(users []entities.User) error {
 	return nil
 }
 
-func (repo *UsersRepository) Update(user *entities.User) error {
-	ctx, cancel := context.WithTimeout(context.Background(), QUERY_TIMEOUT)
-	defer cancel()
+func (repo *UsersRepository) Update(ctx context.Context, user *entities.User) error {
 	tx, err := repo.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -193,9 +181,7 @@ func (repo *UsersRepository) Update(user *entities.User) error {
 	return err
 }
 
-func (repo *UsersRepository) Delete(id int64) error {
-	ctx, cancel := context.WithTimeout(context.Background(), QUERY_TIMEOUT)
-	defer cancel()
+func (repo *UsersRepository) Delete(ctx context.Context, id int64) error {
 	query := fmt.Sprintf("DELETE FROM %s WHERE id=$1", USERS_TABLE)
 	_, err := repo.db.ExecContext(ctx, query, id)
 	return err

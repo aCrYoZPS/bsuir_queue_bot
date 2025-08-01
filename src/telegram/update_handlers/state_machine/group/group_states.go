@@ -14,8 +14,8 @@ import (
 )
 
 type GroupsRepository interface {
-	GetAdmins(groupName string) ([]entities.User, error)
-	DoesGroupExist(groupName string) (bool, error)
+	GetAdmins(ctx context.Context, groupName string) ([]entities.User, error)
+	DoesGroupExist(ctx context.Context, groupName string) (bool, error)
 }
 
 type groupSubmitForm struct {
@@ -25,7 +25,7 @@ type groupSubmitForm struct {
 	Group    string `json:"group,omitempty"`
 }
 type UsersRepository interface {
-	GetByTgId(tgId int64) (*entities.User, error)
+	GetByTgId(ctx context.Context, tgId int64) (*entities.User, error)
 }
 
 type groupSubmitStartState struct {
@@ -44,7 +44,7 @@ func (*groupSubmitStartState) StateName() string {
 }
 
 func (state *groupSubmitStartState) Handle(ctx context.Context, message *tgbotapi.Message) error {
-	user, err := state.users.GetByTgId(message.From.ID)
+	user, err := state.users.GetByTgId(ctx, message.From.ID)
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (state *groupSubmitStartState) Handle(ctx context.Context, message *tgbotap
 		_, err := state.bot.Send(msg)
 		return err
 	}
-	err = state.cache.SaveState(*interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_SUBMIT_GROUPNAME_STATE))
+	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_SUBMIT_GROUPNAME_STATE))
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (*groupSubmitGroupNameState) StateName() string {
 
 func (state *groupSubmitGroupNameState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	groupName := message.Text
-	groupExists, err := state.groups.DoesGroupExist(groupName)
+	groupExists, err := state.groups.DoesGroupExist(ctx, groupName)
 	if err != nil {
 		return err
 	}
@@ -94,8 +94,8 @@ func (state *groupSubmitGroupNameState) Handle(ctx context.Context, message *tgb
 	if err != nil {
 		return err
 	}
-	state.cache.SaveInfo(message.Chat.ID, string(form))
-	err = state.cache.SaveState(*interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_SUBMIT_NAME_STATE))
+	state.cache.SaveInfo(ctx, message.Chat.ID, string(form))
+	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_SUBMIT_NAME_STATE))
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (state *groupSubmitNameState) Handle(ctx context.Context, message *tgbotapi
 		return err
 	}
 
-	info, err := state.cache.GetInfo(message.Chat.ID)
+	info, err := state.cache.GetInfo(ctx, message.Chat.ID)
 	if err != nil {
 		return err
 	}
@@ -145,17 +145,17 @@ func (state *groupSubmitNameState) Handle(ctx context.Context, message *tgbotapi
 	if err != nil {
 		return err
 	}
-	err = state.cache.SaveInfo(message.Chat.ID, string(data))
+	err = state.cache.SaveInfo(ctx, message.Chat.ID, string(data))
 	if err != nil {
 		return err
 	}
 
-	err = state.cache.SaveState(*interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_WAITING_STATE))
+	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_WAITING_STATE))
 	if err != nil {
 		return err
 	}
 
-	admins, err := state.groups.GetAdmins(form.Group)
+	admins, err := state.groups.GetAdmins(ctx, form.Group)
 	if err != nil {
 		return err
 	}
@@ -180,7 +180,7 @@ func (state *groupSubmitNameState) SendMessagesToAdmins(ctx context.Context, adm
 			if err != nil {
 				errRes <- err
 			}
-			err = state.requests.SaveRequest(interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
+			err = state.requests.SaveRequest(ctx, interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
 			errRes <- err
 		}
 	}(errRes)

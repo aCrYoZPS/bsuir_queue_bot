@@ -1,5 +1,7 @@
 package interfaces
 
+import "context"
+
 type LessonsService interface {
-	AddGroupLessons(groupName string) (url string, err error)
+	AddGroupLessons(ctx context.Context, groupName string) (url string, err error)
 }

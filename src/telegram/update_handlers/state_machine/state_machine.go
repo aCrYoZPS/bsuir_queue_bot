@@ -48,13 +48,13 @@ func NewStateMachine(conf *statesConfig) *StateMachine {
 }
 
 func (machine *StateMachine) HandleState(ctx context.Context, message *tgbotapi.Message) error {
-	mu := machine.cache.AcquireLock(message.Chat.ID)
+	mu := machine.cache.AcquireLock(ctx, message.Chat.ID)
 	mu.Lock()
 
 	defer mu.Unlock()
-	defer machine.cache.ReleaseLock(message.Chat.ID)
+	defer machine.cache.ReleaseLock(ctx, message.Chat.ID)
 
-	info, err := machine.cache.GetState(message.Chat.ID)
+	info, err := machine.cache.GetState(ctx, message.Chat.ID)
 	if err != nil {
 		return err
 	}

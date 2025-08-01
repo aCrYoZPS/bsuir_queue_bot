@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -10,8 +11,9 @@ import (
 )
 
 // TODO: create background processes to clean the maps for GC
+
+var _ interfaces.HandlersCache = (*HandlersCache)(nil)
 type HandlersCache struct {
-	interfaces.HandlersCache
 	db    *sql.DB
 	locks sync.Map
 }
@@ -28,15 +30,15 @@ const (
 	INFO_TABLE   = "info"
 )
 
-func (cache *HandlersCache) SaveState(info interfaces.CachedInfo) error {
+func (cache *HandlersCache) SaveState(ctx context.Context, info interfaces.CachedInfo) error {
 	query := fmt.Sprintf("INSERT OR REPLACE INTO %s (chat_id, state) VALUES ($1, $2)", STATES_TABLE)
-	_, err := cache.db.Exec(query, info.ChatId(), info.State())
+	_, err := cache.db.ExecContext(ctx, query, info.ChatId(), info.State())
 	return err
 }
 
-func (cache *HandlersCache) GetState(chatId int64) (*interfaces.CachedInfo, error) {
+func (cache *HandlersCache) GetState(ctx context.Context, chatId int64) (*interfaces.CachedInfo, error) {
 	query := fmt.Sprintf("SELECT state FROM %s WHERE chat_id=$1", STATES_TABLE)
-	row := cache.db.QueryRow(query, chatId)
+	row := cache.db.QueryRowContext(ctx, query, chatId)
 	if row.Err() != nil {
 		return nil, row.Err()
 	}
@@ -51,7 +53,7 @@ func (cache *HandlersCache) GetState(chatId int64) (*interfaces.CachedInfo, erro
 	return interfaces.NewCachedInfo(chatId, state), nil
 }
 
-func (cache *HandlersCache) AcquireLock(chatId int64) *sync.Mutex {
+func (cache *HandlersCache) AcquireLock(ctx context.Context, chatId int64) *sync.Mutex {
 	mu := &sync.Mutex{}
 	val, loaded := cache.locks.LoadOrStore(chatId, mu)
 	if loaded {
@@ -60,19 +62,19 @@ func (cache *HandlersCache) AcquireLock(chatId int64) *sync.Mutex {
 	return mu
 }
 
-func (cache *HandlersCache) ReleaseLock(chatId int64) {
+func (cache *HandlersCache) ReleaseLock(ctx context.Context, chatId int64) {
 	cache.locks.Delete(chatId)
 }
 
-func (cache *HandlersCache) SaveInfo(chatId int64, json string) error {
+func (cache *HandlersCache) SaveInfo(ctx context.Context, chatId int64, json string) error {
 	query := fmt.Sprintf("INSERT OR REPLACE INTO %s (chat_id, json) VALUES ($1, $2)", INFO_TABLE)
-	_, err := cache.db.Exec(query, chatId, json)
+	_, err := cache.db.ExecContext(ctx, query, chatId, json)
 	return err
 }
 
-func (cache *HandlersCache) GetInfo(chatId int64) (string, error) {
+func (cache *HandlersCache) GetInfo(ctx context.Context, chatId int64) (string, error) {
 	query := fmt.Sprintf("SELECT json FROM %s WHERE chat_id=$1", INFO_TABLE)
-	row := cache.db.QueryRow(query, chatId)
+	row := cache.db.QueryRowContext(ctx, query, chatId)
 	if row.Err() != nil {
 		return "", row.Err()
 	}

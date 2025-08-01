@@ -1,6 +1,7 @@
 package iis_api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -22,7 +23,7 @@ func NewGroupsService(repo interfaces.GroupsRepository) *GroupsService {
 	}
 }
 
-func (serv *GroupsService) InitAllGroups() error {
+func (serv *GroupsService) InitAllGroups(ctx context.Context) error {
 	if _, err := os.Stat("groups.json"); errors.Is(err, os.ErrNotExist) {
 		file, err := os.Create("groups.json")
 		if err != nil {
@@ -60,5 +61,5 @@ func (serv *GroupsService) InitAllGroups() error {
 		return err
 	}
 
-	return serv.AddNonPresented(data)
+	return serv.AddNonPresented(ctx, data)
 }
