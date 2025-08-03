@@ -22,4 +22,5 @@ func main() {
 	
 	controller := ioc.UseBotController()
 	controller.Start()
+	ioc.Reset()
 }

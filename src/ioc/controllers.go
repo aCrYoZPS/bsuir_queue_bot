@@ -5,11 +5,12 @@ import (
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/bot"
+	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 var useTgBot = provider(
-	func() *tgbotapi.BotAPI {
+	func() *tgutils.Bot {
 		bot_token := os.Getenv("BOT_TOKEN")
 		debug := os.Getenv("DEBUG")
 		bot, err := tgbotapi.NewBotAPI(bot_token)
@@ -19,7 +20,7 @@ var useTgBot = provider(
 		if debug != "" {
 			bot.Debug = true
 		}
-		return bot
+		return tgutils.NewBot(bot)
 	},
 )
 

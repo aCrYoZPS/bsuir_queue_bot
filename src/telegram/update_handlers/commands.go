@@ -8,6 +8,7 @@ import (
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
+	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -42,7 +43,7 @@ func NewMessagesHandler(stateMachine StateMachine, cache interfaces.HandlersCach
 	return &MessagesService{cache: cache, stateMachine: stateMachine}
 }
 
-func (srv *MessagesService) HandleCommands(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
+func (srv *MessagesService) HandleCommands(update *tgbotapi.Update, bot *tgutils.Bot) {
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DEFAULT_TIMEOUT)
 	defer cancel()
 	if update.Message.Command() != "" {
@@ -66,7 +67,7 @@ func (srv *MessagesService) HandleCommands(update *tgbotapi.Update, bot *tgbotap
 	}
 }
 
-func (srv *MessagesService) HandleMessages(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
+func (srv *MessagesService) HandleMessages(update *tgbotapi.Update, bot *tgutils.Bot) {
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DEFAULT_TIMEOUT)
 	defer cancel()
 	err := srv.stateMachine.HandleState(ctx, update.Message)

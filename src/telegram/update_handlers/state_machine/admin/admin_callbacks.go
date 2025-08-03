@@ -13,6 +13,7 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	adminInterfaces "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/admin/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
+	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -34,7 +35,7 @@ func NewAdminCallbackHandler(usersRepo interfaces.UsersRepository, cache interfa
 	}
 }
 
-func (handler *AdminCallbackHandler) HandleCallback(ctx context.Context, update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
+func (handler *AdminCallbackHandler) HandleCallback(ctx context.Context, update *tgbotapi.Update, bot *tgutils.Bot) error {
 	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 	if _, err := bot.Request(callback); err != nil {
 		return err
@@ -56,7 +57,7 @@ func (handler *AdminCallbackHandler) HandleCallback(ctx context.Context, update 
 	return err
 }
 
-func (handler *AdminCallbackHandler) handleAcceptCallback(ctx context.Context, msg *tgbotapi.Message, command string, bot *tgbotapi.BotAPI) error {
+func (handler *AdminCallbackHandler) handleAcceptCallback(ctx context.Context, msg *tgbotapi.Message, command string, bot *tgutils.Bot) error {
 	var chatId int64
 	chatId, err := strconv.ParseInt(strings.TrimPrefix(command, "accept"), 10, 64)
 	if err != nil {
@@ -108,7 +109,7 @@ func (handler *AdminCallbackHandler) addAdmin(ctx context.Context,form *adminSub
 	return err
 }
 
-func (handler *AdminCallbackHandler) handleDeclineCallback(ctx context.Context, msg *tgbotapi.Message, command string, bot *tgbotapi.BotAPI) error {
+func (handler *AdminCallbackHandler) handleDeclineCallback(ctx context.Context, msg *tgbotapi.Message, command string, bot *tgutils.Bot) error {
 	var chatId int64
 	err := json.Unmarshal([]byte(strings.TrimPrefix(command, "decline")), &chatId)
 	if err != nil {
@@ -136,7 +137,7 @@ func (handler *AdminCallbackHandler) handleDeclineCallback(ctx context.Context, 
 	return err
 }
 
-func (handler *AdminCallbackHandler) RemoveMarkup(ctx context.Context, msg *tgbotapi.Message, bot *tgbotapi.BotAPI) error {
+func (handler *AdminCallbackHandler) RemoveMarkup(ctx context.Context, msg *tgbotapi.Message, bot *tgutils.Bot) error {
 	request, err := handler.requests.GetByMsg(ctx, int64(msg.MessageID), msg.Chat.ID)
 	if err != nil {
 		return err

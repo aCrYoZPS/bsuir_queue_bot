@@ -4,16 +4,17 @@ import (
 	"fmt"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
+	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type BotController struct {
-	bot         *tgbotapi.BotAPI
+	bot         *tgutils.Bot
 	msgSrv      MessagesService
 	callbackSrv CallbacksService
 }
 
-func NewBotController(bot *tgbotapi.BotAPI, msgSrv MessagesService, callbackSrv CallbacksService) (*BotController, error) {
+func NewBotController(bot *tgutils.Bot, msgSrv MessagesService, callbackSrv CallbacksService) (*BotController, error) {
 	bc := &BotController{
 		bot:         bot,
 		msgSrv:      msgSrv,

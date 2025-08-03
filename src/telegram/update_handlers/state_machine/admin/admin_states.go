@@ -18,6 +18,7 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
 	stateErrors "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/errors"
+	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/uuid"
 )
@@ -34,10 +35,10 @@ const infoTemplate = "Имя: {{.Name}} \nГруппа: {{.Group}}\n{{if .Additi
 type adminSubmitStartState struct {
 	cache           interfaces.HandlersCache
 	usersRepository interfaces.UsersRepository
-	bot             *tgbotapi.BotAPI
+	bot             *tgutils.Bot
 }
 
-func NewAdminSubmitState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, usersRepository interfaces.UsersRepository) *adminSubmitStartState {
+func NewAdminSubmitState(cache interfaces.HandlersCache, bot *tgutils.Bot, usersRepository interfaces.UsersRepository) *adminSubmitStartState {
 	return &adminSubmitStartState{cache: cache, bot: bot, usersRepository: usersRepository}
 }
 
@@ -54,14 +55,15 @@ func (state *adminSubmitStartState) Handle(ctx context.Context, message *tgbotap
 		err = state.TransitionAndSend(ctx, interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE), tgbotapi.NewMessage(message.Chat.ID, "Вы уже админ группы"))
 		return err
 	}
-	err = state.TransitionAndSend(ctx, interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_NAME_STATE), tgbotapi.NewMessage(message.Chat.ID, "Введите ваши фамилию и имя (Пример формата: Иванов Иван)"))
+	err = state.TransitionAndSend(ctx, interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_NAME_STATE), 
+			   		  tgbotapi.NewMessage(message.Chat.ID, "Введите ваши фамилию и имя (Пример формата: Иванов Иван)"))
 	return err
 }
 
 func (state *adminSubmitStartState) checkIfAdmin(ctx context.Context, tgId int64) (bool, error) {
 	user, err := state.usersRepository.GetById(ctx, tgId)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("couldn't get user by id when checking admin: %w",err)
 	}
 	return slices.Contains(user.Roles, entities.Admin), nil
 }
@@ -69,18 +71,21 @@ func (state *adminSubmitStartState) checkIfAdmin(ctx context.Context, tgId int64
 func (state *adminSubmitStartState) TransitionAndSend(ctx context.Context, newState *interfaces.CachedInfo, msg tgbotapi.MessageConfig) error {
 	err := state.cache.SaveState(ctx, *newState)
 	if err != nil {
-		return err
+		return fmt.Errorf("couldn't save state during admin submit: %w", err)
 	}
-	_, err = state.bot.Send(msg)
-	return err
+	_, err = state.bot.SendCtx(ctx,msg)
+	if err != nil {
+		return fmt.Errorf("couldn't send message during admin submit: %w", err)
+	}
+	return nil
 }
 
 type adminSubmittingNameState struct {
 	cache interfaces.HandlersCache
-	bot   *tgbotapi.BotAPI
+	bot   *tgutils.Bot
 }
 
-func NewAdminSubmittingNameState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) *adminSubmittingNameState {
+func NewAdminSubmittingNameState(cache interfaces.HandlersCache, bot *tgutils.Bot) *adminSubmittingNameState {
 	return &adminSubmittingNameState{cache: cache, bot: bot}
 }
 
@@ -94,19 +99,22 @@ func (state *adminSubmittingNameState) Handle(ctx context.Context, message *tgbo
 	}
 	info, err := json.Marshal(&adminSubmitForm{UserId: message.From.ID, Name: message.Text})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal admin submit form: %w", err)
 	}
 	err = state.cache.SaveInfo(ctx, message.Chat.ID, string(info))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to save info to cache during submitting name for admin: %w", err)
 	}
 	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_GROUP_STATE))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to save state during transition from admin submitting name to submitting group: %w", err)
 	}
 	msg := tgbotapi.NewMessage(message.Chat.ID, "Введите ваш номер группы, указанный в ИИСе")
-	_, err = state.bot.Send(msg)
-	return err
+	_, err = state.bot.SendCtx(ctx, msg)
+	if err != nil {
+		return fmt.Errorf("failed to send message during admin submitting name: %w", err)
+	}
+	return nil
 }
 
 type GroupsService interface {
@@ -115,11 +123,11 @@ type GroupsService interface {
 
 type adminSubmitingGroupState struct {
 	cache interfaces.HandlersCache
-	bot   *tgbotapi.BotAPI
+	bot   *tgutils.Bot
 	srv   GroupsService
 }
 
-func NewAdminSubmitingGroupState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, srv GroupsService) *adminSubmitingGroupState {
+func NewAdminSubmitingGroupState(cache interfaces.HandlersCache, bot *tgutils.Bot, srv GroupsService) *adminSubmitingGroupState {
 	return &adminSubmitingGroupState{cache: cache, bot: bot, srv: srv}
 }
 
@@ -129,52 +137,55 @@ func (*adminSubmitingGroupState) StateName() string {
 
 func (state *adminSubmitingGroupState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	if message.Text == "" {
-		return stateErrors.NewInvalidInput("No text in message")
+		return stateErrors.NewInvalidInput("no text in message")
 	}
 	exists, err := state.srv.DoesGroupExist(ctx, message.Text)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to check if group exists during admin submitting group state: %w",err)
 	}
 	if !exists {
 		msg := tgbotapi.NewMessage(message.Chat.ID, "Введите номер существующей группы")
-		_, err := state.bot.Send(msg)
-		return err
+		_, err := state.bot.SendCtx(ctx, msg)
+		return fmt.Errorf("failed to send group not exists message during admin submitting group: %w", err)
 	}
 	info, err := state.cache.GetInfo(ctx, message.Chat.ID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get info from cache during admin submitting group")
 	}
 	form := &adminSubmitForm{}
 	err = json.Unmarshal([]byte(info), form)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal info from cache during admin submitting group: %w", err)
 	}
 	form.Group = message.Text
 
 	marshalledInfo, err := json.Marshal(form)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed marshal info during admin submitting group: %w", err)
 	}
 	err = state.cache.SaveInfo(ctx, message.Chat.ID, string(marshalledInfo))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to save info to cache during admin submitting group")
 	}
 	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_PROOF_STATE))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed save new state during transitioning from admin submitting group to admin submitting proof")
 	}
 	msg := tgbotapi.NewMessage(message.Chat.ID, "Предоставьте доказательство вверенных группой полномочий (в виде фото, с дополнительной текстовой информацией по усмотрению)")
-	_, err = state.bot.Send(msg)
+	_, err = state.bot.SendCtx(ctx, msg)
+	if err != nil {
+		return fmt.Errorf("failed to send message at the end of admin submitting group")
+	}
 	return err
 }
 
 type adminSubmittingProofState struct {
 	cache    interfaces.HandlersCache
-	bot      *tgbotapi.BotAPI
+	bot      *tgutils.Bot
 	requests interfaces.AdminRequestsRepository
 }
 
-func NewAdminSubmitingProofState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, requests interfaces.AdminRequestsRepository) *adminSubmittingProofState {
+func NewAdminSubmitingProofState(cache interfaces.HandlersCache, bot *tgutils.Bot, requests interfaces.AdminRequestsRepository) *adminSubmittingProofState {
 	return &adminSubmittingProofState{cache: cache, bot: bot, requests: requests}
 }
 
@@ -184,30 +195,30 @@ func (state *adminSubmittingProofState) StateName() string {
 
 func (state *adminSubmittingProofState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	if message.Photo == nil {
-		_, err := state.bot.Send(tgbotapi.NewMessage(message.Chat.ID, "Отправьте фото как часть сообщения"))
-		return err
+		_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Отправьте фото как часть сообщения"))
+		return fmt.Errorf("failed to send no photo message during admin submitting proof: %w", err)
 	}
 	info, err := state.cache.GetInfo(ctx, message.Chat.ID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get info during admin submitting proof: %w", err)
 	}
 
 	form := &adminSubmitForm{}
 	err = json.Unmarshal([]byte(info), form)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal form during admin submitting proof: %w", err)
 	}
 	form.AdditionalInfo = message.Caption
 
 	maxSizeId := selectMaxSizedPhoto(message.Photo)
 	fileBytes, err := state.getFileBytes(maxSizeId)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get file bytes for photo during admin submitting proof: %w", err)
 	}
 
 	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_WAITING_STATE))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to save state during transitioning from admin proof to admin waiting")
 	}
 
 	msg := state.createTemplateResponse(message.Chat.ID, form, fileBytes)
@@ -216,10 +227,10 @@ func (state *adminSubmittingProofState) Handle(ctx context.Context, message *tgb
 
 type adminWaitingState struct {
 	cache interfaces.HandlersCache
-	bot   *tgbotapi.BotAPI
+	bot   *tgutils.Bot
 }
 
-func NewAdminWaitingProofState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) *adminWaitingState {
+func NewAdminWaitingProofState(cache interfaces.HandlersCache, bot *tgutils.Bot) *adminWaitingState {
 	return &adminWaitingState{cache: cache, bot: bot}
 }
 
@@ -229,8 +240,11 @@ func (state *adminWaitingState) StateName() string {
 
 func (state *adminWaitingState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	msg := tgbotapi.NewMessage(message.From.ID, "Sorry, your last admin submit has not been proceeded yet")
-	_, err := state.bot.Send(msg)
-	return err
+	_, err := state.bot.SendCtx(ctx,msg)
+	if err != nil {
+		return fmt.Errorf("failed to send message to user during admin waiting state: %w", err)
+	}
+	return nil
 }
 
 func createMarkupKeyboard(form *adminSubmitForm) *tgbotapi.InlineKeyboardMarkup {
@@ -281,7 +295,7 @@ func (state *adminSubmittingProofState) getFileBytes(fileId string) ([]byte, err
 	return bytes, nil
 }
 
-func (state *adminSubmittingProofState) sendPhotoToOwners(ctx context.Context, msg tgbotapi.PhotoConfig, bot *tgbotapi.BotAPI) error {
+func (state *adminSubmittingProofState) sendPhotoToOwners(ctx context.Context, msg tgbotapi.PhotoConfig, bot *tgutils.Bot) error {
 	owners := strings.Split(os.Getenv("OWNERS"), ",")
 
 	for _, owner := range owners {
@@ -290,9 +304,9 @@ func (state *adminSubmittingProofState) sendPhotoToOwners(ctx context.Context, m
 			return errors.Join(err, fmt.Errorf("invalid owner id value %s", owner))
 		}
 		msg.ChatID = chatId
-		sentMsg, err := bot.Send(msg)
+		sentMsg, err := bot.SendCtx(ctx, msg)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to send msg to owner id %s during admin proof submit: %w", owner, err)
 		}
 		err = state.requests.SaveRequest(ctx, interfaces.NewAdminRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, uuid.NewString()))
 		if err != nil {

@@ -31,7 +31,7 @@ func provider[T any](factory func() T) func() T {
 	}
 }
 
-func reset() {
+func Reset() {
 	container = map[int]any{}
 	isPending = map[int]bool{}
 }

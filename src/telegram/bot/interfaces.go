@@ -1,12 +1,15 @@
 package bot
 
-import tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+import (
+	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+)
 
 type MessagesService interface {
-	HandleCommands(update *tgbotapi.Update, bot *tgbotapi.BotAPI)
-	HandleMessages(update *tgbotapi.Update, bot *tgbotapi.BotAPI)
+	HandleCommands(update *tgbotapi.Update, bot *tgutils.Bot)
+	HandleMessages(update *tgbotapi.Update, bot *tgutils.Bot)
 }
 
 type CallbacksService interface {
-	HandleCallbacks(update *tgbotapi.Update, bot *tgbotapi.BotAPI)
+	HandleCallbacks(update *tgbotapi.Update, bot *tgutils.Bot)
 }

@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -9,6 +10,8 @@ import (
 )
 
 const LESSONS_REQUESTS_TABLE = "lessons_requests"
+
+var _ interfaces.LessonsRequestsRepository = (*LessonsRequestsRepository)(nil)
 
 type LessonsRequestsRepository struct {
 	interfaces.LessonsRequestsRepository
@@ -21,15 +24,15 @@ func NewLessonsRequestsRepository(db *sql.DB) *LessonsRequestsRepository {
 	}
 }
 
-func (repo *LessonsRequestsRepository) Add(req *entities.LessonRequest) error {
+func (repo *LessonsRequestsRepository) Add(ctx context.Context, req *entities.LessonRequest) error {
 	query := fmt.Sprintf("INSERT INTO %s (user_id, lesson_id) values ($1, $2)", LESSONS_REQUESTS_TABLE)
-	_, err := repo.db.Exec(query, req.UserId, req.LessonId)
+	_, err := repo.db.ExecContext(ctx, query, req.UserId, req.LessonId)
 	return err
 }
 
-func (repo *LessonsRequestsRepository) GetByUserId(userId int64) (*entities.LessonRequest, error) {
+func (repo *LessonsRequestsRepository) GetByUserId(ctx context.Context, userId int64) (*entities.LessonRequest, error) {
 	query := fmt.Sprintf("SELECT id, user_id, group_id FROM %s WHERE user_id=$1", LESSONS_REQUESTS_TABLE)
-	row := repo.db.QueryRow(query, userId)
+	row := repo.db.QueryRowContext(ctx, query, userId)
 	if row.Err() != nil {
 		return nil, row.Err()
 	}

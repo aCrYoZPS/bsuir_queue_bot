@@ -10,6 +10,7 @@ import (
 	adminInterfaces "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/admin/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/group"
+	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -35,10 +36,10 @@ func NewCallbackService(usersRepo interfaces.UsersRepository, cache interfaces.H
 }
 
 type CallbackHandler interface {
-	HandleCallback(ctx context.Context, update *tgbotapi.Update, bot *tgbotapi.BotAPI) error
+	HandleCallback(ctx context.Context, update *tgbotapi.Update, bot *tgutils.Bot) error
 }
 
-func (serv *CallbacksService) HandleCallbacks(update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
+func (serv *CallbacksService) HandleCallbacks(update *tgbotapi.Update, bot *tgutils.Bot) {
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DEFAULT_TIMEOUT)
 	defer cancel()
 	if update.CallbackQuery == nil {

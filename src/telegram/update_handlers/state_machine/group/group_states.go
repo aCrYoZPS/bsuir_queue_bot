@@ -3,15 +3,19 @@ package group
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
+	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/uuid"
 )
+
+var errNoAdmins = errors.New("no admins found")
 
 type GroupsRepository interface {
 	GetAdmins(ctx context.Context, groupName string) ([]entities.User, error)
@@ -30,12 +34,12 @@ type UsersRepository interface {
 
 type groupSubmitStartState struct {
 	cache  interfaces.HandlersCache
-	bot    *tgbotapi.BotAPI
+	bot    *tgutils.Bot
 	groups GroupsRepository
 	users  UsersRepository
 }
 
-func NewGroupSubmitState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, groups GroupsRepository, users UsersRepository) *groupSubmitStartState {
+func NewGroupSubmitState(cache interfaces.HandlersCache, bot *tgutils.Bot, groups GroupsRepository, users UsersRepository) *groupSubmitStartState {
 	return &groupSubmitStartState{cache: cache, bot: bot, groups: groups, users: users}
 }
 
@@ -50,28 +54,28 @@ func (state *groupSubmitStartState) Handle(ctx context.Context, message *tgbotap
 	}
 	if user.Id == 0 {
 		msg := tgbotapi.NewMessage(message.Chat.ID, "Вы уже член группы")
-		_, err := state.bot.Send(msg)
-		return err
+		_, err := state.bot.SendCtx(ctx, msg)
+		return fmt.Errorf("failed to send belonging to group message when starting group submit: %w", err)
 	}
 	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_SUBMIT_GROUPNAME_STATE))
 	if err != nil {
 		return err
 	}
 	msg := tgbotapi.NewMessage(message.Chat.ID, "Введите номер группы,в которую хотите вступить")
-	_, err = state.bot.Send(msg)
+	_, err = state.bot.SendCtx(ctx, msg)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to send group number request when starting group submit: %w", err)
 	}
 	return err
 }
 
 type groupSubmitGroupNameState struct {
 	cache  interfaces.HandlersCache
-	bot    *tgbotapi.BotAPI
+	bot    *tgutils.Bot
 	groups GroupsRepository
 }
 
-func NewGroupSubmitGroupNameState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, groups GroupsRepository) *groupSubmitGroupNameState {
+func NewGroupSubmitGroupNameState(cache interfaces.HandlersCache, bot *tgutils.Bot, groups GroupsRepository) *groupSubmitGroupNameState {
 	return &groupSubmitGroupNameState{bot: bot, cache: cache, groups: groups}
 }
 
@@ -87,30 +91,36 @@ func (state *groupSubmitGroupNameState) Handle(ctx context.Context, message *tgb
 	}
 	if !groupExists {
 		msg := tgbotapi.NewMessage(message.Chat.ID, "Данная группа не найдена")
-		_, err := state.bot.Send(msg)
-		return err
+		_, err := state.bot.SendCtx(ctx, msg)
+		return fmt.Errorf("failed to send not found message for submitting group: %w", err)
 	}
 	form, err := json.Marshal(&groupSubmitForm{UserId: message.From.ID, UserName: message.From.UserName, Group: groupName})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal group submit form: %w", err)
 	}
-	state.cache.SaveInfo(ctx, message.Chat.ID, string(form))
+	err = state.cache.SaveInfo(ctx, message.Chat.ID, string(form))
+	if err != nil {
+		return fmt.Errorf("failed to save group submit form %w", err)
+	}
 	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_SUBMIT_NAME_STATE))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to save group submit name state: %w", err)
 	}
-	_, err = state.bot.Send(tgbotapi.NewMessage(message.Chat.ID, "Введите ваши фамилию и имя (Пример формата: Иван Иванов)"))
-	return err
+	_, err = state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Введите ваши фамилию и имя (Пример формата: Иван Иванов)"))
+	if err != nil {
+		return fmt.Errorf("failed to send message for submitting user info: %w", err)
+	}
+	return nil
 }
 
 type groupSubmitNameState struct {
 	cache    interfaces.HandlersCache
-	bot      *tgbotapi.BotAPI
+	bot      *tgutils.Bot
 	groups   GroupsRepository
 	requests interfaces.RequestsRepository
 }
 
-func NewGroupSubmitNameState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, groups GroupsRepository, requests interfaces.RequestsRepository) *groupSubmitNameState {
+func NewGroupSubmitNameState(cache interfaces.HandlersCache, bot *tgutils.Bot, groups GroupsRepository, requests interfaces.RequestsRepository) *groupSubmitNameState {
 	return &groupSubmitNameState{
 		cache:    cache,
 		bot:      bot,
@@ -127,78 +137,86 @@ func (state *groupSubmitNameState) Handle(ctx context.Context, message *tgbotapi
 	name := message.Text
 	fullName := strings.Fields(name)
 	if len(fullName) != 2 {
-		_, err := state.bot.Send(tgbotapi.NewMessage(message.Chat.ID, "Введите фамилию и имя как в предоставленном образце"))
-		return err
+		_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Введите фамилию и имя как в предоставленном образце"))
+		return fmt.Errorf("failed to send message when submiting name for attendance to group: %w", err)
 	}
 
 	info, err := state.cache.GetInfo(ctx, message.Chat.ID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get group submit info: %w", err)
 	}
 	form := &groupSubmitForm{}
 	err = json.Unmarshal([]byte(info), form)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal info (%s) into group submit form: %w", string(info), err)
 	}
 	form.Name = fullName[0] + " " + fullName[1]
 	data, err := json.Marshal(form)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal group submit form: %w", err)
 	}
 	err = state.cache.SaveInfo(ctx, message.Chat.ID, string(data))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to save info: %w", err)
 	}
 
 	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_WAITING_STATE))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to save state: %w", err)
 	}
 
 	admins, err := state.groups.GetAdmins(ctx, form.Group)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get group admins during group name submit: %w", err)
 	}
 
 	err = state.SendMessagesToAdmins(ctx, admins, form)
 	if err != nil {
-		return nil
+		if errors.Is(err, errNoAdmins) {
+			err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE))
+			if err != nil {
+				return fmt.Errorf("failed to save idle state during group name submit: %w", err)
+			}
+			_, err = state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "У данной группы пока нет администраторов"))
+			if err != nil {
+				return fmt.Errorf("failed to send message during group name submit: %w", err)
+			}
+		}	
 	}
-	_, err = state.bot.Send(tgbotapi.NewMessage(message.Chat.ID, "Ваша заявка была отправлена администратору"))
-	return err
+	_, err = state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Ваша заявка была отправлена администратору"))
+	if err != nil {
+		return fmt.Errorf("failed to send message during group name submit: %w", err)
+	}
+	return nil
 }
 
 func (state *groupSubmitNameState) SendMessagesToAdmins(ctx context.Context, admins []entities.User, form *groupSubmitForm) error {
-	errRes := make(chan error, 1)
-	go func(chan error) {
-		text := fmt.Sprintf("Пользователь под id @%s и именем \"%s\" хочет присоединиться к группе", form.UserName, form.Name)
-		reqUUID := uuid.NewString()
-		for _, admin := range admins {
-			msg := tgbotapi.NewMessage(admin.TgId, text)
-			msg.ReplyMarkup = createMarkupKeyboard(form)
-			sentMsg, err := state.bot.Send(msg)
-			if err != nil {
-				errRes <- err
-			}
-			err = state.requests.SaveRequest(ctx, interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
-			errRes <- err
-		}
-	}(errRes)
-	var err error
-	select {
-	case <-ctx.Done():
-		return fmt.Errorf("failed to send messages to group admins: %v", ctx.Err())
-	case err = <-errRes:
-		return err
+	if len(admins) == 0 {
+		return errNoAdmins
 	}
+	text := fmt.Sprintf("Пользователь под id @%s и именем \"%s\" хочет присоединиться к группе", form.UserName, form.Name)
+	reqUUID := uuid.NewString()
+	for _, admin := range admins {
+		msg := tgbotapi.NewMessage(admin.TgId, text)
+		msg.ReplyMarkup = createMarkupKeyboard(form)
+		sentMsg, err := state.bot.SendCtx(ctx, msg)
+		if err != nil {
+			return fmt.Errorf("failed to send messages to admin during submitting group name: %w", err)
+		}
+		err = state.requests.SaveRequest(ctx, interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
+		if err != nil {
+			return fmt.Errorf("failed to save group request while sending messages to admin: %w", err)
+		}
+	}
+	return nil
 }
 
 type groupWaitingState struct {
 	cache interfaces.HandlersCache
-	bot   *tgbotapi.BotAPI
+	bot   *tgutils.Bot
 }
 
-func NewGroupWaitingState(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI) *groupWaitingState {
+func NewGroupWaitingState(cache interfaces.HandlersCache, bot *tgutils.Bot) *groupWaitingState {
 	return &groupWaitingState{cache: cache, bot: bot}
 }
 
@@ -207,18 +225,11 @@ func (*groupWaitingState) StateName() string {
 }
 
 func (state *groupWaitingState) Handle(ctx context.Context, message *tgbotapi.Message) error {
-	errRes := make(chan error, 1)
-	go func(chan error) {
-		_, err := state.bot.Send(tgbotapi.NewMessage(message.Chat.ID, "Ваша заявка всё ещё рассматривается, подождите"))
-		errRes <- err
-	}(errRes)
-	var err error
-	select {
-	case <-ctx.Done():
-		return fmt.Errorf("failed to send waiting message: %v", ctx.Err())
-	case err = <-errRes:
-	    return err	
+	_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Ваша заявка всё ещё рассматривается, подождите"))
+	if err != nil {
+		return fmt.Errorf("failed to send message to user waiting for group submit: %w", err)
 	}
+	return nil
 }
 
 func createMarkupKeyboard(form *groupSubmitForm) *tgbotapi.InlineKeyboardMarkup {

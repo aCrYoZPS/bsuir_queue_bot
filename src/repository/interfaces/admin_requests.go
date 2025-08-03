@@ -1,5 +1,7 @@
 package interfaces
 
+import "context"
+
 type AdminRequest struct {
 	UUID   string
 	MsgId  int64
@@ -11,8 +13,8 @@ func NewAdminRequest(msgId, chatId int64, uuid string) *AdminRequest {
 }
 
 type AdminRequestsRepository interface {
-	SaveRequest(*AdminRequest) error
-	DeleteRequest(msgId int64) error
-	GetByUUID(uuid string) ([]AdminRequest, error)
-	GetByMsg(msgId, chatId int64) (*AdminRequest, error)
+	SaveRequest(ctx context.Context, req *AdminRequest) error
+	DeleteRequest(ctx context.Context, msgId int64) error
+	GetByUUID(ctx context.Context, uuid string) ([]AdminRequest, error)
+	GetByMsg(ctx context.Context, msgId, chatId int64) (*AdminRequest, error)
 }

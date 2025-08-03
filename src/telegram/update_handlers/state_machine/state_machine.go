@@ -2,11 +2,13 @@ package stateMachine
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/labworks"
+	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -15,13 +17,13 @@ type StateName string
 type StateMachine struct {
 	update_handlers.StateMachine
 	cache     interfaces.HandlersCache
-	bot       *tgbotapi.BotAPI
+	bot       *tgutils.Bot
 	usersRepo interfaces.UsersRepository
 }
 
 type statesConfig struct {
 	cache         interfaces.HandlersCache
-	bot           *tgbotapi.BotAPI
+	bot           *tgutils.Bot
 	groupsRepo    interfaces.GroupsRepository
 	usersRepo     interfaces.UsersRepository
 	requests      interfaces.RequestsRepository
@@ -29,7 +31,7 @@ type statesConfig struct {
 	labworks      labworks.LabworksService
 }
 
-func NewStatesConfig(cache interfaces.HandlersCache, bot *tgbotapi.BotAPI, groupsRepo interfaces.GroupsRepository, usersRepo interfaces.UsersRepository,
+func NewStatesConfig(cache interfaces.HandlersCache, bot *tgutils.Bot, groupsRepo interfaces.GroupsRepository, usersRepo interfaces.UsersRepository,
 	requests interfaces.RequestsRepository, adminRequests interfaces.AdminRequestsRepository, labworks labworks.LabworksService) *statesConfig {
 	return &statesConfig{
 		cache:         cache,
@@ -56,19 +58,19 @@ func (machine *StateMachine) HandleState(ctx context.Context, message *tgbotapi.
 
 	info, err := machine.cache.GetState(ctx, message.Chat.ID)
 	if err != nil {
-		return err
+		return fmt.Errorf("couldn't get state in state machine: %w",err)
 	}
 
 	var state State
 	if info != nil {
-		state, err = getStateByName(info.State())
-		if err != nil {
-			return err
+		state = getStateByName(info.State())
+		if state == nil {
+			return fmt.Errorf("failed to get state for name %s", info.State())
 		}
 	} else {
-		state, err = getStateByName(constants.IDLE_STATE)
-		if err != nil {
-			return err
+		state = getStateByName(constants.IDLE_STATE)
+		if state == nil {
+			return fmt.Errorf("failed to get idle state for name %s", info.State())
 		}
 	}
 	return state.Handle(ctx, message)

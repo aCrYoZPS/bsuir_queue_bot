@@ -2,7 +2,6 @@ package stateMachine
 
 import (
 	"context"
-	"errors"
 	"slices"
 	"sync"
 
@@ -46,11 +45,11 @@ func createLabworksStates(conf *statesConfig) []State {
 
 var states = []State{}
 
-func getStateByName(name string) (State, error) {
+func getStateByName(name string) State {
 	for _, state := range states {
 		if state.StateName() == (name) {
-			return state, nil
+			return state
 		}
 	}
-	return &idleState{}, errors.New("no such state")
+	return nil
 }

@@ -14,7 +14,7 @@ func NewBot(botApi *tgbotapi.BotAPI) *Bot {
 	return &Bot{BotAPI: botApi}
 }
 
-func (bot *Bot) Send(ctx context.Context, c tgbotapi.Chattable) (tgbotapi.Message, error) {
+func (bot *Bot) SendCtx(ctx context.Context, c tgbotapi.Chattable) (tgbotapi.Message, error) {
 	resChan := make(chan struct {
 		tgbotapi.Message
 		error

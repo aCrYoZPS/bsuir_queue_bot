@@ -22,7 +22,6 @@ func NewGroupRequest(msgId, chatId int64, opts ...func(*GroupRequest)) *GroupReq
 	}
 	return groupReq
 }
-
 func WithUUID(uuid string) func(req *GroupRequest) {
 	return func(req *GroupRequest) {
 		req.UUID = uuid
