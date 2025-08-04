@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/ioc"
 	logging "github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
@@ -20,7 +23,9 @@ func main() {
 		}
 	}
 	
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
 	controller := ioc.UseBotController()
-	controller.Start()
+	controller.Start(ctx)
 	ioc.Reset()
 }

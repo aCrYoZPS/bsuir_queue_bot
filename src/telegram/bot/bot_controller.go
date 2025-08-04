@@ -1,7 +1,10 @@
 package bot
 
 import (
+	"context"
 	"fmt"
+	"net/http"
+	"sync"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
@@ -23,7 +26,11 @@ func NewBotController(bot *tgutils.Bot, msgSrv MessagesService, callbackSrv Call
 	return bc, nil
 }
 
-func (controller *BotController) Start() {
+func (controller *BotController) Server() http.Client {
+	return *http.DefaultClient
+}
+
+func (controller *BotController) Start(ctx context.Context) {
 	logging.Info(fmt.Sprintf("authorized on account %s", controller.bot.Self.UserName))
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -31,15 +38,32 @@ func (controller *BotController) Start() {
 
 	updates := controller.bot.GetUpdatesChan(u)
 
-	for update := range updates {
-		if update.Message != nil {
-			if update.Message.Command() != "" {
-				go controller.msgSrv.HandleCommands(&update, controller.bot)
-			} else {
-				go controller.msgSrv.HandleMessages(&update, controller.bot)
+	wg := sync.WaitGroup{}
+	select {
+	case <-ctx.Done():
+		controller.bot.StopReceivingUpdates()
+		wg.Wait()
+	default:
+		for update := range updates {
+			if update.Message != nil {
+				wg.Add(1)
+				if update.Message.Command() != "" {
+					go func(*sync.WaitGroup) {
+						controller.msgSrv.HandleCommands(&update, controller.bot)
+						wg.Done()
+					}(&wg)
+				} else {
+					go func(*sync.WaitGroup) {
+						controller.msgSrv.HandleMessages(&update, controller.bot)
+						wg.Done()
+					}(&wg)
+				}
+			} else if update.CallbackQuery != nil {
+				go func(*sync.WaitGroup) {
+					controller.callbackSrv.HandleCallbacks(&update, controller.bot)
+					wg.Done()
+				}(&wg)
 			}
-		} else if update.CallbackQuery != nil {
-			go controller.callbackSrv.HandleCallbacks(&update, controller.bot)
 		}
 	}
 }
