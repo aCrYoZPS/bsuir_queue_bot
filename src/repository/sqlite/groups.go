@@ -21,7 +21,7 @@ type GroupsRepository struct {
 	db *sql.DB
 }
 
-func NewGroupsRepository(db *sql.DB) (interfaces.GroupsRepository, error) {
+func NewGroupsRepository(db *sql.DB) (*GroupsRepository, error) {
 	repo := &GroupsRepository{
 		db: db,
 	}

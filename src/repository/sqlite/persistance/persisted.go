@@ -7,6 +7,7 @@ import (
 )
 
 type Lesson struct {
+	Id             int64
 	GroupId        int64
 	LessonType     string
 	Subject        string

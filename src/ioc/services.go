@@ -66,7 +66,7 @@ var useDriveApi = provider(
 )
 
 var UseDriveApiService = provider(
-	func() driveapi.DriveApi {
+	func() *driveapi.DriveApiService {
 		return driveapi.NewDriveApiService(
 			useGroupsRepository(), useDriveApi(),
 		)
@@ -74,7 +74,7 @@ var UseDriveApiService = provider(
 )
 
 var UseSheetsApiService = provider(
-	func() sheetsapi.SheetsApi {
+	func() *sheetsapi.SheetsApiService {
 		return sheetsapi.NewSheetsApiService(
 			useGroupsRepository(),
 			UseDriveApiService(), useSheetsApi(),
@@ -99,7 +99,7 @@ var useLessonsService = provider(
 var UseCallbacksService = provider(
 	func() bot.CallbacksService {
 		return stateMachine.NewCallbackService(
-			useUsersRepository(), useHandlersCache(), useRequestsRepository(),
-			useAdminRequestsRepository(), useLessonsService())
+			useUsersRepository(), useHandlersCache(), useLessonsRequestsRepository(),
+			useRequestsRepository(), useAdminRequestsRepository(), useLessonsService(), UseSheetsApiService(), useLessonsRepository(), useUsersRepository())
 	},
 )

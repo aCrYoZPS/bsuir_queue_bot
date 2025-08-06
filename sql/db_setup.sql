@@ -32,11 +32,13 @@ CREATE TABLE IF NOT EXISTS lessons_requests (
     user_id INTEGER, 
     lesson_id INTEGER,
     msg_id INTEGER,
-    chat_id INTEGER,
+    chat_id INTEGER NOT NULL,
+    submit_time INTEGER NOT NULL,
     FOREIGN KEY (lesson_id) REFERENCES lessons(id),
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+CREATE INDEX IF NOT EXISTS lessons_requests_lesson_id_idx ON lessons_requests(lesson_id);
 CREATE INDEX IF NOT EXISTS lessons_requests_user_id_idx ON lessons_requests(user_id);
 
 CREATE TABLE IF NOT EXISTS users_roles (

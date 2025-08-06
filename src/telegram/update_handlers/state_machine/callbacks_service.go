@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/cron"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/admin"
 	adminInterfaces "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/admin/interfaces"
@@ -16,22 +17,28 @@ import (
 
 type CallbacksService struct {
 	//More of a placeholder, which will contain inject google services to handle callbacks
-	usersRepo     interfaces.UsersRepository
-	requests      interfaces.RequestsRepository
-	cache         interfaces.HandlersCache
-	adminRequests interfaces.AdminRequestsRepository
-	lessons       adminInterfaces.LessonsService
+	usersRepo       interfaces.UsersRepository
+	lessonsRequests cron.LessonsRequestsRepository
+	requests        interfaces.RequestsRepository
+	cache           interfaces.HandlersCache
+	adminRequests   interfaces.AdminRequestsRepository
+	lessons         adminInterfaces.LessonsService
+	sheets          cron.SheetsApi
+	usersCron       cron.UsersRepo
+	lessonsCron     cron.LessonsRepo
 }
 
-func NewCallbackService(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache,
+func NewCallbackService(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache, lessonsRequests cron.LessonsRequestsRepository,
 	requests interfaces.RequestsRepository, adminRequests interfaces.AdminRequestsRepository,
-	lessons adminInterfaces.LessonsService) *CallbacksService {
+	lessons adminInterfaces.LessonsService, sheets cron.SheetsApi, lessonsCron cron.LessonsRepo, usersCron cron.UsersRepo) *CallbacksService {
 	return &CallbacksService{
-		usersRepo:     usersRepo,
-		cache:         cache,
-		requests:      requests,
-		adminRequests: adminRequests,
-		lessons:       lessons,
+		usersRepo:       usersRepo,
+		cache:           cache,
+		requests:        requests,
+		adminRequests:   adminRequests,
+		lessonsRequests: lessonsRequests,
+		lessons:         lessons,
+		usersCron:       usersCron,
 	}
 }
 
@@ -62,6 +69,8 @@ func (serv *CallbacksService) HandleCallbacks(update *tgbotapi.Update, bot *tgut
 		callback_handler = admin.NewAdminCallbackHandler(serv.usersRepo, serv.cache, serv.adminRequests, serv.lessons)
 	case strings.HasPrefix(update.CallbackData(), constants.GROUP_CALLBACKS):
 		callback_handler = group.NewGroupCallbackHandler(serv.usersRepo, serv.cache, serv.requests)
+	case strings.HasPrefix(update.CallbackData(), cron.REMINDER_CALLBACKS):
+		callback_handler = cron.NewSheetsRefreshCallbackHandler(serv.lessonsRequests, serv.sheets, serv.usersCron, serv.lessonsCron)
 	}
 
 	err := callback_handler.HandleCallback(ctx, update, bot)

@@ -80,9 +80,6 @@ func (serv *SheetsApiService) createLists(ctx context.Context, groupName string,
 	update := sheets.BatchUpdateSpreadsheetRequest{}
 	for _, lesson := range lessons {
 		updateTitle := serv.createLessonName(lesson)
-		if iis_api_entities.Subgroup(lesson.SubgroupNumber) != iis_api_entities.AllSubgroups {
-			updateTitle += fmt.Sprintf(" (%s)", fmt.Sprint(int(lesson.SubgroupNumber)))
-		}
 		update.Requests = append(update.Requests, &sheets.Request{
 			AddSheet: &sheets.AddSheetRequest{Properties: &sheets.SheetProperties{
 				Title: updateTitle,
@@ -98,7 +95,11 @@ func (serv *SheetsApiService) createLists(ctx context.Context, groupName string,
 }
 
 func (serv *SheetsApiService) createLessonName(lesson persistance.Lesson) string {
-	return lesson.Subject + " " + serv.formatDateToEuropean(lesson.Date)
+	updateTitle := lesson.Subject + " " + serv.formatDateToEuropean(lesson.Date)
+	if iis_api_entities.Subgroup(lesson.SubgroupNumber) != iis_api_entities.AllSubgroups {
+		updateTitle += fmt.Sprintf(" (%s)", fmt.Sprint(int(lesson.SubgroupNumber)))
+	}
+	return updateTitle
 }
 
 func (serv *SheetsApiService) formatDateToEuropean(date time.Time) string {
@@ -109,7 +110,7 @@ func (serv *SheetsApiService) formatDateToEuropean(date time.Time) string {
 
 func parseLessonName(name string) (subject string, date time.Time) {
 	data := strings.Split(name, " ")
-	if len(data) != 2 {
+	if len(data) != 3 {
 		return "", time.Time{}
 	}
 	subject = data[0]
@@ -133,7 +134,7 @@ func parseLessonName(name string) (subject string, date time.Time) {
 	return subject, date
 }
 
-func (serv *SheetsApiService) ClearSpreadsheet(ctx context.Context, spreadsheetId string) error {
+func (serv *SheetsApiService) ClearSpreadsheet(ctx context.Context, spreadsheetId string, before time.Time) error {
 	getSpreadsheetRequest := sheets.SpreadsheetsGetCall{}
 	spreadsheet, err := getSpreadsheetRequest.Do()
 	if err != nil {
@@ -141,16 +142,19 @@ func (serv *SheetsApiService) ClearSpreadsheet(ctx context.Context, spreadsheetI
 	}
 	deleteSheetsRequest := sheets.BatchUpdateSpreadsheetRequest{}
 	for _, sheet := range spreadsheet.Sheets {
-		deleteSheetsRequest.Requests = append(deleteSheetsRequest.Requests, &sheets.Request{
-			DeleteSheet: &sheets.DeleteSheetRequest{SheetId: sheet.Properties.SheetId},
-		})
+		_, date := parseLessonName(sheet.Properties.Title)
+		if date.Before(before) {
+			deleteSheetsRequest.Requests = append(deleteSheetsRequest.Requests, &sheets.Request{
+				DeleteSheet: &sheets.DeleteSheetRequest{SheetId: sheet.Properties.SheetId},
+			})
+		}
 	}
 	call := serv.api.Spreadsheets.BatchUpdate(spreadsheetId, &deleteSheetsRequest)
 	_, err = call.Context(ctx).Do()
 	return err
 }
 
-func (serv *SheetsApiService) AddLabwork(ctx context.Context, req *labworks.LabworkRequest) error {
+func (serv *SheetsApiService) AddLabwork(ctx context.Context, req *labworks.AppendedLabwork) error {
 	group, err := serv.groupsRepo.GetByName(ctx, req.GroupName)
 	if err != nil {
 		return err
@@ -164,7 +168,7 @@ func (serv *SheetsApiService) AddLabwork(ctx context.Context, req *labworks.Labw
 		titleSubject, titleDate := parseLessonName(sheet.Properties.Title)
 		if titleSubject == req.DisciplineName && req.RequestedDate.Equal(titleDate) {
 			if sheet.Tables == nil {
-				err = serv.createTable(ctx,sheet)
+				err = serv.createTable(ctx, sheet)
 				if err != nil {
 					return err
 				}
@@ -209,13 +213,27 @@ func (serv *SheetsApiService) createTable(ctx context.Context, sheet *sheets.She
 					},
 				},
 			},
+			SortRange: &sheets.SortRangeRequest{
+				SortSpecs: []*sheets.SortSpec{
+					{
+						DimensionIndex: 2,
+						SortOrder:      "DESCENDING",
+					},
+				},
+				Range: &sheets.GridRange{
+					SheetId:          sheet.Properties.SheetId,
+					StartRowIndex:    0,
+					StartColumnIndex: 0,
+					EndColumnIndex:   3,
+				},
+			},
 		},
 		}},
 	).Context(ctx).Do()
 	return err
 }
 
-func (serv *SheetsApiService) appendToSheet(ctx context.Context, spreadsheetId string, sheet *sheets.Sheet, req *labworks.LabworkRequest) error {
+func (serv *SheetsApiService) appendToSheet(ctx context.Context, spreadsheetId string, sheet *sheets.Sheet, req *labworks.AppendedLabwork) error {
 	tableSearchRange := fmt.Sprintf("'%s'!A1:B5", sheet.Properties.Title)
 	_, err := serv.api.Spreadsheets.Values.Append(spreadsheetId, tableSearchRange, &sheets.ValueRange{
 		Range:          tableSearchRange,

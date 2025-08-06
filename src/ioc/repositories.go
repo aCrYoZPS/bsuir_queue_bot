@@ -33,26 +33,26 @@ var useMockGroupsRepository = provider(
 )
 
 var useRequestsRepository = provider(
-	func() interfaces.RequestsRepository {
+	func() *sqlite.RequestsRepository {
 		return sqlite.NewRequestsRepository(useSqliteConnection())
 	},
 )
 
 var useAdminRequestsRepository = provider(
-	func() interfaces.AdminRequestsRepository {
+	func() *sqlite.AdminRequestsRepository {
 		return sqlite.NewAdminRequestsRepository(useSqliteConnection())
 	},
 )
 
 var useHandlersCache = provider(
-	func() interfaces.HandlersCache {
+	func() *sqlite.HandlersCache {
 		repo := sqlite.NewHandlersCache(useSqliteConnection())
 		return repo
 	},
 )
 
 var useGroupsRepository = provider(
-	func() interfaces.GroupsRepository {
+	func() *sqlite.GroupsRepository {
 		repos, err := sqlite.NewGroupsRepository(
 			useSqliteConnection(),
 		)
@@ -70,14 +70,23 @@ var useMockLessonsRepository = provider(
 )
 
 var useUsersRepository = provider(
-	func() interfaces.UsersRepository {
+	func() *sqlite.UsersRepository {
 		return sqlite.NewUsersRepository(useSqliteConnection())
 	},
 )
 
 var useLessonsRepository = provider(
-	func() interfaces.LessonsRepository {
+	func() *sqlite.LessonsRepository {
 		repos := sqlite.NewLessonsRepository(
+			useSqliteConnection(),
+		)
+		return repos
+	},
+)
+
+var useLessonsRequestsRepository = provider(
+	func() *sqlite.LessonsRequestsRepository {
+		repos := sqlite.NewLessonsRequestsRepository(
 			useSqliteConnection(),
 		)
 		return repos

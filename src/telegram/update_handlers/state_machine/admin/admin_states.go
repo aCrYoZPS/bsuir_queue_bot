@@ -55,15 +55,15 @@ func (state *adminSubmitStartState) Handle(ctx context.Context, message *tgbotap
 		err = state.TransitionAndSend(ctx, interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE), tgbotapi.NewMessage(message.Chat.ID, "Вы уже админ группы"))
 		return err
 	}
-	err = state.TransitionAndSend(ctx, interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_NAME_STATE), 
-			   		  tgbotapi.NewMessage(message.Chat.ID, "Введите ваши фамилию и имя (Пример формата: Иванов Иван)"))
+	err = state.TransitionAndSend(ctx, interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_NAME_STATE),
+		tgbotapi.NewMessage(message.Chat.ID, "Введите ваши фамилию и имя (Пример формата: Иванов Иван)"))
 	return err
 }
 
 func (state *adminSubmitStartState) checkIfAdmin(ctx context.Context, tgId int64) (bool, error) {
 	user, err := state.usersRepository.GetById(ctx, tgId)
 	if err != nil {
-		return false, fmt.Errorf("couldn't get user by id when checking admin: %w",err)
+		return false, fmt.Errorf("couldn't get user by id when checking admin: %w", err)
 	}
 	return slices.Contains(user.Roles, entities.Admin), nil
 }
@@ -73,7 +73,7 @@ func (state *adminSubmitStartState) TransitionAndSend(ctx context.Context, newSt
 	if err != nil {
 		return fmt.Errorf("couldn't save state during admin submit: %w", err)
 	}
-	_, err = state.bot.SendCtx(ctx,msg)
+	_, err = state.bot.SendCtx(ctx, msg)
 	if err != nil {
 		return fmt.Errorf("couldn't send message during admin submit: %w", err)
 	}
@@ -118,7 +118,7 @@ func (state *adminSubmittingNameState) Handle(ctx context.Context, message *tgbo
 }
 
 type GroupsService interface {
-	DoesGroupExist(ctx context.Context,groupname string) (bool, error)
+	DoesGroupExist(ctx context.Context, groupname string) (bool, error)
 }
 
 type adminSubmitingGroupState struct {
@@ -141,7 +141,7 @@ func (state *adminSubmitingGroupState) Handle(ctx context.Context, message *tgbo
 	}
 	exists, err := state.srv.DoesGroupExist(ctx, message.Text)
 	if err != nil {
-		return fmt.Errorf("failed to check if group exists during admin submitting group state: %w",err)
+		return fmt.Errorf("failed to check if group exists during admin submitting group state: %w", err)
 	}
 	if !exists {
 		msg := tgbotapi.NewMessage(message.Chat.ID, "Введите номер существующей группы")
@@ -240,7 +240,7 @@ func (state *adminWaitingState) StateName() string {
 
 func (state *adminWaitingState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	msg := tgbotapi.NewMessage(message.From.ID, "Sorry, your last admin submit has not been proceeded yet")
-	_, err := state.bot.SendCtx(ctx,msg)
+	_, err := state.bot.SendCtx(ctx, msg)
 	if err != nil {
 		return fmt.Errorf("failed to send message to user during admin waiting state: %w", err)
 	}

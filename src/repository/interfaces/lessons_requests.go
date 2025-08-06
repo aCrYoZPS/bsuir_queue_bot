@@ -9,4 +9,5 @@ import (
 type LessonsRequestsRepository interface {
 	Add(context.Context,*entities.LessonRequest) error
 	GetByUserId(ctx context.Context, userId int64) (*entities.LessonRequest, error)
+	GetLessonRequests(ctx context.Context, lessonId int64) ([]entities.LessonRequest, error)
 }

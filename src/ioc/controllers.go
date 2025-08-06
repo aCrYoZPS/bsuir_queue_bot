@@ -3,6 +3,7 @@ package ioc
 import (
 	"os"
 
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/cron"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/bot"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
@@ -31,5 +32,11 @@ var UseBotController = provider(
 			logging.FatalLog(err.Error())
 		}
 		return bot
+	},
+)
+
+var UseTasksController = provider(
+	func() *cron.TasksController {
+		return cron.NewTasksController(UseSheetsApiService(), useLessonsRepository(), useLessonsRequestsRepository(), useUsersRepository(), useTgBot())
 	},
 )

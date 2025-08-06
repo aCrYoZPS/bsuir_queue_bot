@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
@@ -22,10 +23,31 @@ import (
 var errNoLessons = errors.New("no lessons for given subject")
 
 type SheetsService interface {
-	AddLabwork(context.Context, *LabworkRequest) error
+	AddLabwork(context.Context, *AppendedLabwork) error
+}
+
+type AppendedLabwork struct {
+	RequestedDate  time.Time
+	SentProofTime  time.Time
+	DisciplineName string
+	GroupName      string
+	FullName       string
+	LabworkNumber  int8
+}
+
+func NewAppendedLabwork(RequestedDate time.Time, SentProofTime time.Time, DisciplineName string, GroupName string, FullName string, LabworkNumber int8) *AppendedLabwork {
+	return &AppendedLabwork{
+		RequestedDate:  RequestedDate,
+		SentProofTime:  SentProofTime,
+		DisciplineName: DisciplineName,
+		GroupName:      GroupName,
+		FullName:       FullName,
+		LabworkNumber:  LabworkNumber,
+	}
 }
 
 type LabworkRequest struct {
+	LabworkId      int64     `json:"lab_id,omitempty"`
 	RequestedDate  time.Time `json:"requested_time,omitempty"`
 	SentProofTime  time.Time `json:"sent_prof,omitempty"`
 	DisciplineName string    `json:"discipline,omitempty"`
@@ -36,28 +58,30 @@ type LabworkRequest struct {
 }
 
 type LabworksCallbackHandler struct {
-	bot      *tgutils.Bot
-	cache    interfaces.HandlersCache
-	requests interfaces.RequestsRepository
-	sheets   SheetsService
-	labworks LabworksService
-	users    UsersService
+	bot             *tgutils.Bot
+	cache           interfaces.HandlersCache
+	requests        interfaces.RequestsRepository
+	labworkRequests interfaces.LessonsRequestsRepository
+	sheets          SheetsService
+	labworks        LabworksService
+	users           UsersService
 }
 
-func NewLabworksCallbackHandler(bot *tgutils.Bot, cache interfaces.HandlersCache, labworks LabworksService, users UsersService, sheets SheetsService) *LabworksCallbackHandler {
+func NewLabworksCallbackHandler(bot *tgutils.Bot, cache interfaces.HandlersCache, labworks LabworksService, labworkRequests interfaces.LessonsRequestsRepository, users UsersService, sheets SheetsService) *LabworksCallbackHandler {
 	return &LabworksCallbackHandler{
-		bot:      bot,
-		cache:    cache,
-		labworks: labworks,
-		users:    users,
-		sheets:   sheets,
+		bot:             bot,
+		cache:           cache,
+		labworks:        labworks,
+		labworkRequests: labworkRequests,
+		users:           users,
+		sheets:          sheets,
 	}
 }
 
 func (handler *LabworksCallbackHandler) HandleCallback(ctx context.Context, update *tgbotapi.Update, bot *tgutils.Bot) error {
 	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 	if _, err := bot.Request(callback); err != nil {
-		return fmt.Errorf("failed to create labwork callback while handling: %w",err)
+		return fmt.Errorf("failed to create labwork callback while handling: %w", err)
 	}
 	if strings.HasPrefix(update.CallbackData(), constants.LABWORK_DISCIPLINE_CALLBACKS) {
 		discipline, userTgId := parseLabworkDisciplineCallback(update.CallbackData())
@@ -79,11 +103,11 @@ func (handler *LabworksCallbackHandler) HandleCallback(ctx context.Context, upda
 		return nil
 	}
 	if strings.HasPrefix(update.CallbackData(), constants.LABWORK_TIME_CALLBACKS) {
-		date, userTgId := parseLabworkTimeCallback(update.CallbackData())
-		if date.Equal(time.Time{}) || userTgId == 0 {
+		date, labworkId := parseLabworkTimeCallback(update.CallbackData())
+		if date.Equal(time.Time{}) || labworkId == 0 {
 			return fmt.Errorf("couldn't get time and tg id from labwork callback (%s)", update.CallbackData())
 		}
-		err := handler.handleTimeCallback(ctx, update.CallbackQuery.Message, date)
+		err := handler.handleTimeCallback(ctx, update.CallbackQuery.Message, date, labworkId)
 		if err != nil {
 			return err
 		}
@@ -114,14 +138,14 @@ func (handler *LabworksCallbackHandler) handleDisciplineCallback(ctx context.Con
 	}
 	lessons, err := handler.labworks.GetNext(ctx, discipline, user.GroupId)
 	if err != nil {
-		return fmt.Errorf("failed to get next labworks during labworks discipline callback: %w",err)
+		return fmt.Errorf("failed to get next labworks during labworks discipline callback: %w", err)
 	}
 	if lessons == nil {
 		return errNoLessons
 	}
 	json, err := json.Marshal(&LabworkRequest{DisciplineName: discipline, GroupName: user.GroupName, FullName: user.GroupName, TgId: user.TgId})
 	if err != nil {
-		return fmt.Errorf("failed to marshal labwork request during labworks discipline callback: %w",err)
+		return fmt.Errorf("failed to marshal labwork request during labworks discipline callback: %w", err)
 	}
 	err = handler.cache.SaveInfo(ctx, message.Chat.ID, string(json))
 	if err != nil {
@@ -141,7 +165,7 @@ func (handler *LabworksCallbackHandler) createDisciplinesKeyboard(lessons []pers
 		row := []tgbotapi.InlineKeyboardButton{}
 		for _, discipline := range chunk {
 			formattedDate := fmt.Sprintf("%d.%d.%d", discipline.Date.Day(), discipline.Date.Month(), discipline.Date.Year())
-			row = append(row, tgbotapi.NewInlineKeyboardButtonData(formattedDate, createLabworkTimeCallback(userTgId, discipline.Date)))
+			row = append(row, tgbotapi.NewInlineKeyboardButtonData(formattedDate, createLabworkTimeCallback(discipline.Id, discipline.Date)))
 		}
 		markup = append(markup, row)
 	}
@@ -149,21 +173,21 @@ func (handler *LabworksCallbackHandler) createDisciplinesKeyboard(lessons []pers
 	return &keyboard
 }
 
-func createLabworkTimeCallback(userTgId int64, date time.Time) string {
+func createLabworkTimeCallback(labworkId int64, date time.Time) string {
 	builder := strings.Builder{}
 	builder.Grow(64)
 	builder.WriteString(constants.LABWORK_TIME_CALLBACKS)
 	builder.WriteString("|")
 	builder.WriteString(fmt.Sprintf("%d.%d.%d", date.Day(), date.Month(), date.Year()))
 	builder.WriteString("|")
-	builder.WriteString(fmt.Sprint(userTgId))
+	builder.WriteString(fmt.Sprint(labworkId))
 	return builder.String()
 }
 
-func parseLabworkTimeCallback(callback string) (date time.Time, userTgId int64) {
+func parseLabworkTimeCallback(callback string) (date time.Time, labworkId int64) {
 	callback, _ = strings.CutPrefix(callback, constants.LABWORK_TIME_CALLBACKS+"|")
 	formattedDate, after, _ := strings.Cut(callback, "|")
-	userTgId, err := strconv.ParseInt(after, 10, 64)
+	labworkId, err := strconv.ParseInt(after, 10, 64)
 	if err != nil {
 		return time.Time{}, 0
 	}
@@ -184,20 +208,23 @@ func parseLabworkTimeCallback(callback string) (date time.Time, userTgId int64) 
 		return time.Time{}, 0
 	}
 	date = time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
-	return date, userTgId
+	return date, labworkId
 }
 
-func (handler *LabworksCallbackHandler) handleTimeCallback(ctx context.Context, msg *tgbotapi.Message, date time.Time) error {
+func (handler *LabworksCallbackHandler) handleTimeCallback(ctx context.Context, msg *tgbotapi.Message, date time.Time, labworkId int64) error {
 	jsonedInfo, err := handler.cache.GetInfo(ctx, msg.Chat.ID)
 	if err != nil {
-		return fmt.Errorf("failed to get info during labwork time callback handling: %w",err)
+		return fmt.Errorf("failed to get info during labwork time callback handling: %w", err)
 	}
 	info := LabworkRequest{}
 	err = json.Unmarshal([]byte(jsonedInfo), &info)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal info during labwork time callback handling: %w", err)
 	}
+
 	info.RequestedDate = date
+	info.LabworkId = labworkId
+
 	infoBytes, err := json.Marshal(&info)
 	if err != nil {
 		return fmt.Errorf("failed to marshal info during labwork time callback handling: %w", err)
@@ -238,13 +265,29 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(ctx context.Context
 		return fmt.Errorf("failed to save idle state during labwork accept callback handling: %w", err)
 	}
 
-	err = handler.sheets.AddLabwork(ctx, form)
+	err = handler.sheets.AddLabwork(ctx, handler.AppendedLabwork(form))
 	if err != nil {
 		return fmt.Errorf("failed to add labwork to sheets during labwork accept callback handling: %w", err)
 	}
 
+	err = handler.labworkRequests.Add(ctx, entities.NewLessonRequest(form.LabworkId, form.TgId, int64(msg.MessageID), msg.Chat.ID, form.LabworkNumber))
+	if err != nil {
+		return fmt.Errorf("failed to add labwork request during labwork accept callback handling: %w", err)
+	}
+
 	err = handler.RemoveMarkup(ctx, msg, bot)
 	return err
+}
+
+func (handler *LabworksCallbackHandler) AppendedLabwork(req *LabworkRequest) *AppendedLabwork {
+	return &AppendedLabwork{
+		RequestedDate:  req.RequestedDate,
+		SentProofTime:  req.SentProofTime,
+		DisciplineName: req.DisciplineName,
+		GroupName:      req.DisciplineName,
+		FullName:       req.FullName,
+		LabworkNumber:  req.LabworkNumber,
+	}
 }
 
 func (handler *LabworksCallbackHandler) RemoveMarkup(ctx context.Context, msg *tgbotapi.Message, bot *tgutils.Bot) error {
@@ -269,8 +312,7 @@ func (handler *LabworksCallbackHandler) RemoveMarkup(ctx context.Context, msg *t
 	return nil
 }
 
-
-func (handler *LabworksCallbackHandler) handleDeclineCallback(ctx context.Context,msg *tgbotapi.Message, command string, bot *tgutils.Bot) error {
+func (handler *LabworksCallbackHandler) handleDeclineCallback(ctx context.Context, msg *tgbotapi.Message, command string, bot *tgutils.Bot) error {
 	var chatId int64
 	err := json.Unmarshal([]byte(strings.TrimPrefix(command, "decline")), &chatId)
 	if err != nil {
