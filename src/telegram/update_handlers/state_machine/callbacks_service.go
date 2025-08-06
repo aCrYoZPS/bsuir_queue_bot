@@ -18,19 +18,19 @@ import (
 type CallbacksService struct {
 	//More of a placeholder, which will contain inject google services to handle callbacks
 	usersRepo       interfaces.UsersRepository
-	lessonsRequests cron.LessonsRequestsRepository
+	lessonsRequests cron.LessonsRequestsRepositoryReminder
 	requests        interfaces.RequestsRepository
 	cache           interfaces.HandlersCache
 	adminRequests   interfaces.AdminRequestsRepository
 	lessons         adminInterfaces.LessonsService
-	sheets          cron.SheetsApi
-	usersCron       cron.UsersRepo
-	lessonsCron     cron.LessonsRepo
+	sheets          cron.SheetsApiReminder
+	usersCron       cron.UsersRepoReminder
+	lessonsCron     cron.LessonsRepoReminder
 }
 
-func NewCallbackService(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache, lessonsRequests cron.LessonsRequestsRepository,
+func NewCallbackService(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache, lessonsRequests cron.LessonsRequestsRepositoryReminder,
 	requests interfaces.RequestsRepository, adminRequests interfaces.AdminRequestsRepository,
-	lessons adminInterfaces.LessonsService, sheets cron.SheetsApi, lessonsCron cron.LessonsRepo, usersCron cron.UsersRepo) *CallbacksService {
+	lessons adminInterfaces.LessonsService, sheets cron.SheetsApiReminder, lessonsCron cron.LessonsRepoReminder, usersCron cron.UsersRepoReminder) *CallbacksService {
 	return &CallbacksService{
 		usersRepo:       usersRepo,
 		cache:           cache,

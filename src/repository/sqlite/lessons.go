@@ -251,3 +251,9 @@ func (repo *LessonsRepository) GetLessonByRequest(ctx context.Context, requestId
 	}
 	return &lesson, nil
 }
+
+func (repo *LessonsRepository) DeleteLessons(ctx context.Context,before time.Time) error {
+	query := fmt.Sprintf("DELETE FROM %s WHERE date-$1 < 0", LESSONS_TABLE)
+	_, err := repo.db.ExecContext(ctx,query, before)
+	return err
+}

@@ -11,13 +11,13 @@ import (
 )
 
 type ReminderCallbackHandler struct {
-	lessons         LessonsRepo
-	lessonsRequests LessonsRequestsRepository
-	sheets          SheetsApi
-	users           UsersRepo
+	lessons         LessonsRepoReminder
+	lessonsRequests LessonsRequestsRepositoryReminder
+	sheets          SheetsApiReminder
+	users           UsersRepoReminder
 }
 
-func NewSheetsRefreshCallbackHandler(lessonsRequests LessonsRequestsRepository, sheets SheetsApi, users UsersRepo, lessons LessonsRepo) *ReminderCallbackHandler {
+func NewSheetsRefreshCallbackHandler(lessonsRequests LessonsRequestsRepositoryReminder, sheets SheetsApiReminder, users UsersRepoReminder, lessons LessonsRepoReminder) *ReminderCallbackHandler {
 	return &ReminderCallbackHandler{lessonsRequests: lessonsRequests, sheets: sheets, users: users, lessons: lessons}
 }
 

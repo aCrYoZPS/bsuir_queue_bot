@@ -37,6 +37,6 @@ var UseBotController = provider(
 
 var UseTasksController = provider(
 	func() *cron.TasksController {
-		return cron.NewTasksController(UseSheetsApiService(), useLessonsRepository(), useLessonsRequestsRepository(), useUsersRepository(), useTgBot())
+		return cron.NewTasksController(UseSheetsApiService(), useLessonsRepository(), useLessonsRequestsRepository(), useUsersRepository(), UseDriveApiService(), useTgBot())
 	},
 )

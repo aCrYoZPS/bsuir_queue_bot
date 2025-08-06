@@ -11,21 +11,44 @@ import (
 
 type TasksController struct {
 	sheets         SheetsApi
-	lessons        LessonsRepo
-	lessonsRequest LessonsRequestsRepository
+	lessons        LessonRepo
+	drive          DriveApi
+	lessonsRequest LessonsRequestRepo
 	users          UsersRepo
 	bot            *tgutils.Bot
 }
 
-func NewTasksController(sheets SheetsApi, lessons LessonsRepo, lessonsRequest LessonsRequestsRepository, users UsersRepo, bot *tgutils.Bot) *TasksController {
+func NewTasksController(sheets SheetsApi, lessons LessonRepo, lessonsRequest LessonsRequestRepo, users UsersRepo, drive DriveApi, bot *tgutils.Bot) *TasksController {
 	tasksController := &TasksController{
 		sheets:         sheets,
 		lessons:        lessons,
 		lessonsRequest: lessonsRequest,
 		users:          users,
+		drive:          drive,
 		bot:            bot,
 	}
 	return tasksController
+}
+
+type SheetsApi interface {
+	SheetsApiClear
+	SheetsApiReminder
+}
+
+type LessonRepo interface {
+	LessonsRepoClear
+	LessonsRepoReminder
+}
+
+type UsersRepo interface {
+	UsersRepoReminder
+}
+
+type DriveApi interface {
+	DriveApiClear
+}
+type LessonsRequestRepo interface {
+	LessonsRequestsRepositoryReminder
 }
 
 func (controller *TasksController) InitTasks(ctx context.Context) {
@@ -33,9 +56,17 @@ func (controller *TasksController) InitTasks(ctx context.Context) {
 	if err != nil {
 		slog.Error(fmt.Errorf("failed to init cron scheduler: %w", err).Error())
 	}
+
 	sheetsRefresh := NewReminderTask(controller.sheets, controller.lessons, controller.lessonsRequest, controller.users, controller.bot)
 	daily := gocron.DailyJob(1, gocron.NewAtTimes(gocron.NewAtTime(22, 0, 0)))
-	_, err = scheduler.NewJob(daily, gocron.NewTask(func() { sheetsRefresh.Run() }))
+	_, err = scheduler.NewJob(daily, gocron.NewTask(func() { sheetsRefresh.Run(ctx) }), gocron.WithContext(ctx))
+	if err != nil {
+		slog.Error(fmt.Errorf("failed to init sheets refresh cron: %w", err).Error())
+	}
+
+	clearLessons := NewClearLessonsTask(controller.sheets, controller.lessons, controller.drive)
+	monthly := gocron.MonthlyJob(1, gocron.NewDaysOfTheMonth(15, -1), gocron.NewAtTimes(gocron.NewAtTime(22, 0, 0)))
+	_, err = scheduler.NewJob(monthly, gocron.NewTask(func() { clearLessons.Run(ctx) }))
 	if err != nil {
 		slog.Error(fmt.Errorf("failed to init sheets refresh cron: %w", err).Error())
 	}
