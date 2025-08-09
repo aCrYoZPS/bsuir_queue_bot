@@ -53,6 +53,14 @@ func (repo *LessonsRepository) AddRange(ctx context.Context, lessons []*entities
 	return err
 }
 
+func (repo *LessonsRepository) Add(ctx context.Context, lesson *persistance.Lesson) error {
+	query := fmt.Sprintf("INSERT INTO %s (group_id, subject, lesson_type, subgroup_number, date, time) values ($1,$2,$3,$4,$5,$6)", LESSONS_TABLE)
+	storedDate := lesson.Date.Format(savedFormat)
+	storedTime := lesson.Time.Format(savedFormat)
+	_, err := repo.db.ExecContext(ctx, query, lesson.GroupId, lesson.Subject, lesson.LessonType, lesson.SubgroupNumber, storedDate, storedTime)
+	return err
+}
+
 func (repo *LessonsRepository) GetAll(ctx context.Context, groupName string) ([]persistance.Lesson, error) {
 	query := fmt.Sprintf("SELECT id, group_id, lesson_type, subject, subgroup_number, date, time FROM %s WHERE $1 in (SELECT name from %s)", LESSONS_TABLE, GROUPS_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query, groupName)
@@ -252,8 +260,8 @@ func (repo *LessonsRepository) GetLessonByRequest(ctx context.Context, requestId
 	return &lesson, nil
 }
 
-func (repo *LessonsRepository) DeleteLessons(ctx context.Context,before time.Time) error {
+func (repo *LessonsRepository) DeleteLessons(ctx context.Context, before time.Time) error {
 	query := fmt.Sprintf("DELETE FROM %s WHERE date-$1 < 0", LESSONS_TABLE)
-	_, err := repo.db.ExecContext(ctx,query, before)
+	_, err := repo.db.ExecContext(ctx, query, before)
 	return err
 }

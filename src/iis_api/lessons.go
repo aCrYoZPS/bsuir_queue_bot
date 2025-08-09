@@ -13,8 +13,6 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
 )
 
-// That'll probably be turned into service class, which contains injected repository. Commented it out to compile project, for now
-
 type LessonsService struct {
 	sheetsApi sheetsapi.SheetsApi
 	interfaces.LessonsRepository
@@ -49,11 +47,11 @@ func (serv *LessonsService) AddGroupLessons(ctx context.Context, groupName strin
 		return serv.CreateFilledSheet(ctx, groupName, lessons)
 	}
 	totalLessons := serv.getTotalLessons(responseJson)
-	err = serv.AddRange(ctx,totalLessons)
+	err = serv.AddRange(ctx, totalLessons)
 	if err != nil {
 		return "", err
 	}
-	lessons, err = serv.GetAll(ctx,groupName)
+	lessons, err = serv.GetAll(ctx, groupName)
 	if err != nil {
 		return "", err
 	}
@@ -102,4 +100,14 @@ func (serv *LessonsService) assignGroupId(groupId int64, resp *schedulesResponse
 	for i := range allLessons {
 		allLessons[i].GroupId = groupId
 	}
+}
+
+func (serv *LessonsService) Add(ctx context.Context, lesson *persistance.Lesson) error {
+	err := serv.LessonsRepository.Add(ctx, lesson)
+	if err != nil {
+		return err
+	}
+
+	err = serv.sheetsApi.Add(ctx, lesson)
+	return err
 }

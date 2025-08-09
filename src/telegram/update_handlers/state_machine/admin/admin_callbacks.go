@@ -36,11 +36,6 @@ func NewAdminCallbackHandler(usersRepo interfaces.UsersRepository, cache interfa
 }
 
 func (handler *AdminCallbackHandler) HandleCallback(ctx context.Context, update *tgbotapi.Update, bot *tgutils.Bot) error {
-	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
-	if _, err := bot.Request(callback); err != nil {
-		return err
-	}
-
 	if !strings.HasPrefix(update.CallbackQuery.Data, constants.ADMIN_CALLBACKS) {
 		return errors.New("invalid command requested")
 	}

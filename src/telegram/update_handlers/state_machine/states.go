@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/admin"
+	customlabworks "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/custom_labworks"
 	groups "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/group"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/labworks"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -22,7 +23,7 @@ func InitStates(conf *statesConfig) {
 	once.Do(
 		func() {
 			states = []State{newIdleState(conf.cache, conf.bot, conf.usersRepo)}
-			states = slices.Concat(states, createAdminStates(conf), createGroupStates(conf), createLabworksStates(conf))
+			states = slices.Concat(states, createAdminStates(conf), createGroupStates(conf), createLabworksStates(conf), createCustomLabworkStates(conf))
 		},
 	)
 }
@@ -41,6 +42,10 @@ func createGroupStates(conf *statesConfig) []State {
 func createLabworksStates(conf *statesConfig) []State {
 	return []State{labworks.NewLabworkSubmitProofState(conf.bot, conf.cache, conf.groupsRepo, conf.requests),
 		labworks.NewLabworkSubmitStartState(conf.bot, conf.cache, conf.labworks, conf.usersRepo), labworks.NewLabworkSubmitWaitingState(conf.bot)}
+}
+
+func createCustomLabworkStates(conf *statesConfig) []State {
+	return []State{customlabworks.NewLabworkAddStartState(conf.bot, conf.cache, conf.usersRepo), customlabworks.NewLabworkAddSubmitNameState(conf.bot, conf.cache), customlabworks.NewLabworkAddSubmitNameState(conf.bot, conf.cache)}
 }
 
 var states = []State{}

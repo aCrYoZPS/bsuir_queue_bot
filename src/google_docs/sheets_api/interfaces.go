@@ -10,7 +10,8 @@ import (
 
 type SheetUrl = string
 type SheetsApi interface {
+	Add(ctx context.Context, lesson *persistance.Lesson) error
 	CreateSheet(ctx context.Context, groupName string, lessons []persistance.Lesson) (SheetUrl, error)
 	ClearSpreadsheet(ctx context.Context, spreadsheetId string, before time.Time) error
-	AddLabwork(context.Context, *labworks.AppendedLabwork) error
+	AddLabworkRequest(context.Context, *labworks.AppendedLabwork) error
 }

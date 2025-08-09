@@ -13,10 +13,11 @@ import (
 )
 
 const (
-	HELP_COMMAND       = "/help"
-	SUBMIT_COMMAND     = "/submit"
-	ASSIGN_COMMAND     = "/assign"
-	JOIN_GROUP_COMMAND = "/join"
+	HELP_COMMAND        = "/help"
+	SUBMIT_COMMAND      = "/submit"
+	ASSIGN_COMMAND      = "/assign"
+	JOIN_GROUP_COMMAND  = "/join"
+	ADD_LABWORK_COMMAND = "/add"
 )
 
 var userCommands = []tgbotapi.BotCommand{
@@ -26,8 +27,16 @@ var userCommands = []tgbotapi.BotCommand{
 	{Command: JOIN_GROUP_COMMAND, Description: "Отправка заявки на участие в группе"},
 }
 
+var adminCommands = []tgbotapi.BotCommand{
+	{Command: ADD_LABWORK_COMMAND, Description: "Добавление собственной пары"},
+}
+
 func GetUserCommands() []tgbotapi.BotCommand {
 	return userCommands
+}
+
+func GetAdminCommands() []tgbotapi.BotCommand {
+	return adminCommands
 }
 
 type StateMachine interface {
@@ -53,7 +62,7 @@ func (srv *MessagesService) HandleCommands(update *tgbotapi.Update, bot *tgutils
 				return compared == commandText
 			}
 		}
-		if !slices.ContainsFunc(userCommands, isCommand(update.Message.Command())) {
+		if !slices.ContainsFunc(slices.Concat(userCommands, adminCommands), isCommand(update.Message.Command())) {
 			if _, err := bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Незнакомая команда")); err != nil {
 				slog.Error(err.Error())
 			}

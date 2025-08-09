@@ -16,6 +16,8 @@ import (
 	"google.golang.org/api/sheets/v4"
 )
 
+var errSheetExists = errors.New("sheets: sheet with such name already exists")
+
 var _ SheetsApi = (*SheetsApiService)(nil)
 var _ labworks.SheetsService = (*SheetsApiService)(nil)
 
@@ -154,7 +156,7 @@ func (serv *SheetsApiService) ClearSpreadsheet(ctx context.Context, spreadsheetI
 	return err
 }
 
-func (serv *SheetsApiService) AddLabwork(ctx context.Context, req *labworks.AppendedLabwork) error {
+func (serv *SheetsApiService) AddLabworkRequest(ctx context.Context, req *labworks.AppendedLabwork) error {
 	group, err := serv.groupsRepo.GetByName(ctx, req.GroupName)
 	if err != nil {
 		return err
@@ -230,7 +232,10 @@ func (serv *SheetsApiService) createTable(ctx context.Context, sheet *sheets.She
 		},
 		}},
 	).Context(ctx).Do()
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to add table for sheet: %w", err)
+	}
+	return nil
 }
 
 func (serv *SheetsApiService) appendToSheet(ctx context.Context, spreadsheetId string, sheet *sheets.Sheet, req *labworks.AppendedLabwork) error {
@@ -251,4 +256,49 @@ func (serv *SheetsApiService) formatDateTimeToEuropean(dateTime time.Time) strin
 	date := fmt.Sprint(dateTime.Day()) + "." + fmt.Sprint(dateTime.Month()) + "." + fmt.Sprint(dateTime.Year())
 	time := zeroPrependedHour + ":" + zeroPrependedMinutes + ":" + zeroPrependedSeconds
 	return date + " " + time
+}
+
+func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistance.Lesson) error {
+	group, err := serv.groupsRepo.GetById(ctx, int(lesson.GroupId))
+	if err != nil {
+		return fmt.Errorf("failed to get group in sheets api during addition of custom labwork: %w", err)
+	}
+
+	sheet, err := serv.api.Spreadsheets.Get(group.SpreadsheetId).Context(ctx).Do()
+	if err != nil {
+		return fmt.Errorf("failed to get spreadsheet by id during addition of custom labwork: %w", err)
+	}
+	sheetIndex := 0
+	sheetTitle := serv.createLessonName(*lesson)
+	for i, sheet := range sheet.Sheets {
+		if _, date := parseLessonName(sheet.Properties.Title); date.After(lesson.Date) {
+			sheetIndex = i + 1
+			break
+		}
+	}
+
+	for _, sheet := range sheet.Sheets {
+		if sheetTitle == sheet.Properties.Title {
+			return errSheetExists
+		}
+	}
+
+	createdSheet, err := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{
+		Requests: []*sheets.Request{
+			{
+				AddSheet: &sheets.AddSheetRequest{
+					Properties: &sheets.SheetProperties{
+						Title: sheetTitle,
+						Index: int64(sheetIndex),
+					},
+				},
+			},
+		},
+	}).Context(ctx).Do()
+	if err != nil {
+		return fmt.Errorf("failed to create sheet while adding custom labwork: %w", err)
+	}
+
+	err = serv.createTable(ctx, createdSheet.UpdatedSpreadsheet.Sheets[sheetIndex])
+	return err
 }

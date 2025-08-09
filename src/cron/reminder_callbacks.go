@@ -62,7 +62,7 @@ func (handler *ReminderCallbackHandler) SetNextLesson(ctx context.Context, reque
 	if err != nil {
 		return fmt.Errorf("failed to get lesson request by id in sheets refresh cron: %w", err)
 	}
-	err = handler.sheets.AddLabwork(ctx, labworks.NewAppendedLabwork(lesson.Date, req.SubmitTime, lesson.Subject, usr.GroupName, usr.FullName, req.LabworkNumber))
+	err = handler.sheets.AddLabworkRequest(ctx, labworks.NewAppendedLabwork(lesson.Date, req.SubmitTime, lesson.Subject, usr.GroupName, usr.FullName, req.LabworkNumber))
 	if err != nil {
 		return fmt.Errorf("failed to add labwork to sheets during sheets refresh cron: %w", err)
 	}

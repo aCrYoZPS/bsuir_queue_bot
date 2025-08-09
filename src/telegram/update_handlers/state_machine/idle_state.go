@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
@@ -42,7 +43,7 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 		}
 	case update_handlers.HELP_COMMAND:
 		var commands []tgbotapi.BotCommand
-		commands = append(commands, update_handlers.GetUserCommands()...)
+		commands = append(commands, slices.Concat(update_handlers.GetUserCommands(), update_handlers.GetAdminCommands())...)
 		builder := strings.Builder{}
 		for _, command := range commands {
 			builder.WriteString(command.Command)
@@ -63,12 +64,8 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 		if currentState == nil {
 			return fmt.Errorf("couldn't find state for %s command", update_handlers.JOIN_GROUP_COMMAND)
 		}
-		err = currentState.Handle(ctx, message)
-		if err != nil {
-			return err
-		}
 	case update_handlers.SUBMIT_COMMAND:
-		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID,constants.LABWORK_SUBMIT_START_STATE))	
+		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.LABWORK_SUBMIT_START_STATE))
 		if err != nil {
 			return fmt.Errorf("failed to transition from idle state to labwork submit state")
 		}
@@ -76,12 +73,21 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 		if currentState == nil {
 			return fmt.Errorf("couldn't find state for %s command", constants.LABWORK_SUBMIT_START_STATE)
 		}
-		err = currentState.Handle(ctx, message)
+	case update_handlers.ADD_LABWORK_COMMAND:
+		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.LABWORK_ADD_START_STATE))
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to transition from idle state to labwork add state")
+		}
+		currentState = getStateByName(constants.LABWORK_ADD_START_STATE)
+		if currentState == nil {
+			return fmt.Errorf("couldn't find state for %s command", constants.LABWORK_ADD_START_STATE)
 		}
 	default:
 		return errors.Join(errors.ErrUnsupported, errors.New("answers are only to commands"))
+	}
+	err := currentState.Handle(ctx, message)
+	if err != nil {
+		return err
 	}
 	return nil
 }

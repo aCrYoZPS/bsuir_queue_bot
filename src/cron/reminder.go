@@ -20,7 +20,7 @@ type Task interface {
 }
 
 type SheetsApiReminder interface {
-	AddLabwork(ctx context.Context, req *labworks.AppendedLabwork) error
+	AddLabworkRequest(ctx context.Context, req *labworks.AppendedLabwork) error
 }
 
 type LessonsRepoReminder interface {

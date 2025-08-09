@@ -23,7 +23,7 @@ import (
 var errNoLessons = errors.New("no lessons for given subject")
 
 type SheetsService interface {
-	AddLabwork(context.Context, *AppendedLabwork) error
+	AddLabworkRequest(context.Context, *AppendedLabwork) error
 }
 
 type AppendedLabwork struct {
@@ -79,10 +79,6 @@ func NewLabworksCallbackHandler(bot *tgutils.Bot, cache interfaces.HandlersCache
 }
 
 func (handler *LabworksCallbackHandler) HandleCallback(ctx context.Context, update *tgbotapi.Update, bot *tgutils.Bot) error {
-	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
-	if _, err := bot.Request(callback); err != nil {
-		return fmt.Errorf("failed to create labwork callback while handling: %w", err)
-	}
 	if strings.HasPrefix(update.CallbackData(), constants.LABWORK_DISCIPLINE_CALLBACKS) {
 		discipline, userTgId := parseLabworkDisciplineCallback(update.CallbackData())
 		if discipline == "" || userTgId == 0 {
@@ -151,7 +147,7 @@ func (handler *LabworksCallbackHandler) handleDisciplineCallback(ctx context.Con
 	if err != nil {
 		return fmt.Errorf("failed to save info to cache during labworks discipline callback: %w", err)
 	}
-	keyboard := handler.createDisciplinesKeyboard(lessons, message.From.ID)
+	keyboard := handler.createDisciplinesKeyboard(lessons)
 	_, err = handler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(message.From.ID, message.MessageID, *keyboard))
 	if err != nil {
 		return fmt.Errorf("failed to send keyboard during labworks callback handling: %w", err)
@@ -159,7 +155,7 @@ func (handler *LabworksCallbackHandler) handleDisciplineCallback(ctx context.Con
 	return nil
 }
 
-func (handler *LabworksCallbackHandler) createDisciplinesKeyboard(lessons []persistance.Lesson, userTgId int64) *tgbotapi.InlineKeyboardMarkup {
+func (handler *LabworksCallbackHandler) createDisciplinesKeyboard(lessons []persistance.Lesson) *tgbotapi.InlineKeyboardMarkup {
 	markup := [][]tgbotapi.InlineKeyboardButton{}
 	for chunk := range slices.Chunk(lessons, CHUNK_SIZE) {
 		row := []tgbotapi.InlineKeyboardButton{}
@@ -265,7 +261,7 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(ctx context.Context
 		return fmt.Errorf("failed to save idle state during labwork accept callback handling: %w", err)
 	}
 
-	err = handler.sheets.AddLabwork(ctx, handler.AppendedLabwork(form))
+	err = handler.sheets.AddLabworkRequest(ctx, handler.AppendedLabwork(form))
 	if err != nil {
 		return fmt.Errorf("failed to add labwork to sheets during labwork accept callback handling: %w", err)
 	}

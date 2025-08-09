@@ -100,6 +100,6 @@ var UseCallbacksService = provider(
 	func() bot.CallbacksService {
 		return stateMachine.NewCallbackService(
 			useUsersRepository(), useHandlersCache(), useLessonsRequestsRepository(),
-			useRequestsRepository(), useAdminRequestsRepository(), useLessonsService(), UseSheetsApiService(), useLessonsRepository(), useUsersRepository())
+			useRequestsRepository(), useAdminRequestsRepository(), useLessonsService(), UseSheetsApiService(), useLessonsRepository())
 	},
 )

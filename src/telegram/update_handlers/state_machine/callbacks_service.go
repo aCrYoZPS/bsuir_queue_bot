@@ -6,31 +6,57 @@ import (
 	"strings"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/cron"
+	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/sheets_api"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/admin"
 	adminInterfaces "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/admin/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
+	customlabworks "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/custom_labworks"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/group"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/labworks"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+type LessonsService interface {
+	cron.LessonRepo
+	adminInterfaces.LessonsService
+	labworks.LabworksService
+	interfaces.LessonsRepository
+}
+
+type UsersRepository interface {
+	interfaces.UsersRepository
+	cron.UsersRepoReminder
+}
+
+type LessonsRequestsService interface {
+	cron.LessonsRequestRepo
+	cron.LessonsRequestsRepositoryReminder
+	interfaces.LessonsRequestsRepository
+}
+
+type SheetsApi interface {
+	cron.SheetsApi
+	cron.SheetsApiReminder
+	cron.SheetsApiClear
+	sheetsapi.SheetsApi
+}
+
 type CallbacksService struct {
 	//More of a placeholder, which will contain inject google services to handle callbacks
-	usersRepo       interfaces.UsersRepository
-	lessonsRequests cron.LessonsRequestsRepositoryReminder
+	usersRepo       UsersRepository
+	lessonsRequests LessonsRequestsService
 	requests        interfaces.RequestsRepository
 	cache           interfaces.HandlersCache
 	adminRequests   interfaces.AdminRequestsRepository
-	lessons         adminInterfaces.LessonsService
-	sheets          cron.SheetsApiReminder
-	usersCron       cron.UsersRepoReminder
-	lessonsCron     cron.LessonsRepoReminder
+	lessons         LessonsService
+	sheets          SheetsApi
 }
 
-func NewCallbackService(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache, lessonsRequests cron.LessonsRequestsRepositoryReminder,
+func NewCallbackService(usersRepo UsersRepository, cache interfaces.HandlersCache, lessonsRequests LessonsRequestsService,
 	requests interfaces.RequestsRepository, adminRequests interfaces.AdminRequestsRepository,
-	lessons adminInterfaces.LessonsService, sheets cron.SheetsApiReminder, lessonsCron cron.LessonsRepoReminder, usersCron cron.UsersRepoReminder) *CallbacksService {
+	lessons LessonsService, sheets SheetsApi, lessonsCron cron.LessonsRepoReminder) *CallbacksService {
 	return &CallbacksService{
 		usersRepo:       usersRepo,
 		cache:           cache,
@@ -38,7 +64,6 @@ func NewCallbackService(usersRepo interfaces.UsersRepository, cache interfaces.H
 		adminRequests:   adminRequests,
 		lessonsRequests: lessonsRequests,
 		lessons:         lessons,
-		usersCron:       usersCron,
 	}
 }
 
@@ -69,8 +94,14 @@ func (serv *CallbacksService) HandleCallbacks(update *tgbotapi.Update, bot *tgut
 		callback_handler = admin.NewAdminCallbackHandler(serv.usersRepo, serv.cache, serv.adminRequests, serv.lessons)
 	case strings.HasPrefix(update.CallbackData(), constants.GROUP_CALLBACKS):
 		callback_handler = group.NewGroupCallbackHandler(serv.usersRepo, serv.cache, serv.requests)
+	case strings.HasPrefix(update.CallbackData(), constants.LABWORK_CALLBACKS):
+		callback_handler = labworks.NewLabworksCallbackHandler(bot, serv.cache, serv.lessons, serv.lessonsRequests, serv.usersRepo, serv.sheets)
 	case strings.HasPrefix(update.CallbackData(), cron.REMINDER_CALLBACKS):
-		callback_handler = cron.NewSheetsRefreshCallbackHandler(serv.lessonsRequests, serv.sheets, serv.usersCron, serv.lessonsCron)
+		callback_handler = cron.NewSheetsRefreshCallbackHandler(serv.lessonsRequests, serv.sheets, serv.usersRepo, serv.lessons)
+	case strings.HasPrefix(update.CallbackData(), constants.CALENDAR_CALLBACKS):
+		callback_handler = customlabworks.NewCalendarCallbackHandler(bot, serv.cache)
+	case strings.HasPrefix(update.CallbackData(), constants.TIME_PICKER_CALLBACKS):
+		callback_handler = customlabworks.NewCalendarCallbackHandler(bot, serv.cache)
 	}
 
 	err := callback_handler.HandleCallback(ctx, update, bot)

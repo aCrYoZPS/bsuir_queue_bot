@@ -29,11 +29,6 @@ func NewGroupCallbackHandler(users interfaces.UsersRepository, cache interfaces.
 }
 
 func (handler *GroupCallbackHandler) HandleCallback(ctx context.Context, update *tgbotapi.Update, bot *tgutils.Bot) error {
-	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
-	if _, err := bot.Request(callback); err != nil {
-		return fmt.Errorf("failed to request callback from telegram: %w", err)
-	}
-
 	if !strings.HasPrefix(update.CallbackQuery.Data, constants.GROUP_CALLBACKS) {
 		return fmt.Errorf("callback doesn't have group prefix (%s)", constants.GROUP_CALLBACKS)
 	}

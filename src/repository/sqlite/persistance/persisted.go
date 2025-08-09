@@ -9,11 +9,22 @@ import (
 type Lesson struct {
 	Id             int64
 	GroupId        int64
-	LessonType     string
+	LessonType     entities.LessonType
 	Subject        string
-	SubgroupNumber int8
+	SubgroupNumber entities.Subgroup
 	Date           time.Time
 	Time           time.Time
+}
+
+func NewPersistedLesson(groupId int64, subgroupNumber entities.Subgroup, lessonType entities.LessonType, subject string, date time.Time, time time.Time) *Lesson {
+	return &Lesson{
+		GroupId:        groupId,
+		SubgroupNumber: subgroupNumber,
+		LessonType:     lessonType,
+		Subject:        subject,
+		Date:           date,
+		Time:           time,
+	}
 }
 
 func ToLessonEntity(lesson *Lesson) *entities.Lesson {

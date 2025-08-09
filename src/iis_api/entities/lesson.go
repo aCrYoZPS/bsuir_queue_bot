@@ -8,8 +8,7 @@ import (
 	"time"
 )
 
-// I mean, it's basically a enum.
-type Subgroup int8
+type Subgroup = int8
 
 const (
 	AllSubgroups   = Subgroup(0)
