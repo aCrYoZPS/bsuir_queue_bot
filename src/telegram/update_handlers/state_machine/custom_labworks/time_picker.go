@@ -3,11 +3,13 @@ package customlabworks
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
+	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/sheets_api"
 	iis_api_entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
@@ -232,7 +234,13 @@ func (callbackHandler *TimePickerCallbackHandler) handleTimeSubmitCallback(ctx c
 
 	err = callbackHandler.lessons.Add(ctx, persistance.NewPersistedLesson(request.GroupId, iis_api_entities.AllSubgroups, iis_api_entities.Labwork, request.Name, requestDate, requestTime))
 	if err != nil {
-		return fmt.Errorf("failed to add custom lesson during time picker callback handling: %w", err)
+		if errors.Is(err, sheetsapi.ErrSheetsExists()) {
+			_, err := callbackHandler.bot.SendCtx(ctx, tgbotapi.NewMessage(update.Message.Chat.ID, "Пара под данным именем и датой уже существует. Пожалуйста, укажите другое имя"))
+			if err != nil {
+				return fmt.Errorf("failed to send sheet exists message during time picker submit callback handling: %w", err)
+			}
+		}
+		return fmt.Errorf("failed to add custom lesson during time picker submit callback handling: %w", err)
 	}
 
 	_, err = callbackHandler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))

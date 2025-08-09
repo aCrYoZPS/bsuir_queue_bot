@@ -18,6 +18,10 @@ import (
 
 var errSheetExists = errors.New("sheets: sheet with such name already exists")
 
+func ErrSheetsExists() error {
+	return errSheetExists
+}
+
 var _ SheetsApi = (*SheetsApiService)(nil)
 var _ labworks.SheetsService = (*SheetsApiService)(nil)
 
