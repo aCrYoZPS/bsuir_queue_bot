@@ -235,21 +235,18 @@ func (callbackHandler *TimePickerCallbackHandler) handleTimeSubmitCallback(ctx c
 	err = callbackHandler.lessons.Add(ctx, persistance.NewPersistedLesson(request.GroupId, iis_api_entities.AllSubgroups, iis_api_entities.Labwork, request.Name, requestDate, requestTime))
 	if err != nil {
 		if errors.Is(err, sheetsapi.ErrSheetsExists()) {
-			_, err := callbackHandler.bot.SendCtx(ctx, tgbotapi.NewMessage(update.Message.Chat.ID, "Пара под данным именем и датой уже существует. Пожалуйста, укажите другое имя"))
+			_, err := callbackHandler.bot.SendCtx(ctx, tgbotapi.NewEditMessageTextAndMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID,
+				"Пара под данным именем и датой уже существует. Пожалуйста, укажите другое имя", tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
 			if err != nil {
 				return fmt.Errorf("failed to send sheet exists message during time picker submit callback handling: %w", err)
 			}
+
 		}
 		return fmt.Errorf("failed to add custom lesson during time picker submit callback handling: %w", err)
 	}
-
-	_, err = callbackHandler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
+	_, err = callbackHandler.bot.SendCtx(ctx, tgbotapi.NewEditMessageTextAndMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, "Ваша лабораторная была сохранена", tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
 	if err != nil {
 		return fmt.Errorf("failed to remove markup from message during time picker submit callback hadnling: %w", err)
-	}
-	_, err = callbackHandler.bot.SendCtx(ctx, tgbotapi.NewEditMessageText(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, "Ваша лабораторная была сохранена"))
-	if err != nil {
-		return fmt.Errorf("failed to edit message during time picker submit callback hadnling: %w", err)
 	}
 	return nil
 }
