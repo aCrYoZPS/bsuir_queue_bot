@@ -17,22 +17,22 @@ import (
 
 const (
 	additionalRows = 3
-	calendarStart  = 1
+	calendarStart  = 2
 )
 
 var months = map[time.Month]string{
-	time.January:   "Января",
-	time.February:  "Февраля",
-	time.March:     "Марта",
-	time.April:     "Апреля",
-	time.May:       "Мая",
-	time.June:      "Июня",
-	time.July:      "Июля",
-	time.August:    "Августа",
-	time.September: "Сентября",
-	time.October:   "Октября",
-	time.November:  "Ноября",
-	time.December:  "Декабря",
+	time.January:   "Январь",
+	time.February:  "Февраль",
+	time.March:     "Марть",
+	time.April:     "Апрель",
+	time.May:       "Май",
+	time.June:      "Июнь",
+	time.July:      "Июль",
+	time.August:    "Август",
+	time.September: "Сентябрь",
+	time.October:   "Октябрь",
+	time.November:  "Ноябрь",
+	time.December:  "Декабрь",
 }
 
 var days = map[time.Weekday]string{
@@ -62,10 +62,10 @@ func createCalendar(date time.Time, isCurrentMonth bool) *tgbotapi.InlineKeyboar
 	_, lastOfMonthWeek := lastOfMonth.ISOWeek()
 	_, firstOfMonthWeek := firstOfMonth.ISOWeek()
 
-	markup := make([][]tgbotapi.InlineKeyboardButton, int(math.Abs(float64(lastOfMonthWeek-firstOfMonthWeek)))+additionalRows)
+	markup := make([][]tgbotapi.InlineKeyboardButton, int(math.Abs(float64(lastOfMonthWeek-firstOfMonthWeek+1)))+additionalRows)
 
 	createCalendarHeader(&markup, currentMonth, currentYear)
-	createDateRows(&markup, currentDay, int(currentMonth), currentYear, lastOfMonth)
+	createDateRows(&markup, firstOfMonth.Weekday(), currentDay, int(currentMonth), currentYear, lastOfMonth)
 
 	if isCurrentMonth {
 		markup[len(markup)-1] = make([]tgbotapi.InlineKeyboardButton, oneSideNavigationSize)
@@ -81,14 +81,21 @@ func createCalendar(date time.Time, isCurrentMonth bool) *tgbotapi.InlineKeyboar
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: markup}
 }
 
-func createDateRows(markup *[][]tgbotapi.InlineKeyboardButton, currentDay, currentMonth, currentYear int, lastOfMonth time.Time) {
+func createDateRows(markup *[][]tgbotapi.InlineKeyboardButton, firstDayWeekday time.Weekday, currentDay, currentMonth, currentYear int, lastOfMonth time.Time) {
 	for i := range 7 {
 		(*markup)[1][i] = tgbotapi.NewInlineKeyboardButtonData(days[time.Weekday(i)], constants.IGNORE_CALLBACKS)
 	}
 
 	displayedDate := 1
-	for i := calendarStart; i < len(*markup)-2; i++ {
-		for j := 0; j < 7; j, displayedDate = j+1, displayedDate+1 {
+	for i := calendarStart; i < len(*markup)-1; i++ {
+		j := 0
+		if i == calendarStart {
+			for j = 0; j < int(firstDayWeekday); j++ {
+				(*markup)[i][j] = tgbotapi.NewInlineKeyboardButtonData("-", constants.IGNORE_CALLBACKS)
+			}
+			j = int(firstDayWeekday)
+		}
+		for ; j < 7; j, displayedDate = j+1, displayedDate+1 {
 			if displayedDate >= currentDay && displayedDate <= lastOfMonth.Day() {
 				(*markup)[i][j] = tgbotapi.NewInlineKeyboardButtonData(fmt.Sprint(displayedDate), createDateCallback(displayedDate, currentMonth, currentYear))
 			} else {
@@ -107,6 +114,7 @@ func createCalendarHeader(markup *[][]tgbotapi.InlineKeyboardButton, currentMont
 		(*markup)[i] = make([]tgbotapi.InlineKeyboardButton, daysInWeek)
 	}
 
+	(*markup)[1] = make([]tgbotapi.InlineKeyboardButton, 7)
 	//Row of week days
 	for i := range 7 {
 		(*markup)[1][i] = tgbotapi.NewInlineKeyboardButtonData(days[time.Weekday(i)], constants.IGNORE_CALLBACKS)
@@ -165,14 +173,14 @@ func parseEuropeanDate(europeanDate string) time.Time {
 }
 
 type CalendarCallbackHandler struct {
-	bot     *tgutils.Bot
-	cache   interfaces.HandlersCache
+	bot   *tgutils.Bot
+	cache interfaces.HandlersCache
 }
 
 func NewCalendarCallbackHandler(bot *tgutils.Bot, cache interfaces.HandlersCache) *CalendarCallbackHandler {
 	return &CalendarCallbackHandler{
-		bot:     bot,
-		cache:   cache,
+		bot:   bot,
+		cache: cache,
 	}
 }
 
@@ -237,7 +245,8 @@ func (handler *CalendarCallbackHandler) handleDate(ctx context.Context, update *
 	if err != nil {
 		return fmt.Errorf("failed to save jsoned info during date callback handling in calendar: %w", err)
 	}
-	_, err = handler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.Message.Chat.ID, update.Message.MessageID, *createTimePicker("")))
+
+	_, err = handler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, *createTimePicker("")))
 	if err != nil {
 		return fmt.Errorf("failed to edit message during date callback handling in calendar: %w", err)
 	}

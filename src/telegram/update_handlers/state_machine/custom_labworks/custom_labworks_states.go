@@ -68,6 +68,11 @@ func (state *labworkAddStartState) Handle(ctx context.Context, message *tgbotapi
 	if err != nil {
 		return fmt.Errorf("failed to save jsoned request into cache during custom labwork add start state handling: %w", err)
 	}
+
+	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.LABWORK_ADD_SUBMIT_NAME_STATE))
+	if err != nil {
+		return fmt.Errorf("failed to transition to custom labwork submit name state: %w", err)
+	}
 	_, err = state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Введите название добавленной пары"))
 	if err != nil {
 		return fmt.Errorf("failed to send response in labwork add start state: %w", err)
@@ -107,7 +112,17 @@ func (state *labworkAddSubmitNameState) Handle(ctx context.Context, message *tgb
 		return nil
 	}
 
-	json, err := json.Marshal(&LessonRequest{Name: name})
+	jsonedReq, err := state.cache.GetInfo(ctx, message.Chat.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get jsoned request info in custom labwork name submit state: %w", err)
+	}
+	req := &LessonRequest{}
+	err = json.Unmarshal([]byte(jsonedReq), &req)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal jsoned req (%s) in custom labwork name submit state: %w", jsonedReq, err)
+	}
+	req.Name = name
+	json, err := json.Marshal(req)
 	if err != nil {
 		return fmt.Errorf("failed to marshal lesson request in custom labwork submit name state: %w", err)
 	}
@@ -119,14 +134,16 @@ func (state *labworkAddSubmitNameState) Handle(ctx context.Context, message *tgb
 	resp := tgbotapi.NewMessage(message.Chat.ID, "Выберите дату добавленной пары")
 	resp.ReplyMarkup = createCalendar(time.Now(), true)
 
-	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.LABWORK_ADD_WAITING_STATE))
-	if err != nil {
-		return err
-	}
 	_, err = state.bot.SendCtx(ctx, resp)
 	if err != nil {
 		return fmt.Errorf("failed to send response during custom labwork name submit: %w", err)
 	}
+
+	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.LABWORK_ADD_WAITING_STATE))
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

@@ -87,11 +87,11 @@ func (handler *AdminCallbackHandler) handleAcceptCallback(ctx context.Context, m
 	if _, err := bot.Send(resp); err != nil {
 		return err
 	}
-	err = handler.RemoveMarkup(ctx, msg, bot)
+	err = handler.RemoveMarkupFromOwners(ctx, msg, bot)
 	return err
 }
 
-func (handler *AdminCallbackHandler) addAdmin(ctx context.Context,form *adminSubmitForm) error {
+func (handler *AdminCallbackHandler) addAdmin(ctx context.Context, form *adminSubmitForm) error {
 	user, err := handler.usersRepo.GetByTgId(ctx, form.UserId)
 	if err != nil {
 		return err
@@ -99,9 +99,20 @@ func (handler *AdminCallbackHandler) addAdmin(ctx context.Context,form *adminSub
 	if slices.Contains(user.Roles, entities.Admin) {
 		return ErrAlreadyAdmin
 	}
-	user.Roles = append(user.Roles, entities.Admin)
-	err = handler.usersRepo.Update(ctx, user)
-	return err
+	if user.Id != 0 {
+		user.Roles = append(user.Roles, entities.Admin)
+		err = handler.usersRepo.Update(ctx, user)
+		if err != nil {
+			return fmt.Errorf("failed updating user during admin assigning: %w", err)
+		}
+	} else {
+		user = entities.NewUser(form.Name, form.Group, form.UserId, entities.WithAdminRole())
+		err = handler.usersRepo.Add(ctx, user)
+		if err != nil {
+			return fmt.Errorf("failed to add user during admin assigning: %w", err)
+		}
+	}
+	return nil
 }
 
 func (handler *AdminCallbackHandler) handleDeclineCallback(ctx context.Context, msg *tgbotapi.Message, command string, bot *tgutils.Bot) error {
@@ -119,11 +130,12 @@ func (handler *AdminCallbackHandler) handleDeclineCallback(ctx context.Context, 
 	if err != nil {
 		return err
 	}
+
 	err = handler.cache.SaveState(ctx, *interfaces.NewCachedInfo(chatId, constants.IDLE_STATE))
 	if err != nil {
 		return err
 	}
-	err = handler.RemoveMarkup(ctx, msg, bot)
+	err = handler.RemoveMarkupFromOwners(ctx, msg, bot)
 	if err != nil {
 		return err
 	}
@@ -132,7 +144,7 @@ func (handler *AdminCallbackHandler) handleDeclineCallback(ctx context.Context, 
 	return err
 }
 
-func (handler *AdminCallbackHandler) RemoveMarkup(ctx context.Context, msg *tgbotapi.Message, bot *tgutils.Bot) error {
+func (handler *AdminCallbackHandler) RemoveMarkupFromOwners(ctx context.Context, msg *tgbotapi.Message, bot *tgutils.Bot) error {
 	request, err := handler.requests.GetByMsg(ctx, int64(msg.MessageID), msg.Chat.ID)
 	if err != nil {
 		return err

@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
@@ -37,13 +38,17 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 		if currentState == nil {
 			return fmt.Errorf("failed to get state for name %s", currentState)
 		}
-		err = currentState.Handle(ctx, message)
-		if err != nil {
-			return err
-		}
 	case update_handlers.HELP_COMMAND:
 		var commands []tgbotapi.BotCommand
-		commands = append(commands, slices.Concat(update_handlers.GetUserCommands(), update_handlers.GetAdminCommands())...)
+		commands = append(commands, update_handlers.GetUserCommands()...)
+
+		user, err := state.usersRepo.GetByTgId(ctx, message.From.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get user by id during handling help command: %w", err)
+		}
+		if slices.Contains(user.Roles, entities.Admin) {
+			commands = append(commands, update_handlers.GetAdminCommands()...)
+		}
 		builder := strings.Builder{}
 		for _, command := range commands {
 			builder.WriteString(command.Command)
@@ -51,10 +56,11 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 			builder.WriteString(command.Description)
 			builder.WriteByte('\n')
 		}
-		_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, builder.String()))
+		_, err = state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, builder.String()))
 		if err != nil {
 			return fmt.Errorf("failed to send message during help command: %w", err)
 		}
+		return nil
 	case update_handlers.JOIN_GROUP_COMMAND:
 		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_SUBMIT_START_STATE))
 		if err != nil {

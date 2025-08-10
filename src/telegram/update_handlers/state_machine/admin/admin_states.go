@@ -61,7 +61,7 @@ func (state *adminSubmitStartState) Handle(ctx context.Context, message *tgbotap
 }
 
 func (state *adminSubmitStartState) checkIfAdmin(ctx context.Context, tgId int64) (bool, error) {
-	user, err := state.usersRepository.GetById(ctx, tgId)
+	user, err := state.usersRepository.GetByTgId(ctx, tgId)
 	if err != nil {
 		return false, fmt.Errorf("couldn't get user by id when checking admin: %w", err)
 	}
@@ -97,6 +97,7 @@ func (state *adminSubmittingNameState) Handle(ctx context.Context, message *tgbo
 	if message.Text == "" {
 		return errors.New("no text in message")
 	}
+
 	info, err := json.Marshal(&adminSubmitForm{UserId: message.From.ID, Name: message.Text})
 	if err != nil {
 		return fmt.Errorf("failed to marshal admin submit form: %w", err)
@@ -105,6 +106,7 @@ func (state *adminSubmittingNameState) Handle(ctx context.Context, message *tgbo
 	if err != nil {
 		return fmt.Errorf("failed to save info to cache during submitting name for admin: %w", err)
 	}
+	
 	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_GROUP_STATE))
 	if err != nil {
 		return fmt.Errorf("failed to save state during transition from admin submitting name to submitting group: %w", err)
@@ -139,15 +141,17 @@ func (state *adminSubmitingGroupState) Handle(ctx context.Context, message *tgbo
 	if message.Text == "" {
 		return stateErrors.NewInvalidInput("no text in message")
 	}
+
 	exists, err := state.srv.DoesGroupExist(ctx, message.Text)
 	if err != nil {
 		return fmt.Errorf("failed to check if group exists during admin submitting group state: %w", err)
 	}
 	if !exists {
-		msg := tgbotapi.NewMessage(message.Chat.ID, "Введите номер существующей группы")
+		msg := tgbotapi.NewMessage(message.Chat.ID, "Введите номер существующей в ИИСе группы")
 		_, err := state.bot.SendCtx(ctx, msg)
 		return fmt.Errorf("failed to send group not exists message during admin submitting group: %w", err)
 	}
+
 	info, err := state.cache.GetInfo(ctx, message.Chat.ID)
 	if err != nil {
 		return fmt.Errorf("failed to get info from cache during admin submitting group")
@@ -158,11 +162,11 @@ func (state *adminSubmitingGroupState) Handle(ctx context.Context, message *tgbo
 		return fmt.Errorf("failed to unmarshal info from cache during admin submitting group: %w", err)
 	}
 	form.Group = message.Text
-
 	marshalledInfo, err := json.Marshal(form)
 	if err != nil {
 		return fmt.Errorf("failed marshal info during admin submitting group: %w", err)
 	}
+
 	err = state.cache.SaveInfo(ctx, message.Chat.ID, string(marshalledInfo))
 	if err != nil {
 		return fmt.Errorf("failed to save info to cache during admin submitting group")
@@ -176,7 +180,7 @@ func (state *adminSubmitingGroupState) Handle(ctx context.Context, message *tgbo
 	if err != nil {
 		return fmt.Errorf("failed to send message at the end of admin submitting group")
 	}
-	return err
+	return nil
 }
 
 type adminSubmittingProofState struct {

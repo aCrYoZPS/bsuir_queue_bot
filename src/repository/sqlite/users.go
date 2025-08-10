@@ -47,7 +47,7 @@ func (repo *UsersRepository) GetById(ctx context.Context, id int64) (*entities.U
 }
 
 func (repo *UsersRepository) GetByTgId(ctx context.Context, tgId int64) (*entities.User, error) {
-	query := fmt.Sprintf("SELECT %[1]s.id, %[1]s.tg_id, %[1]s.group_id, %[1]s.full_name, %[2]s.role_name FROM %[1]s INNER JOIN %[2]s ON %[1]s.id = %[2]s.user_id WHERE %[1]s.tg_id = $1", USERS_TABLE, ROLES_TABLE)
+	query := fmt.Sprintf("SELECT u.id, u.tg_id, u.group_id, u.full_name, r.role_name FROM %[1]s AS u INNER JOIN %[2]s AS r ON u.id = r.user_id WHERE u.tg_id = $1", USERS_TABLE, ROLES_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query, tgId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -133,7 +133,12 @@ func (repo *UsersRepository) Add(ctx context.Context, user *entities.User) error
 		return err
 	}
 	query = fmt.Sprintf("INSERT INTO %s (user_id, role_name) values ($1, $2)", ROLES_TABLE)
-	tx.ExecContext(ctx, query, id, entities.Basic)
+	for _, role := range user.Roles {
+		_, err = tx.ExecContext(ctx, query, id, role.ToString())
+		if err != nil {
+			return err
+		}
+	}
 	err = tx.Commit()
 	if err != nil {
 		return err
@@ -156,7 +161,12 @@ func (repo *UsersRepository) AddRange(ctx context.Context, users []entities.User
 			return err
 		}
 		query = fmt.Sprintf("INSERT INTO %s (user_id, role_name) values ($1, $2)", ROLES_TABLE)
-		tx.ExecContext(ctx, query, id, entities.Basic)
+		for _, role := range user.Roles {
+			_, err = tx.ExecContext(ctx, query, id, role.ToString())
+			if err != nil {
+				return err
+			}
+		}
 	}
 	err = tx.Commit()
 	if err != nil {

@@ -2,6 +2,7 @@ package stateMachine
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -101,7 +102,14 @@ func (serv *CallbacksService) HandleCallbacks(update *tgbotapi.Update, bot *tgut
 	case strings.HasPrefix(update.CallbackData(), constants.CALENDAR_CALLBACKS):
 		callback_handler = customlabworks.NewCalendarCallbackHandler(bot, serv.cache)
 	case strings.HasPrefix(update.CallbackData(), constants.TIME_PICKER_CALLBACKS):
-		callback_handler = customlabworks.NewCalendarCallbackHandler(bot, serv.cache)
+		callback_handler = customlabworks.NewTimePickerCallbackHandler(bot, serv.lessons, serv.cache)
+	case strings.HasPrefix(update.CallbackData(), constants.IGNORE_CALLBACKS):
+		callbackConfig := tgbotapi.NewCallback(update.CallbackQuery.ID, "")
+		_, err := bot.Request(callbackConfig)
+		if err != nil {
+			slog.Error(fmt.Errorf("failed to send empty callback during ignore callback handling: %w", err).Error())
+		}
+		return
 	}
 
 	err := callback_handler.HandleCallback(ctx, update, bot)

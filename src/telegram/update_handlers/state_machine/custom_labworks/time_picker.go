@@ -23,13 +23,14 @@ func createTimePicker(currentTime string) *tgbotapi.InlineKeyboardMarkup {
 	if currentTime == "" {
 		currentTime = "15:00"
 	}
-	markup := make([][]tgbotapi.InlineKeyboardButton, 4)
-	markup[0] = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("15:00", constants.IGNORE_CALLBACKS)}
+	markup := make([][]tgbotapi.InlineKeyboardButton, 5)
+	markup[0] = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(currentTime, constants.IGNORE_CALLBACKS)}
 	markup[1] = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("+", createHoursIncreaseCallback(currentTime)),
 		tgbotapi.NewInlineKeyboardButtonData("-", createHoursDecreaseCallback(currentTime))}
 	markup[2] = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("+", createMinutesIncreaseCallback(currentTime)),
 		tgbotapi.NewInlineKeyboardButtonData("-", createMinutesDecreaseCallback(currentTime))}
 	markup[3] = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Назад", constants.TIME_CANCEL)}
+	markup[4] = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Принять", constants.TIME_SUBMIT)}
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: markup}
 }
 
@@ -105,7 +106,7 @@ func (callbackHandler *TimePickerCallbackHandler) HandleCallback(ctx context.Con
 }
 
 func (callbackHandler *TimePickerCallbackHandler) handleCancelCallback(ctx context.Context, update *tgbotapi.Update) error {
-	_, err := callbackHandler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.Message.Chat.ID, update.Message.MessageID, *createCalendar(time.Now(), true)))
+	_, err := callbackHandler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, *createCalendar(time.Now(), true)))
 	if err != nil {
 		return fmt.Errorf("failed to edit markup when handling time picker cancel callback: %w", err)
 	}
@@ -129,7 +130,7 @@ func (callbackHandler *TimePickerCallbackHandler) handleHoursIncreaseCallback(ct
 	}
 
 	hours = (hours + 1) % 24
-	curTimeString = fmt.Sprintf("%d:%d", hours, minutes)
+	curTimeString = fmt.Sprintf("%d:%02d", hours, minutes)
 
 	_, err = callbackHandler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, *createTimePicker(curTimeString)))
 	if err != nil {
@@ -155,7 +156,7 @@ func (callbackHandler *TimePickerCallbackHandler) handleHoursDecreaseCallback(ct
 	}
 
 	hours = (24 + hours - 1) % 24
-	curTimeString = fmt.Sprintf("%d:%d", hours, minutes)
+	curTimeString = fmt.Sprintf("%d:%02d", hours, minutes)
 
 	_, err = callbackHandler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, *createTimePicker(curTimeString)))
 	if err != nil {
@@ -181,7 +182,7 @@ func (callbackHandler *TimePickerCallbackHandler) handleMinutesIncreaseCallback(
 	}
 
 	minutes = (minutes + 1) % 60
-	curTimeString = fmt.Sprintf("%d:%d", hours, minutes)
+	curTimeString = fmt.Sprintf("%d:%02d", hours, minutes)
 
 	_, err = callbackHandler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, *createTimePicker(curTimeString)))
 	if err != nil {
@@ -207,7 +208,7 @@ func (callbackHandler *TimePickerCallbackHandler) handleMinutesDecreaseCallback(
 	}
 
 	minutes = (60 + minutes - 1) % 60
-	curTimeString = fmt.Sprintf("%d:%d", hours, minutes)
+	curTimeString = fmt.Sprintf("%d:%02d", hours, minutes)
 
 	_, err = callbackHandler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, *createTimePicker(curTimeString)))
 	if err != nil {
@@ -217,7 +218,7 @@ func (callbackHandler *TimePickerCallbackHandler) handleMinutesDecreaseCallback(
 }
 
 func (callbackHandler *TimePickerCallbackHandler) handleTimeSubmitCallback(ctx context.Context, update *tgbotapi.Update) error {
-	jsonedInfo, err := callbackHandler.cache.GetInfo(ctx, update.Message.Chat.ID)
+	jsonedInfo, err := callbackHandler.cache.GetInfo(ctx, update.CallbackQuery.Message.Chat.ID)
 	if err != nil {
 		return fmt.Errorf("failed to get jsoned info during handling time submit callback: %w", err)
 	}
@@ -241,12 +242,22 @@ func (callbackHandler *TimePickerCallbackHandler) handleTimeSubmitCallback(ctx c
 				return fmt.Errorf("failed to send sheet exists message during time picker submit callback handling: %w", err)
 			}
 
+			err = callbackHandler.cache.SaveState(ctx, *interfaces.NewCachedInfo(update.CallbackQuery.Message.Chat.ID, constants.LABWORK_ADD_SUBMIT_NAME_STATE))
+			if err != nil {
+				return fmt.Errorf("failed to transition to custom labwork name submit during time picker submit: %w", err)
+			}
+			return nil
 		}
 		return fmt.Errorf("failed to add custom lesson during time picker submit callback handling: %w", err)
 	}
 	_, err = callbackHandler.bot.SendCtx(ctx, tgbotapi.NewEditMessageTextAndMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, "Ваша лабораторная была сохранена", tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
 	if err != nil {
 		return fmt.Errorf("failed to remove markup from message during time picker submit callback hadnling: %w", err)
+	}
+
+	err = callbackHandler.cache.SaveState(ctx, *interfaces.NewCachedInfo(update.CallbackQuery.Message.Chat.ID, constants.IDLE_STATE))
+	if err != nil {
+		return fmt.Errorf("failed to transition to idle state in time submit callback handling: %w", err)
 	}
 	return nil
 }

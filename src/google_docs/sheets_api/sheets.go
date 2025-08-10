@@ -174,7 +174,7 @@ func (serv *SheetsApiService) AddLabworkRequest(ctx context.Context, req *labwor
 		titleSubject, titleDate := parseLessonName(sheet.Properties.Title)
 		if titleSubject == req.DisciplineName && req.RequestedDate.Equal(titleDate) {
 			if sheet.Tables == nil {
-				err = serv.createTable(ctx, sheet)
+				err = serv.createTable(ctx, spreadsheetId, sheet)
 				if err != nil {
 					return err
 				}
@@ -186,19 +186,26 @@ func (serv *SheetsApiService) AddLabworkRequest(ctx context.Context, req *labwor
 	return errors.New("no such labwork found")
 }
 
-func (serv *SheetsApiService) createTable(ctx context.Context, sheet *sheets.Sheet) error {
-	_, err := serv.api.Spreadsheets.BatchUpdate("", &sheets.BatchUpdateSpreadsheetRequest{
-		Requests: []*sheets.Request{{
-			UpdateTable: &sheets.UpdateTableRequest{
-				Fields: "*",
+func (serv *SheetsApiService) createTable(ctx context.Context, spreadsheetId string, sheet *sheets.Sheet) error {
+	requests := []*sheets.Request{}
+	for _, bandedRange := range sheet.BandedRanges {
+		requests = append(requests, &sheets.Request{DeleteBanding: &sheets.DeleteBandingRequest{BandedRangeId: bandedRange.BandedRangeId}})
+	}
+	requests = append(requests, []*sheets.Request{
+		{
+			AddTable: &sheets.AddTableRequest{
 				Table: &sheets.Table{
 					Name: "Очередь",
 					Range: &sheets.GridRange{
 						SheetId:          sheet.Properties.SheetId,
-						StartRowIndex:    0,
-						EndRowIndex:      1,
 						StartColumnIndex: 0,
 						EndColumnIndex:   3,
+					},
+					RowsProperties: &sheets.TableRowsProperties{
+						FirstBandColorStyle:  sheet.Properties.TabColorStyle,
+						FooterColorStyle:     sheet.Properties.TabColorStyle,
+						HeaderColorStyle:     sheet.Properties.TabColorStyle,
+						SecondBandColorStyle: sheet.Properties.TabColorStyle,
 					},
 					ColumnProperties: []*sheets.TableColumnProperties{
 						{
@@ -219,23 +226,11 @@ func (serv *SheetsApiService) createTable(ctx context.Context, sheet *sheets.She
 					},
 				},
 			},
-			SortRange: &sheets.SortRangeRequest{
-				SortSpecs: []*sheets.SortSpec{
-					{
-						DimensionIndex: 2,
-						SortOrder:      "DESCENDING",
-					},
-				},
-				Range: &sheets.GridRange{
-					SheetId:          sheet.Properties.SheetId,
-					StartRowIndex:    0,
-					StartColumnIndex: 0,
-					EndColumnIndex:   3,
-				},
-			},
 		},
-		}},
-	).Context(ctx).Do()
+	}...)
+	_, err := serv.api.Spreadsheets.BatchUpdate(spreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{
+		Requests: requests,
+	}).Context(ctx).Do()
 	if err != nil {
 		return fmt.Errorf("failed to add table for sheet: %w", err)
 	}
@@ -281,6 +276,10 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistance.Lesso
 		}
 	}
 
+	if sheetIndex == 0 {
+		sheetIndex = len(sheet.Sheets)
+	}
+
 	for _, sheet := range sheet.Sheets {
 		if sheetTitle == sheet.Properties.Title {
 			return errSheetExists
@@ -288,6 +287,7 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistance.Lesso
 	}
 
 	createdSheet, err := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{
+		IncludeSpreadsheetInResponse: true,
 		Requests: []*sheets.Request{
 			{
 				AddSheet: &sheets.AddSheetRequest{
@@ -303,6 +303,6 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistance.Lesso
 		return fmt.Errorf("failed to create sheet while adding custom labwork: %w", err)
 	}
 
-	err = serv.createTable(ctx, createdSheet.UpdatedSpreadsheet.Sheets[sheetIndex])
+	err = serv.createTable(ctx, createdSheet.SpreadsheetId, createdSheet.UpdatedSpreadsheet.Sheets[sheetIndex])
 	return err
 }

@@ -2,4 +2,4 @@ package constants
 
 import "time"
 
-const DEFAULT_TIMEOUT = 10 * time.Second
+const DEFAULT_TIMEOUT = 30 * time.Second

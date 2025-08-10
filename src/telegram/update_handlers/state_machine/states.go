@@ -45,7 +45,8 @@ func createLabworksStates(conf *statesConfig) []State {
 }
 
 func createCustomLabworkStates(conf *statesConfig) []State {
-	return []State{customlabworks.NewLabworkAddStartState(conf.bot, conf.cache, conf.usersRepo), customlabworks.NewLabworkAddSubmitNameState(conf.bot, conf.cache), customlabworks.NewLabworkAddSubmitNameState(conf.bot, conf.cache)}
+	return []State{customlabworks.NewLabworkAddStartState(conf.bot, conf.cache, conf.usersRepo), customlabworks.NewLabworkAddSubmitNameState(conf.bot, conf.cache),
+		customlabworks.NewLabworkAddWaitingState(conf.bot)}
 }
 
 var states = []State{}

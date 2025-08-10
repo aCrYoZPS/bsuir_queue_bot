@@ -59,6 +59,7 @@ func (controller *BotController) Start(ctx context.Context) {
 					}(&wg)
 				}
 			} else if update.CallbackQuery != nil {
+				wg.Add(1)
 				go func(*sync.WaitGroup) {
 					controller.callbackSrv.HandleCallbacks(&update, controller.bot)
 					wg.Done()
