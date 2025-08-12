@@ -18,7 +18,10 @@ func GetClient() (*http.Client, error) {
 		return nil, err
 	}
 
-	tokenFile := "/run/secrets/token"
+	tokenFile := os.Getenv("OAUTH2_TOKEN_FILE")
+	if tokenFile == "" {
+		return nil, fmt.Errorf("failed to get token file for OAUTH2_TOKEN_FILE env")
+	}
 	token, err := tokenFromFile(tokenFile)
 	if err != nil {
 		token, err = getTokenFromWeb(config)
@@ -36,6 +39,10 @@ func GetClient() (*http.Client, error) {
 }
 
 func getConfig() (*oauth2.Config, error) {
+	credentialsPath := os.Getenv("OAUTH2_CREDENTIALS_FILE")
+	if credentialsPath == "" {
+		return nil, fmt.Errorf("failed to get value for OAUTH2_CREDENTIALS_FILE env")
+	}
 	credentialsFile, err := os.ReadFile("/run/secrets/credentials")
 	if err != nil {
 		return nil, err

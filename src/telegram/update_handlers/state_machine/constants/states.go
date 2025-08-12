@@ -22,6 +22,7 @@ const (
 const (
 	LABWORK_SUBMIT_START_STATE   = "lab_submit"
 	LABWORK_SUBMIT_WAITING_STATE = "lab_wait"
+	LABWORK_SUBMIT_NUMBER_STATE = "lab_num"
 	LABWORK_SUBMIT_PROOF_STATE   = "lab_proof_submit"
 )
 

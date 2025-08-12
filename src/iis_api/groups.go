@@ -3,11 +3,8 @@ package iis_api
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"io"
-	"log/slog"
+	"fmt"
 	"net/http"
-	"os"
 
 	entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
@@ -24,41 +21,19 @@ func NewGroupsService(repo interfaces.GroupsRepository) *GroupsService {
 }
 
 func (serv *GroupsService) InitAllGroups(ctx context.Context) error {
-	if _, err := os.Stat("groups.json"); errors.Is(err, os.ErrNotExist) {
-		file, err := os.Create("groups.json")
-		if err != nil {
-			return err
-		}
+	url := "https://iis.bsuir.by/api/v1/student-groups"
 
-		defer file.Close()
-
-		url := "https://iis.bsuir.by/api/v1/student-groups"
-
-		resp, err := http.Get(url)
-		if err != nil {
-			return err
-		}
-
-		defer resp.Body.Close()
-		_, err = io.Copy(file, resp.Body)
-		if err != nil {
-			return err
-		}
-
-		slog.Info("Finished request")
-	}
-
-	file, err := os.Open("groups.json")
+	resp, err := http.Get(url)
 	if err != nil {
 		return err
 	}
 
-	defer file.Close()
+	defer resp.Body.Close()
 
 	var data []entities.Group
 
-	if err := json.NewDecoder(file).Decode(&data); err != nil {
-		return err
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return fmt.Errorf("failed to decode data from response body to group entity in groups service: %w", err)
 	}
 
 	return serv.AddNonPresented(ctx, data)

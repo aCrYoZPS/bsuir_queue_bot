@@ -59,6 +59,7 @@ func NewCallbackService(usersRepo UsersRepository, cache interfaces.HandlersCach
 	requests interfaces.RequestsRepository, adminRequests interfaces.AdminRequestsRepository,
 	lessons LessonsService, sheets SheetsApi, lessonsCron cron.LessonsRepoReminder) *CallbacksService {
 	return &CallbacksService{
+		sheets:          sheets,
 		usersRepo:       usersRepo,
 		cache:           cache,
 		requests:        requests,
@@ -96,7 +97,7 @@ func (serv *CallbacksService) HandleCallbacks(update *tgbotapi.Update, bot *tgut
 	case strings.HasPrefix(update.CallbackData(), constants.GROUP_CALLBACKS):
 		callback_handler = group.NewGroupCallbackHandler(serv.usersRepo, serv.cache, serv.requests)
 	case strings.HasPrefix(update.CallbackData(), constants.LABWORK_CALLBACKS):
-		callback_handler = labworks.NewLabworksCallbackHandler(bot, serv.cache, serv.lessons, serv.lessonsRequests, serv.usersRepo, serv.sheets)
+		callback_handler = labworks.NewLabworksCallbackHandler(bot, serv.cache, serv.lessons, serv.requests, serv.lessonsRequests, serv.usersRepo, serv.sheets)
 	case strings.HasPrefix(update.CallbackData(), cron.REMINDER_CALLBACKS):
 		callback_handler = cron.NewSheetsRefreshCallbackHandler(serv.lessonsRequests, serv.sheets, serv.usersRepo, serv.lessons)
 	case strings.HasPrefix(update.CallbackData(), constants.CALENDAR_CALLBACKS):

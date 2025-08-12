@@ -5,5 +5,4 @@ type Group struct {
 	Name          string `json:"name,omitempty" db:"name"`
 	FacultyId     int    `json:"facultyId,omitempty" db:"faculty_id"`
 	SpreadsheetId string `json:"-" db:"spreadsheet_id"`
-	AdminId       int    `json:"-" db:"admin_id"`
 }

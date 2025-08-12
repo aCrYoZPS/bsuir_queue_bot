@@ -2,9 +2,9 @@ CREATE TABLE IF NOT EXISTS groups (
 	id INTEGER PRIMARY KEY,
 	name TEXT UNIQUE,
 	faculty_id INTEGER,
-	spreadsheet_id TEXT,
-	admin_id INTEGER
+	spreadsheet_id TEXT
 );
+
 CREATE TABLE IF NOT EXISTS lessons (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     group_id        INTEGER,

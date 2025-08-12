@@ -2,7 +2,7 @@ services:
   backend:
     container_name: "queue_bot"
     env_file: 
-      - path: ./src/.env
+      - path: ./.env
         required: true
     tty: true
     build: 
@@ -10,8 +10,8 @@ services:
       target: main
       dockerfile: Dockerfile
     environment:
-      - OAUTH2_TOKEN_FILE=/run/secrets/token.json
-      - OAUTH2_CREDENTIALS_FILE=/run/secrets/credentials.json
+      - OAUTH2_TOKEN_FILE=/run/secrets/token
+      - OAUTH2_CREDENTIALS_FILE=/run/secrets/credentials
       - SQLITE_FILE=../data/sqlite3.db
       - SQLITE_INIT_FILE=../sql/db_setup.sql
       - DATA_DIRECTORY=../data

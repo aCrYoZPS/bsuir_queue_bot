@@ -11,3 +11,4 @@ services:
       - ./src:/app/src
       - ./.vscode:/app/.vscode
       - ./.devcontainer:/app/.devcontainer
+      

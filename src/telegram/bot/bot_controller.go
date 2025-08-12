@@ -33,7 +33,7 @@ func (controller *BotController) Server() http.Client {
 func (controller *BotController) Start(ctx context.Context) {
 	logging.Info(fmt.Sprintf("authorized on account %s", controller.bot.Self.UserName))
 	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
+	u.Timeout = 600
 	u.AllowedUpdates = []string{"message", "callback_query"}
 
 	updates := controller.bot.GetUpdatesChan(u)

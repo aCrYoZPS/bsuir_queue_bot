@@ -124,7 +124,7 @@ func (handler *GroupCallbackHandler) RemoveMarkup(ctx context.Context, msg *tgbo
 		if err != nil {
 			return fmt.Errorf("failed to delete group request during markup removal: %w", err)
 		}
-		_, err := bot.SendCtx(ctx,tgbotapi.NewEditMessageReplyMarkup(request.ChatId, int(request.MsgId), tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
+		_, err := bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(request.ChatId, int(request.MsgId), tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
 		if err != nil {
 			return fmt.Errorf("failed to send markup removal message: %w", err)
 		}

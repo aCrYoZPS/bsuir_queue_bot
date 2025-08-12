@@ -181,7 +181,7 @@ func (callbackHandler *TimePickerCallbackHandler) handleMinutesIncreaseCallback(
 		return fmt.Errorf("failed to convert minutes to integer when handling time picker minutes increase callback: %w", err)
 	}
 
-	minutes = (minutes + 1) % 60
+	minutes = (minutes + 5) % 60
 	curTimeString = fmt.Sprintf("%d:%02d", hours, minutes)
 
 	_, err = callbackHandler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, *createTimePicker(curTimeString)))
@@ -207,7 +207,7 @@ func (callbackHandler *TimePickerCallbackHandler) handleMinutesDecreaseCallback(
 		return fmt.Errorf("failed to convert minutes to integer when handling time picker minutes decrease callback: %w", err)
 	}
 
-	minutes = (60 + minutes - 1) % 60
+	minutes = (60 + minutes - 5) % 60
 	curTimeString = fmt.Sprintf("%d:%02d", hours, minutes)
 
 	_, err = callbackHandler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, *createTimePicker(curTimeString)))

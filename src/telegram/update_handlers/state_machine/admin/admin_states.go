@@ -27,10 +27,11 @@ type adminSubmitForm struct {
 	UserId         int64  `json:"userId,omitempty"`
 	Name           string `json:"name,omitempty"`
 	Group          string `json:"group,omitempty"`
+	TgName         string `json:"tg_name,omitempty"`
 	AdditionalInfo string `json:"info,omitempty"`
 }
 
-const infoTemplate = "Имя: {{.Name}} \nГруппа: {{.Group}}\n{{if .AdditionalInfo}}Доп информация: {{.AdditionalInfo}} {{end}}"
+const infoTemplate = "Имя: {{.Name}} \nГруппа: {{.Group}}\nИмя пользователя: @{{.TgName}} \n{{if .AdditionalInfo}}Доп информация: {{.AdditionalInfo}} {{end}}"
 
 type adminSubmitStartState struct {
 	cache           interfaces.HandlersCache
@@ -98,7 +99,7 @@ func (state *adminSubmittingNameState) Handle(ctx context.Context, message *tgbo
 		return errors.New("no text in message")
 	}
 
-	info, err := json.Marshal(&adminSubmitForm{UserId: message.From.ID, Name: message.Text})
+	info, err := json.Marshal(&adminSubmitForm{UserId: message.From.ID, Name: message.Text, TgName: message.From.UserName})
 	if err != nil {
 		return fmt.Errorf("failed to marshal admin submit form: %w", err)
 	}
@@ -106,7 +107,7 @@ func (state *adminSubmittingNameState) Handle(ctx context.Context, message *tgbo
 	if err != nil {
 		return fmt.Errorf("failed to save info to cache during submitting name for admin: %w", err)
 	}
-	
+
 	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_GROUP_STATE))
 	if err != nil {
 		return fmt.Errorf("failed to save state during transition from admin submitting name to submitting group: %w", err)
@@ -149,7 +150,10 @@ func (state *adminSubmitingGroupState) Handle(ctx context.Context, message *tgbo
 	if !exists {
 		msg := tgbotapi.NewMessage(message.Chat.ID, "Введите номер существующей в ИИСе группы")
 		_, err := state.bot.SendCtx(ctx, msg)
-		return fmt.Errorf("failed to send group not exists message during admin submitting group: %w", err)
+		if err != nil {
+			return fmt.Errorf("failed to send group not exists message during admin submitting group: %w", err)
+		}
+		return nil
 	}
 
 	info, err := state.cache.GetInfo(ctx, message.Chat.ID)

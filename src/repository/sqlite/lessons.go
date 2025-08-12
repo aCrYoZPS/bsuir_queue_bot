@@ -95,8 +95,8 @@ func (repo *LessonsRepository) GetAll(ctx context.Context, groupName string) ([]
 
 func (repo *LessonsRepository) GetNext(ctx context.Context, subject string, groupId int64) ([]persistance.Lesson, error) {
 	date := time.Now().UTC().Unix()
-	query := fmt.Sprintf("SELECT id, group_id, lesson_type, subject, subgroup_number, date, time FROM %s ORDER BY date-%[2]s WHERE date-%[2]s > 0 AND subject=%s AND group_id = %s LIMIT 4", LESSONS_TABLE, fmt.Sprint(date), subject, fmt.Sprint(groupId))
-	rows, err := repo.db.QueryContext(ctx, query)
+	query := fmt.Sprintf("SELECT id, group_id, lesson_type, subject, subgroup_number, date, time FROM %s WHERE strftime('%%s', date)>$1 AND subject=$2 AND group_id = $3 ORDER BY date LIMIT 4", LESSONS_TABLE)
+	rows, err := repo.db.QueryContext(ctx, query, fmt.Sprint(date), subject, groupId)
 	if err != nil {
 		return nil, err
 	}
@@ -116,12 +116,16 @@ func (repo *LessonsRepository) GetNext(ctx context.Context, subject string, grou
 		if err != nil {
 			return nil, err
 		}
+		i++
 	}
-	return lessons, nil
+	if i == 0 {
+		return []persistance.Lesson{}, nil
+	}
+	return lessons[:i], nil
 }
 
 func (repo *LessonsRepository) GetSubjects(ctx context.Context, groupId int64) ([]string, error) {
-	query := fmt.Sprintf("SELECT DISTINCT subject FROM %s WHERE group_id=$1 ORDER BY subject", LESSONS_TABLE)
+	query := fmt.Sprintf("SELECT DISTINCT subject FROM %s WHERE group_id=$1 AND date>=date('now') ORDER BY subject", LESSONS_TABLE)
 	rows, err := repo.db.Query(query, groupId)
 	if err != nil {
 		return nil, err
@@ -205,7 +209,7 @@ func areLessonsEqual(self *entities.Lesson) func(other *entities.Lesson) bool {
 
 func (repo *LessonsRepository) GetEndedLessons(ctx context.Context, before time.Time) ([]persistance.Lesson, error) {
 	lessons := []persistance.Lesson{}
-	query := fmt.Sprintf("SELECT id, group_id, subject, lesson_type, subgroup_number, date, time FROM %s WHERE date-datetime(now) < 0 ORDER BY date", LESSONS_TABLE)
+	query := fmt.Sprintf("SELECT id, group_id, subject, lesson_type, subgroup_number, date, time FROM %s WHERE date >= date('now') ORDER BY date", LESSONS_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err

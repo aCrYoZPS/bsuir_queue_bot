@@ -47,7 +47,7 @@ func (repo *UsersRepository) GetById(ctx context.Context, id int64) (*entities.U
 }
 
 func (repo *UsersRepository) GetByTgId(ctx context.Context, tgId int64) (*entities.User, error) {
-	query := fmt.Sprintf("SELECT u.id, u.tg_id, u.group_id, u.full_name, r.role_name FROM %[1]s AS u INNER JOIN %[2]s AS r ON u.id = r.user_id WHERE u.tg_id = $1", USERS_TABLE, ROLES_TABLE)
+	query := fmt.Sprintf("SELECT u.id, u.tg_id, u.group_id, g.name, u.full_name, r.role_name FROM %[1]s AS u INNER JOIN %[2]s AS r ON u.id = r.user_id INNER JOIN %[3]s as g ON u.group_id = g.id WHERE u.tg_id = $1", USERS_TABLE, ROLES_TABLE, GROUPS_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query, tgId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -58,7 +58,7 @@ func (repo *UsersRepository) GetByTgId(ctx context.Context, tgId int64) (*entiti
 	user := &entities.User{}
 	for rows.Next() {
 		var roleName string
-		err = rows.Scan(&user.Id, &user.TgId, &user.GroupId, &user.FullName, &roleName)
+		err = rows.Scan(&user.Id, &user.TgId, &user.GroupId, &user.GroupName, &user.FullName, &roleName)
 		if err != nil {
 			return nil, err
 		}

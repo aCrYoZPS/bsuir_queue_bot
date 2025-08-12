@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
+	iis_api_entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
@@ -32,10 +33,11 @@ type AppendedLabwork struct {
 	DisciplineName string
 	GroupName      string
 	FullName       string
+	SubgroupNumber int8
 	LabworkNumber  int8
 }
 
-func NewAppendedLabwork(RequestedDate time.Time, SentProofTime time.Time, DisciplineName string, GroupName string, FullName string, LabworkNumber int8) *AppendedLabwork {
+func NewAppendedLabwork(RequestedDate time.Time, SentProofTime time.Time, DisciplineName string, GroupName string, FullName string, SubgroupNumber, LabworkNumber int8) *AppendedLabwork {
 	return &AppendedLabwork{
 		RequestedDate:  RequestedDate,
 		SentProofTime:  SentProofTime,
@@ -43,6 +45,7 @@ func NewAppendedLabwork(RequestedDate time.Time, SentProofTime time.Time, Discip
 		GroupName:      GroupName,
 		FullName:       FullName,
 		LabworkNumber:  LabworkNumber,
+		SubgroupNumber: SubgroupNumber,
 	}
 }
 
@@ -52,9 +55,12 @@ type LabworkRequest struct {
 	SentProofTime  time.Time `json:"sent_prof,omitempty"`
 	DisciplineName string    `json:"discipline,omitempty"`
 	GroupName      string    `json:"group,omitempty"`
+	SubgroupNumber int8      `json:"subgroup,omitempty"`
 	TgId           int64     `json:"tg_id,omitempty"`
 	FullName       string    `json:"name,omitempty"`
 	LabworkNumber  int8      `json:"lab_num,omitempty"`
+	MessageId      int64     `json:"msg_id. omitempty"`
+	Notes          string    `json:"notes,omitempty"`
 }
 
 type LabworksCallbackHandler struct {
@@ -67,11 +73,12 @@ type LabworksCallbackHandler struct {
 	users           UsersService
 }
 
-func NewLabworksCallbackHandler(bot *tgutils.Bot, cache interfaces.HandlersCache, labworks LabworksService, labworkRequests interfaces.LessonsRequestsRepository, users UsersService, sheets SheetsService) *LabworksCallbackHandler {
+func NewLabworksCallbackHandler(bot *tgutils.Bot, cache interfaces.HandlersCache, labworks LabworksService, requests interfaces.RequestsRepository, labworkRequests interfaces.LessonsRequestsRepository, users UsersService, sheets SheetsService) *LabworksCallbackHandler {
 	return &LabworksCallbackHandler{
 		bot:             bot,
 		cache:           cache,
 		labworks:        labworks,
+		requests:        requests,
 		labworkRequests: labworkRequests,
 		users:           users,
 		sheets:          sheets,
@@ -99,18 +106,18 @@ func (handler *LabworksCallbackHandler) HandleCallback(ctx context.Context, upda
 		return nil
 	}
 	if strings.HasPrefix(update.CallbackData(), constants.LABWORK_TIME_CALLBACKS) {
-		date, labworkId := parseLabworkTimeCallback(update.CallbackData())
+		date, labworkId, subgroup := parseLabworkTimeCallback(update.CallbackData())
 		if date.Equal(time.Time{}) || labworkId == 0 {
 			return fmt.Errorf("couldn't get time and tg id from labwork callback (%s)", update.CallbackData())
 		}
-		err := handler.handleTimeCallback(ctx, update.CallbackQuery.Message, date, labworkId)
+		err := handler.handleTimeCallback(ctx, update.CallbackQuery.Message, date, labworkId, subgroup)
 		if err != nil {
 			return err
 		}
 		return nil
 	}
 	if strings.HasPrefix(update.CallbackData(), constants.LABWORK_CONSIDERATION_CALLBACKS) {
-		command := strings.TrimPrefix(update.CallbackQuery.Data, constants.ADMIN_CALLBACKS)
+		command := strings.TrimPrefix(update.CallbackQuery.Data, constants.LABWORK_CONSIDERATION_CALLBACKS)
 		var err error
 		switch {
 		case strings.HasPrefix(command, "accept"):
@@ -120,15 +127,13 @@ func (handler *LabworksCallbackHandler) HandleCallback(ctx context.Context, upda
 		default:
 			err = fmt.Errorf("no such callback for labworks (%s)", command)
 		}
-		if err != nil {
-			return err
-		}
+		return err
 	}
 	return fmt.Errorf("invalid callback header for labworks callbacks (%s)", update.CallbackData())
 }
 
 func (handler *LabworksCallbackHandler) handleDisciplineCallback(ctx context.Context, message *tgbotapi.Message, discipline string) error {
-	user, err := handler.users.GetByTgId(ctx, message.From.ID)
+	user, err := handler.users.GetByTgId(ctx, message.Chat.ID)
 	if err != nil {
 		return fmt.Errorf("failed to get user by tg id during labworks discipline callback: %w", err)
 	}
@@ -139,7 +144,7 @@ func (handler *LabworksCallbackHandler) handleDisciplineCallback(ctx context.Con
 	if lessons == nil {
 		return errNoLessons
 	}
-	json, err := json.Marshal(&LabworkRequest{DisciplineName: discipline, GroupName: user.GroupName, FullName: user.GroupName, TgId: user.TgId})
+	json, err := json.Marshal(&LabworkRequest{DisciplineName: discipline, GroupName: user.GroupName, FullName: user.FullName, TgId: user.TgId})
 	if err != nil {
 		return fmt.Errorf("failed to marshal labwork request during labworks discipline callback: %w", err)
 	}
@@ -148,7 +153,7 @@ func (handler *LabworksCallbackHandler) handleDisciplineCallback(ctx context.Con
 		return fmt.Errorf("failed to save info to cache during labworks discipline callback: %w", err)
 	}
 	keyboard := handler.createDisciplinesKeyboard(lessons)
-	_, err = handler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(message.From.ID, message.MessageID, *keyboard))
+	_, err = handler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(message.Chat.ID, message.MessageID, *keyboard))
 	if err != nil {
 		return fmt.Errorf("failed to send keyboard during labworks callback handling: %w", err)
 	}
@@ -160,8 +165,11 @@ func (handler *LabworksCallbackHandler) createDisciplinesKeyboard(lessons []pers
 	for chunk := range slices.Chunk(lessons, CHUNK_SIZE) {
 		row := []tgbotapi.InlineKeyboardButton{}
 		for _, discipline := range chunk {
-			formattedDate := fmt.Sprintf("%d.%d.%d", discipline.Date.Day(), discipline.Date.Month(), discipline.Date.Year())
-			row = append(row, tgbotapi.NewInlineKeyboardButtonData(formattedDate, createLabworkTimeCallback(discipline.Id, discipline.Date)))
+			formattedDate := fmt.Sprintf("%02d/%02d/%d", discipline.Date.Day(), discipline.Date.Month(), discipline.Date.Year())
+			if discipline.SubgroupNumber != iis_api_entities.AllSubgroups {
+				formattedDate += fmt.Sprintf(" (%d)", discipline.SubgroupNumber)
+			}
+			row = append(row, tgbotapi.NewInlineKeyboardButtonData(formattedDate, createLabworkTimeCallback(discipline.Id, discipline.Date, discipline.SubgroupNumber)))
 		}
 		markup = append(markup, row)
 	}
@@ -169,7 +177,7 @@ func (handler *LabworksCallbackHandler) createDisciplinesKeyboard(lessons []pers
 	return &keyboard
 }
 
-func createLabworkTimeCallback(labworkId int64, date time.Time) string {
+func createLabworkTimeCallback(labworkId int64, date time.Time, subgroup iis_api_entities.Subgroup) string {
 	builder := strings.Builder{}
 	builder.Grow(64)
 	builder.WriteString(constants.LABWORK_TIME_CALLBACKS)
@@ -177,37 +185,49 @@ func createLabworkTimeCallback(labworkId int64, date time.Time) string {
 	builder.WriteString(fmt.Sprintf("%d.%d.%d", date.Day(), date.Month(), date.Year()))
 	builder.WriteString("|")
 	builder.WriteString(fmt.Sprint(labworkId))
+	builder.WriteString("|")
+	builder.WriteString(fmt.Sprint(subgroup))
 	return builder.String()
 }
 
-func parseLabworkTimeCallback(callback string) (date time.Time, labworkId int64) {
+func parseLabworkTimeCallback(callback string) (date time.Time, labworkId int64, subgroup int8) {
 	callback, _ = strings.CutPrefix(callback, constants.LABWORK_TIME_CALLBACKS+"|")
+	subgroup = iis_api_entities.AllSubgroups
 	formattedDate, after, _ := strings.Cut(callback, "|")
+
+	after, subgroupString, _ := strings.Cut(after, "|")
 	labworkId, err := strconv.ParseInt(after, 10, 64)
 	if err != nil {
-		return time.Time{}, 0
+		return time.Time{}, 0, subgroup
 	}
 	nums := strings.Split(formattedDate, ".")
 	if len(nums) < 3 {
-		return time.Time{}, 0
+		return time.Time{}, 0, subgroup
 	}
 	day, err := strconv.Atoi(nums[0])
 	if err != nil {
-		return time.Time{}, 0
+		return time.Time{}, 0, subgroup
 	}
 	month, err := strconv.Atoi(nums[1])
 	if err != nil {
-		return time.Time{}, 0
+		return time.Time{}, 0, subgroup
 	}
 	year, err := strconv.Atoi(nums[2])
 	if err != nil {
-		return time.Time{}, 0
+		return time.Time{}, 0, subgroup
 	}
 	date = time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
-	return date, labworkId
+	if subgroupString != "" {
+		subgroupVal, err := strconv.Atoi(subgroupString)
+		if err != nil {
+			return time.Time{}, 0, subgroup
+		}
+		subgroup = int8(subgroupVal)
+	}
+	return date, labworkId, subgroup
 }
 
-func (handler *LabworksCallbackHandler) handleTimeCallback(ctx context.Context, msg *tgbotapi.Message, date time.Time, labworkId int64) error {
+func (handler *LabworksCallbackHandler) handleTimeCallback(ctx context.Context, msg *tgbotapi.Message, date time.Time, labworkId int64, subgroup int8) error {
 	jsonedInfo, err := handler.cache.GetInfo(ctx, msg.Chat.ID)
 	if err != nil {
 		return fmt.Errorf("failed to get info during labwork time callback handling: %w", err)
@@ -220,6 +240,7 @@ func (handler *LabworksCallbackHandler) handleTimeCallback(ctx context.Context, 
 
 	info.RequestedDate = date
 	info.LabworkId = labworkId
+	info.SubgroupNumber = subgroup
 
 	infoBytes, err := json.Marshal(&info)
 	if err != nil {
@@ -229,11 +250,17 @@ func (handler *LabworksCallbackHandler) handleTimeCallback(ctx context.Context, 
 	if err != nil {
 		return fmt.Errorf("failed to save info during time callback handling: %w", err)
 	}
-	err = handler.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.LABWORK_SUBMIT_PROOF_STATE))
+	err = handler.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.LABWORK_SUBMIT_NUMBER_STATE))
 	if err != nil {
 		return fmt.Errorf("failed to save labwork submit proof state during labwork time callback handling: %w", err)
 	}
-	_, err = handler.bot.SendCtx(ctx, tgbotapi.NewMessage(msg.Chat.ID, "Введите доказательство готовности лабораторной работы (один прикрепленный файл) и её номер (формат подписи: 4 лаба сделана)"))
+
+	_, err = handler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, msg.MessageID, tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
+	if err != nil {
+		return fmt.Errorf("failed to remove markove during labwork time callback handling")
+	}
+
+	_, err = handler.bot.SendCtx(ctx, tgbotapi.NewMessage(msg.Chat.ID, "Введите номер сдаваемой лабораторной работы"))
 	if err != nil {
 		return fmt.Errorf("failed to send response to user during time callback handling: %w", err)
 	}
@@ -272,6 +299,17 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(ctx context.Context
 	}
 
 	err = handler.RemoveMarkup(ctx, msg, bot)
+	if err != nil {
+		return fmt.Errorf("failed to remove markup during labworks accept callback handling")
+	}
+
+	resp := tgbotapi.NewMessage(form.TgId, "Ваша заявка была принята")
+	resp.ReplyToMessageID = int(form.MessageId)
+	_, err = bot.SendCtx(ctx, resp)
+	if err != nil {
+		return fmt.Errorf("failed to send message to user during labwork decline callback handling: %w", err)
+	}
+
 	return err
 }
 
@@ -280,8 +318,9 @@ func (handler *LabworksCallbackHandler) AppendedLabwork(req *LabworkRequest) *Ap
 		RequestedDate:  req.RequestedDate,
 		SentProofTime:  req.SentProofTime,
 		DisciplineName: req.DisciplineName,
-		GroupName:      req.DisciplineName,
+		GroupName:      req.GroupName,
 		FullName:       req.FullName,
+		SubgroupNumber: req.SubgroupNumber,
 		LabworkNumber:  req.LabworkNumber,
 	}
 }
@@ -332,6 +371,7 @@ func (handler *LabworksCallbackHandler) handleDeclineCallback(ctx context.Contex
 		return err
 	}
 	resp := tgbotapi.NewMessage(form.TgId, "Ваша заявка была отклонена")
+	resp.ReplyToMessageID = int(form.MessageId)
 	_, err = bot.SendCtx(ctx, resp)
 	if err != nil {
 		return fmt.Errorf("failed to send message to user during labwork decline callback handling: %w", err)

@@ -15,8 +15,6 @@ import (
 	"github.com/google/uuid"
 )
 
-var errNoAdmins = errors.New("no admins found")
-
 type GroupsRepository interface {
 	GetAdmins(ctx context.Context, groupName string) ([]entities.User, error)
 	DoesGroupExist(ctx context.Context, groupName string) (bool, error)
@@ -52,10 +50,16 @@ func (state *groupSubmitStartState) Handle(ctx context.Context, message *tgbotap
 	if err != nil {
 		return err
 	}
-	if user.Id == 0 {
-		msg := tgbotapi.NewMessage(message.Chat.ID, "Вы уже член группы")
-		_, err := state.bot.SendCtx(ctx, msg)
-		return fmt.Errorf("failed to send belonging to group message when starting group submit: %w", err)
+	if user.GroupId != 0 {
+		_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Вы уже член группы"))
+		if err != nil {
+			return fmt.Errorf("failed to send part of group response during group submit start state: %w", err)
+		}
+		err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE))
+		if err != nil {
+			return fmt.Errorf("failed to transition to idle state during group submit start state: %w", err)
+		}
+		return nil
 	}
 	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_SUBMIT_GROUPNAME_STATE))
 	if err != nil {
@@ -92,8 +96,25 @@ func (state *groupSubmitGroupNameState) Handle(ctx context.Context, message *tgb
 	if !groupExists {
 		msg := tgbotapi.NewMessage(message.Chat.ID, "Данная группа не найдена")
 		_, err := state.bot.SendCtx(ctx, msg)
-		return fmt.Errorf("failed to send not found message for submitting group: %w", err)
+		return fmt.Errorf("failed to send not found message during submitting group submit name state: %w", err)
 	}
+
+	admins, err := state.groups.GetAdmins(ctx, groupName)
+	if err != nil {
+		return fmt.Errorf("failed to get group admins during group submit groupname state: %w", err)
+	}
+	if len(admins) == 0 {
+		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE))
+		if err != nil {
+			return fmt.Errorf("failed to save idle state during group name submit: %w", err)
+		}
+		_, err = state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "У данной группы пока нет администраторов. Попросите кого-либо из участников группы выступить в его роли"))
+		if err != nil {
+			return fmt.Errorf("failed to send message during group name submit: %w", err)
+		}
+		return nil
+	}
+
 	form, err := json.Marshal(&groupSubmitForm{UserId: message.From.ID, UserName: message.From.UserName, Group: groupName})
 	if err != nil {
 		return fmt.Errorf("failed to marshal group submit form: %w", err)
@@ -172,18 +193,9 @@ func (state *groupSubmitNameState) Handle(ctx context.Context, message *tgbotapi
 
 	err = state.SendMessagesToAdmins(ctx, admins, form)
 	if err != nil {
-		if errors.Is(err, errNoAdmins) {
-			err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE))
-			if err != nil {
-				return fmt.Errorf("failed to save idle state during group name submit: %w", err)
-			}
-			_, err = state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "У данной группы пока нет администраторов"))
-			if err != nil {
-				return fmt.Errorf("failed to send message during group name submit: %w", err)
-			}
-		}	
+		return fmt.Errorf("failed to send messages to admins during group submit name state: %w", err)
 	}
-	_, err = state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Ваша заявка была отправлена администратору"))
+	_, err = state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Ваша заявка была отправлена администраторам группы"))
 	if err != nil {
 		return fmt.Errorf("failed to send message during group name submit: %w", err)
 	}
@@ -192,7 +204,7 @@ func (state *groupSubmitNameState) Handle(ctx context.Context, message *tgbotapi
 
 func (state *groupSubmitNameState) SendMessagesToAdmins(ctx context.Context, admins []entities.User, form *groupSubmitForm) error {
 	if len(admins) == 0 {
-		return errNoAdmins
+		return errors.New("no admins found in group")
 	}
 	text := fmt.Sprintf("Пользователь под id @%s и именем \"%s\" хочет присоединиться к группе", form.UserName, form.Name)
 	reqUUID := uuid.NewString()
