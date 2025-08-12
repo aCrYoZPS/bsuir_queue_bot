@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"google.golang.org/api/googleapi"
 )
 
 // Creates time picker markup with the given string in format "15:00" as time. Pass empty string to set default time
@@ -235,20 +237,7 @@ func (callbackHandler *TimePickerCallbackHandler) handleTimeSubmitCallback(ctx c
 
 	err = callbackHandler.lessons.Add(ctx, persistance.NewPersistedLesson(request.GroupId, iis_api_entities.AllSubgroups, iis_api_entities.Labwork, request.Name, requestDate, requestTime))
 	if err != nil {
-		if errors.Is(err, sheetsapi.ErrSheetsExists()) {
-			_, err := callbackHandler.bot.SendCtx(ctx, tgbotapi.NewEditMessageTextAndMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID,
-				"Пара под данным именем и датой уже существует. Пожалуйста, укажите другое имя", tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
-			if err != nil {
-				return fmt.Errorf("failed to send sheet exists message during time picker submit callback handling: %w", err)
-			}
-
-			err = callbackHandler.cache.SaveState(ctx, *interfaces.NewCachedInfo(update.CallbackQuery.Message.Chat.ID, constants.LABWORK_ADD_SUBMIT_NAME_STATE))
-			if err != nil {
-				return fmt.Errorf("failed to transition to custom labwork name submit during time picker submit: %w", err)
-			}
-			return nil
-		}
-		return fmt.Errorf("failed to add custom lesson during time picker submit callback handling: %w", err)
+		return callbackHandler.wrapLessonsServiceError(ctx, err, update)
 	}
 	_, err = callbackHandler.bot.SendCtx(ctx, tgbotapi.NewEditMessageTextAndMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, "Ваша лабораторная была сохранена", tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
 	if err != nil {
@@ -260,4 +249,28 @@ func (callbackHandler *TimePickerCallbackHandler) handleTimeSubmitCallback(ctx c
 		return fmt.Errorf("failed to transition to idle state in time submit callback handling: %w", err)
 	}
 	return nil
+}
+
+func (callbackHandler *TimePickerCallbackHandler) wrapLessonsServiceError(ctx context.Context, err error, update *tgbotapi.Update) error {
+	if errors.Is(err, sheetsapi.ErrSheetsExists()) {
+		_, err := callbackHandler.bot.SendCtx(ctx, tgbotapi.NewEditMessageTextAndMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID,
+			"Пара под данным именем и датой уже существует. Пожалуйста, укажите другое имя", tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
+		if err != nil {
+			return fmt.Errorf("failed to send sheet exists message during time picker submit callback handling: %w", err)
+		}
+		err = callbackHandler.cache.SaveState(ctx, *interfaces.NewCachedInfo(update.CallbackQuery.Message.Chat.ID, constants.LABWORK_ADD_SUBMIT_NAME_STATE))
+		if err != nil {
+			return fmt.Errorf("failed to transition to custom labwork name submit during time picker submit: %w", err)
+		}
+		return nil
+	} else if googleErr, ok := err.(*googleapi.Error); ok {
+		if googleErr.Code == http.StatusInternalServerError {
+			_, err := callbackHandler.bot.SendCtx(ctx, tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Ошибка на стороне сервисов гугла. Пожалуйста,попробуйте позже"))
+			if err != nil {
+				return fmt.Errorf("failed to send google service error response to user during time picker callback handling: %w", err)
+			}
+		}
+		return fmt.Errorf("failed to add custom lesson during time picker submit callback handling: %w", err)
+	}
+	return err
 }

@@ -174,9 +174,9 @@ func (*labworkSubmitNumberState) StateName() string {
 }
 
 func (state *labworkSubmitNumberState) Handle(ctx context.Context, message *tgbotapi.Message) error {
-	num, err := strconv.Atoi(message.Text)
-	if err != nil {
-		_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Пожалуйста,введите корректный номер лабораторной (одно число)"))
+	num, err := strconv.ParseUint(message.Text, 10, 8)
+	if err != nil || num == 0 || num > 255 {
+		_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Пожалуйста,введите корректный номер лабораторной (одно число, в разумных пределах)"))
 		if err != nil {
 			return fmt.Errorf("failed to send incorrect number msg during labwork submit number state: %w", err)
 		}
@@ -291,7 +291,7 @@ func (state *labworkSubmitProofState) handlePhotoProof(ctx context.Context, admi
 }
 
 func (state *labworkSubmitProofState) handleDocumentProof(ctx context.Context, admins []entities.User, message *tgbotapi.Message, form *LabworkRequest) error {
-	maxSizeId := message.Document.FileID 
+	maxSizeId := message.Document.FileID
 	fileBytes, err := state.GetFileBytes(maxSizeId)
 	if err != nil {
 		return err

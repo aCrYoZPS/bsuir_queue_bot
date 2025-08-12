@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
+	"math/rand"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +16,7 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/labworks"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/sheets/v4"
 )
 
@@ -66,7 +70,7 @@ func (serv *SheetsApiService) CreateSheet(ctx context.Context, groupName string,
 		return sheet.SpreadsheetUrl, nil
 	}
 	newSpreadsheet := sheets.Spreadsheet{Properties: &sheets.SpreadsheetProperties{
-		Title: groupName,
+		Title:  groupName,
 		Locale: "ru",
 	}}
 
@@ -104,17 +108,23 @@ func (serv *SheetsApiService) createLists(ctx context.Context, groupName string,
 		})
 	}
 	update.IncludeSpreadsheetInResponse = true
-	call := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &update)
-	resp, err := call.Context(ctx).Do()
+	var resp *sheets.BatchUpdateSpreadsheetResponse
+	err = serv.WithRetries(ctx, func(ctx context.Context) error {
+		resp, err = serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &update).Context(ctx).Do()
+		return err
+	})()
 	if err != nil {
 		return err
 	}
-	_, err = serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{
-		Requests: []*sheets.Request{
-			{DeleteSheet: &sheets.DeleteSheetRequest{SheetId: resp.UpdatedSpreadsheet.Sheets[0].Properties.SheetId}},
+	err = serv.WithRetries(ctx, func(ctx context.Context) error {
+		_, err := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{
+			Requests: []*sheets.Request{
+				{DeleteSheet: &sheets.DeleteSheetRequest{SheetId: resp.UpdatedSpreadsheet.Sheets[0].Properties.SheetId}},
+			},
 		},
-	},
-	).Context(ctx).Do()
+		).Context(ctx).Do()
+		return err
+	})()
 	if err != nil {
 		return err
 	}
@@ -172,9 +182,17 @@ func parseLessonName(name string) (subject string, date time.Time, subgroup iis_
 
 func (serv *SheetsApiService) ClearSpreadsheet(ctx context.Context, spreadsheetId string, before time.Time) error {
 	getSpreadsheetRequest := sheets.SpreadsheetsGetCall{}
-	spreadsheet, err := getSpreadsheetRequest.Do()
-	if err != nil {
+
+	var (
+		spreadsheet *sheets.Spreadsheet
+		err         error
+	)
+	err = serv.WithRetries(ctx, func(ctx context.Context) error {
+		spreadsheet, err = getSpreadsheetRequest.Context(ctx).Do()
 		return err
+	})()
+	if err != nil {
+		return fmt.Errorf("sheets api service: failed to get spreadsheet during clearing it: %w", err)
 	}
 	deleteSheetsRequest := sheets.BatchUpdateSpreadsheetRequest{}
 	for _, sheet := range spreadsheet.Sheets {
@@ -185,8 +203,10 @@ func (serv *SheetsApiService) ClearSpreadsheet(ctx context.Context, spreadsheetI
 			})
 		}
 	}
-	call := serv.api.Spreadsheets.BatchUpdate(spreadsheetId, &deleteSheetsRequest)
-	_, err = call.Context(ctx).Do()
+	err = serv.WithRetries(ctx, func(ctx context.Context) error {
+		_, err = serv.api.Spreadsheets.BatchUpdate(spreadsheetId, &deleteSheetsRequest).Context(ctx).Do()
+		return err
+	})()
 	return err
 }
 
@@ -258,9 +278,12 @@ func (serv *SheetsApiService) createTable(ctx context.Context, spreadsheetId str
 			},
 		},
 	}...)
-	_, err := serv.api.Spreadsheets.BatchUpdate(spreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{
-		Requests: requests,
-	}).Context(ctx).Do()
+	err := serv.WithRetries(ctx, func(ctx context.Context) error {
+		_, err := serv.api.Spreadsheets.BatchUpdate(spreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{
+			Requests: requests,
+		}).Context(ctx).Do()
+		return err
+	})()
 	if err != nil {
 		return fmt.Errorf("failed to add table for sheet: %w", err)
 	}
@@ -269,27 +292,34 @@ func (serv *SheetsApiService) createTable(ctx context.Context, spreadsheetId str
 
 func (serv *SheetsApiService) appendToSheet(ctx context.Context, spreadsheetId string, sheet *sheets.Sheet, req *labworks.AppendedLabwork) error {
 	tableSearchRange := fmt.Sprintf("'%s'!A1:B5", sheet.Properties.Title)
-	_, err := serv.api.Spreadsheets.Values.Append(spreadsheetId, tableSearchRange, &sheets.ValueRange{
-		Range:          tableSearchRange,
-		MajorDimension: "ROWS",
-		Values:         [][]any{{req.FullName, req.LabworkNumber, serv.formatDateTimeToEuropean(req.SentProofTime)}},
-	}).ValueInputOption("RAW").Context(ctx).Do()
+	err := serv.WithRetries(ctx, func(ctx context.Context) error {
+		_, err := serv.api.Spreadsheets.Values.Append(spreadsheetId, tableSearchRange, &sheets.ValueRange{
+			Range:          tableSearchRange,
+			MajorDimension: "ROWS",
+			Values:         [][]any{{req.FullName, req.LabworkNumber, serv.formatDateTimeToEuropean(req.SentProofTime)}},
+		}).ValueInputOption("RAW").Context(ctx).Do()
+		return err
+	})()
+
 	if err != nil {
 		return fmt.Errorf("failed to append values to sheet: %w", err)
 	}
-	_, err = serv.api.Spreadsheets.BatchUpdate(spreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{Requests: []*sheets.Request{
-		{
-			SortRange: &sheets.SortRangeRequest{
-				Range: &sheets.GridRange{SheetId: sheet.Properties.SheetId, StartRowIndex: 2},
-				SortSpecs: []*sheets.SortSpec{
-					{
-						DimensionIndex: 2,
-						SortOrder:      "DESCENDING",
+	err = serv.WithRetries(ctx, func(ctx context.Context) error {
+		_, err = serv.api.Spreadsheets.BatchUpdate(spreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{Requests: []*sheets.Request{
+			{
+				SortRange: &sheets.SortRangeRequest{
+					Range: &sheets.GridRange{SheetId: sheet.Properties.SheetId, StartRowIndex: 1},
+					SortSpecs: []*sheets.SortSpec{
+						{
+							DimensionIndex: 2,
+							SortOrder:      "ASCENDING",
+						},
 					},
 				},
 			},
-		},
-	}}).Context(ctx).Do()
+		}}).Context(ctx).Do()
+		return err
+	})()
 	if err != nil {
 		return fmt.Errorf("failed to sort sheet after appending to it: %w", err)
 	}
@@ -297,12 +327,8 @@ func (serv *SheetsApiService) appendToSheet(ctx context.Context, spreadsheetId s
 }
 
 func (serv *SheetsApiService) formatDateTimeToEuropean(dateTime time.Time) string {
-	zeroPrependedHour := fmt.Sprint(dateTime.Hour()/10) + fmt.Sprint(dateTime.Hour()%10)
-	zeroPrependedMinutes := fmt.Sprint(dateTime.Minute()/10) + fmt.Sprint(dateTime.Minute()%10)
-	zeroPrependedSeconds := fmt.Sprint(dateTime.Second()/10) + fmt.Sprint(dateTime.Second()%10)
-
 	date := fmt.Sprint(dateTime.Day()) + "/" + fmt.Sprint(int(dateTime.Month())) + "/" + fmt.Sprint(dateTime.Year())
-	time := zeroPrependedHour + ":" + zeroPrependedMinutes + ":" + zeroPrependedSeconds
+	time := fmt.Sprintf("%02d:%02d:%d", dateTime.Hour(), dateTime.Minute(), dateTime.Second())
 	return date + " " + time
 }
 
@@ -335,7 +361,7 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistance.Lesso
 		}
 	}
 
-	createdSheet, err := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{
+	sheetAddCall := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{
 		IncludeSpreadsheetInResponse: true,
 		Requests: []*sheets.Request{
 			{
@@ -347,11 +373,43 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistance.Lesso
 				},
 			},
 		},
-	}).Context(ctx).Do()
+	})
+	sheetAddCall.Header().Set("Accept-Encoding", "gzip")
+
+	var createdSheet *sheets.BatchUpdateSpreadsheetResponse
+	err = serv.WithRetries(ctx, func(ctx context.Context) error {
+		createdSheet, err = sheetAddCall.Context(ctx).Do()
+		return err
+	})()
 	if err != nil {
 		return fmt.Errorf("failed to create sheet while adding custom labwork: %w", err)
 	}
 
 	err = serv.createTable(ctx, createdSheet.SpreadsheetId, createdSheet.UpdatedSpreadsheet.Sheets[sheetIndex])
 	return err
+}
+
+func (serv *SheetsApiService) WithRetries(ctx context.Context, apiCall func(ctx context.Context) error) func() error {
+	return func() error {
+		baseDelay := 100 * time.Millisecond
+		maxRetryCount := 4
+		maxDelay := 5 * time.Second
+
+		for attempt := range maxRetryCount {
+			err := apiCall(ctx)
+			if err != nil {
+				if googleErr, ok := err.(*googleapi.Error); ok {
+					if googleErr.Code == http.StatusInternalServerError {
+						backOffTime := min(baseDelay*time.Duration(math.Pow(2, float64(attempt))), maxDelay)
+
+						jitter := time.Duration(rand.Int63n(int64(backOffTime/2)) + int64(backOffTime))
+						time.Sleep(jitter)
+					}
+				} else {
+					return err
+				}
+			}
+		}
+		return nil
+	}
 }

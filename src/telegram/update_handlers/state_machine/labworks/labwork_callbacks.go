@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"slices"
 	"strconv"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+	"google.golang.org/api/googleapi"
 )
 
 var errNoLessons = errors.New("no lessons for given subject")
@@ -290,6 +292,14 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(ctx context.Context
 
 	err = handler.sheets.AddLabworkRequest(ctx, handler.AppendedLabwork(form))
 	if err != nil {
+		if googleErr, ok := err.(*googleapi.Error); ok {
+			if googleErr.Code == http.StatusInternalServerError {
+				_, err := handler.bot.SendCtx(ctx, tgbotapi.NewMessage(msg.Chat.ID, "Ошибка на стороне гугл сервисов. Попробуйте одобрить заявку позже"))
+				if err != nil {
+					return fmt.Errorf("failed to send google errors failure response during labworks accept callback handling: %w", err)
+				}
+			}
+		}
 		return fmt.Errorf("failed to add labwork to sheets during labwork accept callback handling: %w", err)
 	}
 
