@@ -12,9 +12,9 @@ services:
     environment:
       - OAUTH2_TOKEN_FILE=/run/secrets/token
       - OAUTH2_CREDENTIALS_FILE=/run/secrets/credentials
-      - SQLITE_FILE=../data/sqlite3.db
-      - SQLITE_INIT_FILE=../sql/db_setup.sql
-      - DATA_DIRECTORY=../data
+      - SQLITE_FILE=./data/sqlite3.db
+      - SQLITE_INIT_FILE=./sql/db_setup.sql
+      - DATA_DIRECTORY=./data
     volumes:
       - ./data:/app/data
       - ./sql:/app/sql

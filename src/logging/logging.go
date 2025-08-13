@@ -35,6 +35,6 @@ func Error(message string, args ...any) {
 }
 
 func InitLogging() {
-	logger := slog.New(slog.NewTextHandler(os.Stderr, opts))
+	logger := slog.New(slog.NewTextHandler(os.Stdout, opts))
 	slog.SetDefault(logger)
 }

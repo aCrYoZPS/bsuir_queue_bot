@@ -2,6 +2,7 @@ package driveapi
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"google.golang.org/api/drive/v3"
@@ -10,7 +11,6 @@ import (
 var _ DriveApi = (*DriveApiService)(nil)
 
 type DriveApiService struct {
-	DriveApi
 	groupsRepo interfaces.GroupsRepository
 	api        *drive.Service
 }
@@ -72,4 +72,12 @@ func (serv *DriveApiService) GetSpreadsheets(ctx context.Context) ([]string, err
 		}
 	}
 	return spreadsheetIds, nil
+}
+
+func (serv *DriveApiService) SetSpreadsheetPermissions(ctx context.Context, spreadsheetId string) error {
+	_, err := serv.api.Permissions.Create(spreadsheetId, &drive.Permission{Type: "anyone", Role: "reader"}).Context(ctx).Do()
+	if err != nil {
+		return fmt.Errorf("failed to set spreadsheet permissions: %w", err)
+	}
+	return nil
 }

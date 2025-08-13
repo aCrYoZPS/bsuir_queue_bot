@@ -16,9 +16,8 @@ RUN go build -o /bin/main ./src/main.go
 FROM alpine AS main
 
 WORKDIR /app
-
-COPY --from=0 /bin/main /bin/main
+COPY --from=0 /bin/main ./bin/main
 
 RUN --mount=type=secret,id=credentials.json
 RUN --mount=type=secret,id=token.json
-ENTRYPOINT ["/bin/main"]
+ENTRYPOINT ["./bin/main"]

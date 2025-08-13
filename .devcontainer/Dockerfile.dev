@@ -1,18 +1,21 @@
-FROM golang:bookworm AS main
+FROM golang:alpine AS main
 
 WORKDIR /app
-
-RUN apt-get update && apt-get install -y ca-certificates
 
 ARG UID=1000
 ARG GID=1000
 ENV UID=${UID}
 ENV GID=${GID}
 
-COPY ./go.mod .
-COPY ./go.sum .
-
 RUN --mount=type=secret,id=credentials.json
 RUN --mount=type=secret,id=token.json
 
-ENTRYPOINT ["/bin/bash"]
+RUN go install github.com/go-delve/delve/cmd/dlv@latest
+RUN go install golang.org/x/tools/gopls@latest
+
+RUN apk add --no-cache --update gcc
+
+COPY go.mod .
+COPY go.sum .
+
+ENTRYPOINT ["/bin/sh"]

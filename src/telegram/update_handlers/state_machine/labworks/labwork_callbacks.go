@@ -131,6 +131,9 @@ func (handler *LabworksCallbackHandler) HandleCallback(ctx context.Context, upda
 		}
 		return err
 	}
+	if strings.HasPrefix(update.CallbackData(), constants.LABWORK_TIME_CANCEL_CALLBACKS) {
+		return handler.handleTimeCancelCallback(ctx, update.CallbackQuery.Message)
+	}
 	return fmt.Errorf("invalid callback header for labworks callbacks (%s)", update.CallbackData())
 }
 
@@ -175,6 +178,7 @@ func (handler *LabworksCallbackHandler) createDisciplinesKeyboard(lessons []pers
 		}
 		markup = append(markup, row)
 	}
+	markup = append(markup, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Назад", constants.LABWORK_TIME_CANCEL_CALLBACKS)))
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(markup...)
 	return &keyboard
 }
@@ -265,6 +269,31 @@ func (handler *LabworksCallbackHandler) handleTimeCallback(ctx context.Context, 
 	_, err = handler.bot.SendCtx(ctx, tgbotapi.NewMessage(msg.Chat.ID, "Введите номер сдаваемой лабораторной работы"))
 	if err != nil {
 		return fmt.Errorf("failed to send response to user during time callback handling: %w", err)
+	}
+	return nil
+}
+
+func (handler *LabworksCallbackHandler) handleTimeCancelCallback(ctx context.Context, msg *tgbotapi.Message) error {
+	markup := [][]tgbotapi.InlineKeyboardButton{{}}
+	user, err := handler.users.GetByTgId(ctx, msg.Chat.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get user by tg id during handling labwork time cancel callback: %w", err)
+	}
+	disciplines, err := handler.labworks.GetSubjects(ctx, user.GroupId)
+	if err != nil {
+		return fmt.Errorf("failed to get subjects during handling labwork time cancel callback: %w", err)
+	}
+	for chunk := range slices.Chunk(disciplines, CHUNK_SIZE) {
+		row := []tgbotapi.InlineKeyboardButton{}
+		for _, discipline := range chunk {
+			row = append(row, tgbotapi.NewInlineKeyboardButtonData(discipline, createLabworkDisciplineCallback(msg.From.ID, discipline)))
+		}
+		markup = append(markup, row)
+	}
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(markup...)
+	_, err = handler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, msg.MessageID, keyboard))
+	if err != nil {
+		return fmt.Errorf("failed to remove markup during labwork time cancel callback handling: %w", err)
 	}
 	return nil
 }

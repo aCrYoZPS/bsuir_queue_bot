@@ -16,5 +16,6 @@ func (res *SpreadsheetResult) SpreadsheetId() string {
 }
 
 type DriveApi interface {
+	SetSpreadsheetPermissions(ctx context.Context, spreadsheetId string) error
 	DoesSheetExist(ctx context.Context, name string) (SpreadsheetResult, error)
 }

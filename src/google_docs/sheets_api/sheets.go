@@ -90,6 +90,11 @@ func (serv *SheetsApiService) CreateSheet(ctx context.Context, groupName string,
 	if err != nil {
 		return "", err
 	}
+
+	err = serv.driveApi.SetSpreadsheetPermissions(ctx, spreadsheet.SpreadsheetId)
+	if err != nil {
+		return "", err
+	}
 	return spreadsheet.SpreadsheetUrl, nil
 }
 
