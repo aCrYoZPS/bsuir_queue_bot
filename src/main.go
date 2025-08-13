@@ -17,7 +17,7 @@ func main() {
 
 	_, exists := os.LookupEnv("ENVIRONMENT")
 	if !exists {
-		err := godotenv.Load("../.env")
+		err := godotenv.Load("../.env.local")
 		if err != nil {
 			logging.FatalLog("Error loading .env file")
 		}

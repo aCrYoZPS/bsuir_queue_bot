@@ -247,7 +247,7 @@ func (state *adminWaitingState) StateName() string {
 }
 
 func (state *adminWaitingState) Handle(ctx context.Context, message *tgbotapi.Message) error {
-	msg := tgbotapi.NewMessage(message.From.ID, "Sorry, your last admin submit has not been proceeded yet")
+	msg := tgbotapi.NewMessage(message.From.ID, "Подождите,ваш запрос на роль администратора ещё обрабатывается")
 	_, err := state.bot.SendCtx(ctx, msg)
 	if err != nil {
 		return fmt.Errorf("failed to send message to user during admin waiting state: %w", err)

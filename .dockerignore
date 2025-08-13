@@ -22,6 +22,7 @@ go.work.sum
 **/credentials.json
 **/token.json
 **/.env
+**/.env.local
 **/sqlite3.db
 **/schema.sql
 .null-ls*

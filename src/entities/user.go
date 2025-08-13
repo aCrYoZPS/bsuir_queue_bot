@@ -48,6 +48,7 @@ func NewUser(FullName, GroupName string, TgId int64, opts ...func(*User)) *User 
 		FullName:  FullName,
 		GroupName: GroupName,
 		TgId:      TgId,
+		Roles:     []role{Basic},
 	}
 	for _, opt := range opts {
 		opt(&user)

@@ -136,8 +136,8 @@ func (repos *GroupsRepository) DoesGroupExist(ctx context.Context, groupName str
 }
 
 func (repos *GroupsRepository) GetAdmins(ctx context.Context, groupName string) ([]entities.User, error) {
-	query := fmt.Sprintf("SELECT us.id, us.tg_id, us.group_id, us.full_name FROM %s AS us INNER JOIN %s AS gr ON gr.id=us.group_id WHERE gr.name=$1", USERS_TABLE, GROUPS_TABLE)
-	rows, err := repos.db.QueryContext(ctx, query, groupName)
+	query := fmt.Sprintf("SELECT us.id, us.tg_id, us.group_id, us.full_name FROM %s AS us INNER JOIN %s AS gr ON gr.id=us.group_id INNER JOIN %s AS r ON r.user_id=us.id AND r.role_name=$1 WHERE gr.name=$2", USERS_TABLE, GROUPS_TABLE, ROLES_TABLE)
+	rows, err := repos.db.QueryContext(ctx, query, entities.Admin.ToString(), groupName)
 	if err != nil {
 		return nil, err
 	}

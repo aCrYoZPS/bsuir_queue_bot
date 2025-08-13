@@ -88,6 +88,8 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 		if currentState == nil {
 			return fmt.Errorf("couldn't find state for %s command", constants.LABWORK_ADD_START_STATE)
 		}
+	case "/start":
+
 	default:
 		return errors.Join(errors.ErrUnsupported, errors.New("answers are only to commands"))
 	}

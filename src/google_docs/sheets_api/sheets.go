@@ -237,9 +237,13 @@ func (serv *SheetsApiService) AddLabworkRequest(ctx context.Context, req *labwor
 		titleSubject, titleDate, subgroupNum := parseLessonName(sheet.Properties.Title)
 		if titleSubject == req.DisciplineName && req.RequestedDate.Equal(titleDate) && req.SubgroupNumber == subgroupNum {
 			if sheet.Tables == nil {
-				err = serv.createTable(ctx, spreadsheetId, sheet)
-				if err != nil {
+				requests := serv.GetTableRequests(sheet)
+				err = serv.WithRetries(ctx, func(ctx context.Context) error {
+					_, err := serv.api.Spreadsheets.BatchUpdate(spreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{Requests: requests}).Context(ctx).Do()
 					return err
+				})()
+				if err != nil {
+					return fmt.Errorf("failed to create table during labwork request addition: %w", err)
 				}
 			}
 			err = serv.appendToSheet(ctx, spreadsheetId, sheet, req)
@@ -249,7 +253,7 @@ func (serv *SheetsApiService) AddLabworkRequest(ctx context.Context, req *labwor
 	return errors.New("no such labwork found")
 }
 
-func (serv *SheetsApiService) createTable(ctx context.Context, spreadsheetId string, sheet *sheets.Sheet) error {
+func (serv *SheetsApiService) GetTableRequests(sheet *sheets.Sheet) []*sheets.Request {
 	requests := []*sheets.Request{}
 	for _, bandedRange := range sheet.BandedRanges {
 		requests = append(requests, &sheets.Request{DeleteBanding: &sheets.DeleteBandingRequest{BandedRangeId: bandedRange.BandedRangeId}})
@@ -258,7 +262,7 @@ func (serv *SheetsApiService) createTable(ctx context.Context, spreadsheetId str
 		{
 			AddTable: &sheets.AddTableRequest{
 				Table: &sheets.Table{
-					Name: "Очередь",
+					Name: "Очередь" + " " + sheet.Properties.Title,
 					Range: &sheets.GridRange{
 						SheetId:          sheet.Properties.SheetId,
 						StartColumnIndex: 0,
@@ -291,16 +295,7 @@ func (serv *SheetsApiService) createTable(ctx context.Context, spreadsheetId str
 			},
 		},
 	}...)
-	err := serv.WithRetries(ctx, func(ctx context.Context) error {
-		_, err := serv.api.Spreadsheets.BatchUpdate(spreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{
-			Requests: requests,
-		}).Context(ctx).Do()
-		return err
-	})()
-	if err != nil {
-		return fmt.Errorf("failed to add table for sheet: %w", err)
-	}
-	return nil
+	return requests
 }
 
 func (serv *SheetsApiService) appendToSheet(ctx context.Context, spreadsheetId string, sheet *sheets.Sheet, req *labworks.AppendedLabwork) error {
@@ -387,7 +382,6 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistance.Lesso
 			},
 		},
 	})
-	sheetAddCall.Header().Set("Accept-Encoding", "gzip")
 
 	var createdSheet *sheets.BatchUpdateSpreadsheetResponse
 	err = serv.WithRetries(ctx, func(*sheets.BatchUpdateSpreadsheetResponse) func(ctx context.Context) error {
@@ -400,7 +394,13 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistance.Lesso
 		return fmt.Errorf("failed to create sheet while adding custom labwork: %w", err)
 	}
 
-	err = serv.createTable(ctx, createdSheet.SpreadsheetId, createdSheet.UpdatedSpreadsheet.Sheets[sheetIndex])
+	if len(createdSheet.UpdatedSpreadsheet.Sheets[sheetIndex].Tables) == 0 {
+		requests := serv.GetTableRequests(createdSheet.UpdatedSpreadsheet.Sheets[sheetIndex])
+		err = serv.WithRetries(ctx, func(ctx context.Context) error {
+			_, err := serv.api.Spreadsheets.BatchUpdate(createdSheet.SpreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{Requests: requests}).Context(ctx).Do()
+			return err
+		})()
+	}
 	return err
 }
 

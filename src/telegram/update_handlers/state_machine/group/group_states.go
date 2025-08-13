@@ -96,7 +96,10 @@ func (state *groupSubmitGroupNameState) Handle(ctx context.Context, message *tgb
 	if !groupExists {
 		msg := tgbotapi.NewMessage(message.Chat.ID, "Данная группа не найдена")
 		_, err := state.bot.SendCtx(ctx, msg)
-		return fmt.Errorf("failed to send not found message during submitting group submit name state: %w", err)
+		if err != nil {
+			return fmt.Errorf("failed to send not found message during submitting group submit name state: %w", err)
+		}
+		return nil
 	}
 
 	admins, err := state.groups.GetAdmins(ctx, groupName)
