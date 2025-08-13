@@ -89,7 +89,11 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 			return fmt.Errorf("couldn't find state for %s command", constants.LABWORK_ADD_START_STATE)
 		}
 	case "/start":
-
+		_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, `Воспользуйтесь /help для получения списка команд. Для отправки заявок на лабораторные
+		 вы должны либо стать админом группы,с одобрения владельца бота,либо же членом группы,если у неё уже есть админ.`))
+		if err != nil {
+			return fmt.Errorf("failed to send message during help command: %w", err)
+		}
 	default:
 		return errors.Join(errors.ErrUnsupported, errors.New("answers are only to commands"))
 	}
