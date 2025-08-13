@@ -31,6 +31,6 @@ func WithUUID(uuid string) func(req *GroupRequest) {
 type RequestsRepository interface {
 	SaveRequest(context.Context, *GroupRequest) error
 	DeleteRequest(ctx context.Context, msgId int64) error
-	GetByUUID(ctx context.Context,uuid string) ([]GroupRequest, error)
-	GetByMsg(ctx context.Context,msgId, chatId int64) (*GroupRequest, error)
+	GetByUUID(ctx context.Context, uuid string) ([]GroupRequest, error)
+	GetByMsg(ctx context.Context, msgId, chatId int64) (*GroupRequest, error)
 }

@@ -19,6 +19,7 @@ vendor/
 go.work
 go.work.sum
 
+**/groups.json
 credentials.json
 token.json
 .env

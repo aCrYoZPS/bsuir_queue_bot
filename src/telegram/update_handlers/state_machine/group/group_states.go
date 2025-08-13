@@ -130,7 +130,7 @@ func (state *groupSubmitGroupNameState) Handle(ctx context.Context, message *tgb
 	if err != nil {
 		return fmt.Errorf("failed to save group submit name state: %w", err)
 	}
-	_, err = state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Введите ваши фамилию и имя (Пример формата: Иван Иванов)"))
+	_, err = state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Введите ваши фамилию и имя (Пример формата: Иванов Иван)"))
 	if err != nil {
 		return fmt.Errorf("failed to send message for submitting user info: %w", err)
 	}

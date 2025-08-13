@@ -263,7 +263,7 @@ func (handler *LabworksCallbackHandler) handleTimeCallback(ctx context.Context, 
 
 	_, err = handler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, msg.MessageID, tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
 	if err != nil {
-		return fmt.Errorf("failed to remove markove during labwork time callback handling")
+		return fmt.Errorf("failed to remove markup during labwork time callback handling: %w", err)
 	}
 
 	_, err = handler.bot.SendCtx(ctx, tgbotapi.NewMessage(msg.Chat.ID, "Введите номер сдаваемой лабораторной работы"))
@@ -339,7 +339,7 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(ctx context.Context
 
 	err = handler.RemoveMarkup(ctx, msg, bot)
 	if err != nil {
-		return fmt.Errorf("failed to remove markup during labworks accept callback handling")
+		return fmt.Errorf("failed to remove markup during labworks accept callback handling: %w", err)
 	}
 
 	resp := tgbotapi.NewMessage(form.TgId, "Ваша заявка была принята")

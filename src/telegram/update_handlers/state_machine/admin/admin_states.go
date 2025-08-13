@@ -48,25 +48,32 @@ func (*adminSubmitStartState) StateName() string {
 }
 
 func (state *adminSubmitStartState) Handle(ctx context.Context, message *tgbotapi.Message) error {
-	isAdmin, err := state.checkIfAdmin(ctx, message.From.ID)
+	user, err := state.usersRepository.GetByTgId(ctx, message.Chat.ID)
 	if err != nil {
-		return err
+		return fmt.Errorf("couldn't get user by id when checking admin: %w", err)
 	}
-	if isAdmin {
+	if slices.Contains(user.Roles, entities.Admin) {
 		err = state.TransitionAndSend(ctx, interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE), tgbotapi.NewMessage(message.Chat.ID, "Вы уже админ группы"))
 		return err
+	}
+	if user.Id != 0 {
+		info, err := json.Marshal(&adminSubmitForm{UserId: message.From.ID, Group: user.GroupName, Name: user.FullName, TgName: message.From.UserName})
+		if err != nil {
+			return fmt.Errorf("failed to marshal admin submit form: %w", err)
+		}
+		err = state.cache.SaveInfo(ctx, message.Chat.ID, string(info))
+		if err != nil {
+			return fmt.Errorf("failed to save info to cache during submitting name for admin: %w", err)
+		}
+		err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_PROOF_STATE))
+		if err != nil {
+			return fmt.Errorf("failed to transition to submitting proof state during admin submit start state handling: %w", err)
+		}
+		return nil
 	}
 	err = state.TransitionAndSend(ctx, interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMITTING_NAME_STATE),
 		tgbotapi.NewMessage(message.Chat.ID, "Введите ваши фамилию и имя (Пример формата: Иванов Иван)"))
 	return err
-}
-
-func (state *adminSubmitStartState) checkIfAdmin(ctx context.Context, tgId int64) (bool, error) {
-	user, err := state.usersRepository.GetByTgId(ctx, tgId)
-	if err != nil {
-		return false, fmt.Errorf("couldn't get user by id when checking admin: %w", err)
-	}
-	return slices.Contains(user.Roles, entities.Admin), nil
 }
 
 func (state *adminSubmitStartState) TransitionAndSend(ctx context.Context, newState *interfaces.CachedInfo, msg tgbotapi.MessageConfig) error {
@@ -204,7 +211,10 @@ func (state *adminSubmittingProofState) StateName() string {
 func (state *adminSubmittingProofState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	if message.Photo == nil {
 		_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Отправьте фото как часть сообщения"))
-		return fmt.Errorf("failed to send no photo message during admin submitting proof: %w", err)
+		if err != nil {
+			return fmt.Errorf("failed to send no photo message during admin submitting proof: %w", err)
+		}
+		return nil
 	}
 	info, err := state.cache.GetInfo(ctx, message.Chat.ID)
 	if err != nil {
