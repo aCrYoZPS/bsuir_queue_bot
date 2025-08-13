@@ -113,23 +113,29 @@ func (serv *SheetsApiService) createLists(ctx context.Context, groupName string,
 		})
 	}
 	update.IncludeSpreadsheetInResponse = true
-	var resp *sheets.BatchUpdateSpreadsheetResponse
-	err = serv.WithRetries(ctx, func(ctx context.Context) error {
-		resp, err = serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &update).Context(ctx).Do()
-		return err
-	})()
+	var resp sheets.BatchUpdateSpreadsheetResponse
+	err = serv.WithRetries(ctx, func(resp *sheets.BatchUpdateSpreadsheetResponse) func(ctx context.Context) error {
+		return func(ctx context.Context) error {
+			val, err := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &update).Context(ctx).Do()
+			*resp = *val
+			return err
+		}
+	}(&resp))()
 	if err != nil {
 		return err
 	}
-	err = serv.WithRetries(ctx, func(ctx context.Context) error {
-		_, err := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{
-			Requests: []*sheets.Request{
-				{DeleteSheet: &sheets.DeleteSheetRequest{SheetId: resp.UpdatedSpreadsheet.Sheets[0].Properties.SheetId}},
+
+	if len(resp.UpdatedSpreadsheet.Sheets) > 0 {
+		err = serv.WithRetries(ctx, func(ctx context.Context) error {
+			_, err := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{
+				Requests: []*sheets.Request{
+					{DeleteSheet: &sheets.DeleteSheetRequest{SheetId: resp.UpdatedSpreadsheet.Sheets[0].Properties.SheetId}},
+				},
 			},
-		},
-		).Context(ctx).Do()
-		return err
-	})()
+			).Context(ctx).Do()
+			return err
+		})()
+	}
 	if err != nil {
 		return err
 	}
@@ -189,13 +195,15 @@ func (serv *SheetsApiService) ClearSpreadsheet(ctx context.Context, spreadsheetI
 	getSpreadsheetRequest := sheets.SpreadsheetsGetCall{}
 
 	var (
-		spreadsheet *sheets.Spreadsheet
+		spreadsheet sheets.Spreadsheet
 		err         error
 	)
-	err = serv.WithRetries(ctx, func(ctx context.Context) error {
-		spreadsheet, err = getSpreadsheetRequest.Context(ctx).Do()
-		return err
-	})()
+	err = serv.WithRetries(ctx, func(spreadsheet *sheets.Spreadsheet) func(ctx context.Context) error {
+		return func(ctx context.Context) error {
+			spreadsheet, err = getSpreadsheetRequest.Context(ctx).Do()
+			return err
+		}
+	}(&spreadsheet))()
 	if err != nil {
 		return fmt.Errorf("sheets api service: failed to get spreadsheet during clearing it: %w", err)
 	}
@@ -382,10 +390,12 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistance.Lesso
 	sheetAddCall.Header().Set("Accept-Encoding", "gzip")
 
 	var createdSheet *sheets.BatchUpdateSpreadsheetResponse
-	err = serv.WithRetries(ctx, func(ctx context.Context) error {
-		createdSheet, err = sheetAddCall.Context(ctx).Do()
-		return err
-	})()
+	err = serv.WithRetries(ctx, func(*sheets.BatchUpdateSpreadsheetResponse) func(ctx context.Context) error {
+		return func(ctx context.Context) error {
+			createdSheet, err = sheetAddCall.Context(ctx).Do()
+			return err
+		}
+	}(createdSheet))()
 	if err != nil {
 		return fmt.Errorf("failed to create sheet while adding custom labwork: %w", err)
 	}
@@ -413,6 +423,8 @@ func (serv *SheetsApiService) WithRetries(ctx context.Context, apiCall func(ctx 
 				} else {
 					return err
 				}
+			} else {
+				return nil
 			}
 		}
 		return nil

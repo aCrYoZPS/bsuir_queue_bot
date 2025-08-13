@@ -8,7 +8,5 @@ services:
       dockerfile: ./.devcontainer/Dockerfile.dev
       target: main
     volumes:
-      - ./src:/app/src
-      - ./.vscode:/app/.vscode
-      - ./.devcontainer:/app/.devcontainer
+      - .:/app
       

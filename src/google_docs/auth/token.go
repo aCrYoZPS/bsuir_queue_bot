@@ -43,7 +43,7 @@ func getConfig() (*oauth2.Config, error) {
 	if credentialsPath == "" {
 		return nil, fmt.Errorf("failed to get value for OAUTH2_CREDENTIALS_FILE env")
 	}
-	credentialsFile, err := os.ReadFile("/run/secrets/credentials")
+	credentialsFile, err := os.ReadFile(os.Getenv("OAUTH2_CREDENTIALS_FILE"))
 	if err != nil {
 		return nil, err
 	}
