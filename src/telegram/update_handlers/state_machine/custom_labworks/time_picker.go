@@ -263,6 +263,17 @@ func (callbackHandler *TimePickerCallbackHandler) wrapLessonsServiceError(ctx co
 			return fmt.Errorf("failed to transition to custom labwork name submit during time picker submit: %w", err)
 		}
 		return nil
+	} else if errors.Is(err, sheetsapi.ErrNoSheetCreated()) {
+		_, err := callbackHandler.bot.SendCtx(ctx, tgbotapi.NewEditMessageTextAndMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID,
+			"Пара под данным именем и датой не создалась. Пожалуйста,проверьте,что имя валидно для названия в гугл таблицах", tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
+		if err != nil {
+			return fmt.Errorf("failed to send sheet exists message during time picker submit callback handling: %w", err)
+		}
+		err = callbackHandler.cache.SaveState(ctx, *interfaces.NewCachedInfo(update.CallbackQuery.Message.Chat.ID, constants.LABWORK_ADD_SUBMIT_NAME_STATE))
+		if err != nil {
+			return fmt.Errorf("failed to transition to custom labwork name submit during time picker submit: %w", err)
+		}
+		return nil
 	} else if googleErr, ok := err.(*googleapi.Error); ok {
 		if googleErr.Code == http.StatusInternalServerError {
 			_, err := callbackHandler.bot.SendCtx(ctx, tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Ошибка на стороне сервисов гугла. Пожалуйста,попробуйте позже"))

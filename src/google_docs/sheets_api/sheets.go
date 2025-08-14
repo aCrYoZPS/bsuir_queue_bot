@@ -22,6 +22,11 @@ import (
 
 var errSheetExists = errors.New("sheets: sheet with such name already exists")
 
+var errNoSheetCreated = errors.New("sheets: no sheet created (possibly bad request)")
+
+func ErrNoSheetCreated() error {
+	return errNoSheetCreated
+}
 func ErrSheetsExists() error {
 	return errSheetExists
 }
@@ -117,12 +122,18 @@ func (serv *SheetsApiService) createLists(ctx context.Context, groupName string,
 	err = serv.WithRetries(ctx, func(resp *sheets.BatchUpdateSpreadsheetResponse) func(ctx context.Context) error {
 		return func(ctx context.Context) error {
 			val, err := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &update).Context(ctx).Do()
-			*resp = *val
+			if val != nil {
+				*resp = *val
+			}
 			return err
 		}
 	}(&resp))()
 	if err != nil {
 		return err
+	}
+
+	if resp.UpdatedSpreadsheet == nil {
+		return errNoSheetCreated
 	}
 
 	if len(resp.UpdatedSpreadsheet.Sheets) > 0 {
@@ -394,6 +405,9 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistance.Lesso
 		return fmt.Errorf("failed to create sheet while adding custom labwork: %w", err)
 	}
 
+	if createdSheet == nil {
+		return errNoSheetCreated
+	}
 	if len(createdSheet.UpdatedSpreadsheet.Sheets[sheetIndex].Tables) == 0 {
 		requests := serv.GetTableRequests(createdSheet.UpdatedSpreadsheet.Sheets[sheetIndex])
 		err = serv.WithRetries(ctx, func(ctx context.Context) error {
@@ -421,10 +435,10 @@ func (serv *SheetsApiService) WithRetries(ctx context.Context, apiCall func(ctx 
 						time.Sleep(jitter)
 					}
 				} else {
-					return err
+					return nil
 				}
 			} else {
-				return nil
+				return err
 			}
 		}
 		return nil

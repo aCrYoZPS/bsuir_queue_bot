@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strconv"
 	"strings"
@@ -97,7 +98,7 @@ func (handler *AdminCallbackHandler) addAdmin(ctx context.Context, form *adminSu
 		return err
 	}
 	if slices.Contains(user.Roles, entities.Admin) {
-		return ErrAlreadyAdmin
+		slog.Warn("admin accept callback: user is already admin")
 	}
 	if user.Id != 0 {
 		user.Roles = append(user.Roles, entities.Admin)

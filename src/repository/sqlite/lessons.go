@@ -62,7 +62,7 @@ func (repo *LessonsRepository) Add(ctx context.Context, lesson *persistance.Less
 }
 
 func (repo *LessonsRepository) GetAll(ctx context.Context, groupName string) ([]persistance.Lesson, error) {
-	query := fmt.Sprintf("SELECT id, group_id, lesson_type, subject, subgroup_number, date, time FROM %s WHERE $1 in (SELECT name from %s)", LESSONS_TABLE, GROUPS_TABLE)
+	query := fmt.Sprintf("SELECT l.id, l.group_id, l.lesson_type, l.subject, l.subgroup_number, l.date, l.time FROM %s as l INNER JOIN %s as g ON l.group_id=g.id WHERE g.name=$1", LESSONS_TABLE, GROUPS_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query, groupName)
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (repo *LessonsRepository) GetAll(ctx context.Context, groupName string) ([]
 
 func (repo *LessonsRepository) GetNext(ctx context.Context, subject string, groupId int64) ([]persistance.Lesson, error) {
 	date := time.Now().UTC().Unix()
-	query := fmt.Sprintf("SELECT id, group_id, lesson_type, subject, subgroup_number, date, time FROM %s WHERE strftime('%%s', date)>$1 AND subject=$2 AND group_id = $3 ORDER BY date LIMIT 4", LESSONS_TABLE)
+	query := fmt.Sprintf("SELECT id, group_id, lesson_type, subject, subgroup_number, date, time FROM %s WHERE strftime('%%s', date+time)>$1 AND subject=$2 AND group_id = $3 ORDER BY date LIMIT 4", LESSONS_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query, fmt.Sprint(date), subject, groupId)
 	if err != nil {
 		return nil, err
@@ -125,7 +125,7 @@ func (repo *LessonsRepository) GetNext(ctx context.Context, subject string, grou
 }
 
 func (repo *LessonsRepository) GetSubjects(ctx context.Context, groupId int64) ([]string, error) {
-	query := fmt.Sprintf("SELECT DISTINCT subject FROM %s WHERE group_id=$1 AND date>=date('now') ORDER BY subject", LESSONS_TABLE)
+	query := fmt.Sprintf("SELECT DISTINCT subject FROM %s WHERE group_id=$1 AND strftime('%%s', date+time)>$1  ORDER BY subject", LESSONS_TABLE)
 	rows, err := repo.db.Query(query, groupId)
 	if err != nil {
 		return nil, err

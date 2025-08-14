@@ -39,23 +39,22 @@ func (serv *LessonsService) AddGroupLessons(ctx context.Context, groupName strin
 	if err != nil {
 		return "", err
 	}
+
+	totalLessons := serv.getTotalLessons(responseJson)
+	err = serv.AddRange(ctx, totalLessons)
+	if err != nil {
+		return "", fmt.Errorf("failed to add lessons from response json to the database during lessons sevice add group lessons: %w", err)
+	}
+
 	lessons, err := serv.GetAll(ctx, groupName)
 	if err != nil {
 		return "", err
 	}
 	if len(lessons) != 0 {
 		return serv.CreateFilledSheet(ctx, groupName, lessons)
+	} else {
+		return "", fmt.Errorf("failed to create filled sheet: no lesson found")
 	}
-	totalLessons := serv.getTotalLessons(responseJson)
-	err = serv.AddRange(ctx, totalLessons)
-	if err != nil {
-		return "", err
-	}
-	lessons, err = serv.GetAll(ctx, groupName)
-	if err != nil {
-		return "", err
-	}
-	return serv.CreateFilledSheet(ctx, groupName, lessons)
 }
 
 func (serv *LessonsService) getTotalLessons(responseJson *schedulesResponse) []*iis_api_entities.Lesson {
