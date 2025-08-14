@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/labworks"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
@@ -62,7 +63,7 @@ func (handler *ReminderCallbackHandler) SetNextLesson(ctx context.Context, reque
 	if err != nil {
 		return fmt.Errorf("failed to get lesson request by id in sheets refresh cron: %w", err)
 	}
-	err = handler.sheets.AddLabworkRequest(ctx, labworks.NewAppendedLabwork(lesson.Date, req.SubmitTime, lesson.Subject, usr.GroupName, usr.FullName, lesson.SubgroupNumber, req.LabworkNumber))
+	err = handler.sheets.AddLabworkRequest(ctx, labworks.NewAppendedLabwork(lesson.DateTime.Round(24*time.Hour), req.SubmitTime, lesson.Subject, usr.GroupName, usr.FullName, lesson.SubgroupNumber, req.LabworkNumber))
 	if err != nil {
 		return fmt.Errorf("failed to add labwork to sheets during sheets refresh cron: %w", err)
 	}

@@ -11,8 +11,7 @@ CREATE TABLE IF NOT EXISTS lessons (
     subject         TEXT NOT NULL,
 	lesson_type     TEXT NOT NULL, 
     subgroup_number INTEGER NOT NULL,
-	date 			INTEGER NOT NULL,
-	time     		INTEGER NOT NULL,
+    date_time       INTEGER NOT NULL,
     FOREIGN KEY (group_id) REFERENCES groups(id)
 );
 

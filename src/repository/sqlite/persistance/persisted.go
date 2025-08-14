@@ -12,18 +12,16 @@ type Lesson struct {
 	LessonType     entities.LessonType
 	Subject        string
 	SubgroupNumber entities.Subgroup
-	Date           time.Time
-	Time           time.Time
+	DateTime       time.Time
 }
 
-func NewPersistedLesson(groupId int64, subgroupNumber entities.Subgroup, lessonType entities.LessonType, subject string, date time.Time, time time.Time) *Lesson {
+func NewPersistedLesson(groupId int64, subgroupNumber entities.Subgroup, lessonType entities.LessonType, subject string, dateTime time.Time) *Lesson {
 	return &Lesson{
 		GroupId:        groupId,
 		SubgroupNumber: subgroupNumber,
 		LessonType:     lessonType,
 		Subject:        subject,
-		Date:           date,
-		Time:           time,
+		DateTime:       dateTime,
 	}
 }
 
@@ -32,7 +30,7 @@ func ToLessonEntity(lesson *Lesson) *entities.Lesson {
 		GroupId:        lesson.GroupId,
 		Subject:        lesson.Subject,
 		SubgroupNumber: entities.Subgroup(lesson.SubgroupNumber),
-		StartTime:      entities.TimeOnly(lesson.Time),
+		StartTime:      entities.TimeOnly(lesson.DateTime.AddDate(lesson.DateTime.Year(), int(lesson.DateTime.Month()), lesson.DateTime.Day())),
 	}
 }
 
@@ -42,7 +40,6 @@ func FromLessonEntity(lesson *entities.Lesson, date time.Time) *Lesson {
 		LessonType:     lesson.LessonType,
 		Subject:        lesson.Subject,
 		SubgroupNumber: int8(lesson.SubgroupNumber),
-		Time:           time.Time(lesson.StartTime),
-		Date:           date,
+		DateTime:       date.Add(time.Duration(time.Time(lesson.StartTime).UTC().Unix())),
 	}
 }

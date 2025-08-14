@@ -44,46 +44,38 @@ func (repo *LessonsRepository) AddRange(ctx context.Context, lessons []*entities
 	}
 	storedLessons := repo.getSortedLessons(ctx, lessons)
 	for _, lesson := range storedLessons {
-		storedDate := lesson.Date.Format(savedFormat)
-		storedTime := lesson.Time.Format(savedFormat)
-		query := fmt.Sprintf("INSERT INTO %s (group_id, subject, lesson_type, subgroup_number, date, time) values ($1,$2,$3,$4,$5,$6)", LESSONS_TABLE)
-		tx.ExecContext(ctx, query, lesson.GroupId, lesson.Subject, lesson.LessonType, lesson.SubgroupNumber, storedDate, storedTime)
+		query := fmt.Sprintf("INSERT INTO %s (group_id, subject, lesson_type, subgroup_number, date_time) values ($1,$2,$3,$4,$5)", LESSONS_TABLE)
+		_, err := tx.ExecContext(ctx, query, lesson.GroupId, lesson.Subject, lesson.LessonType, lesson.SubgroupNumber, lesson.DateTime.UTC().Unix())
+		if err != nil {
+			return err
+		}
 	}
 	err = tx.Commit()
 	return err
 }
 
 func (repo *LessonsRepository) Add(ctx context.Context, lesson *persistance.Lesson) error {
-	query := fmt.Sprintf("INSERT INTO %s (group_id, subject, lesson_type, subgroup_number, date, time) values ($1,$2,$3,$4,$5,$6)", LESSONS_TABLE)
-	storedDate := lesson.Date.Format(savedFormat)
-	storedTime := lesson.Time.Format(savedFormat)
-	_, err := repo.db.ExecContext(ctx, query, lesson.GroupId, lesson.Subject, lesson.LessonType, lesson.SubgroupNumber, storedDate, storedTime)
+	query := fmt.Sprintf("INSERT INTO %s (group_id, subject, lesson_type, subgroup_number, date_time) values ($1,$2,$3,$4,$5)", LESSONS_TABLE)
+	_, err := repo.db.ExecContext(ctx, query, lesson.GroupId, lesson.Subject, lesson.LessonType, lesson.SubgroupNumber, lesson.DateTime.UTC().Unix())
 	return err
 }
 
 func (repo *LessonsRepository) GetAll(ctx context.Context, groupName string) ([]persistance.Lesson, error) {
-	query := fmt.Sprintf("SELECT l.id, l.group_id, l.lesson_type, l.subject, l.subgroup_number, l.date, l.time FROM %s as l INNER JOIN %s as g ON l.group_id=g.id WHERE g.name=$1", LESSONS_TABLE, GROUPS_TABLE)
+	query := fmt.Sprintf("SELECT l.id, l.group_id, l.lesson_type, l.subject, l.subgroup_number, l.date_time FROM %s as l INNER JOIN %s as g ON l.group_id=g.id WHERE g.name=$1", LESSONS_TABLE, GROUPS_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query, groupName)
 	if err != nil {
 		return nil, err
 	}
 	lessons := make([]persistance.Lesson, 0, 100)
 	i := 0
-	var storedTime, storedDate = "", ""
+	var storedDateTime int64
 	for rows.Next() {
 		lesson := &persistance.Lesson{}
-		err = rows.Scan(&lesson.Id, &lesson.GroupId, &lesson.LessonType, &lesson.Subject, &lesson.SubgroupNumber, &storedDate, &storedTime)
+		err = rows.Scan(&lesson.Id, &lesson.GroupId, &lesson.LessonType, &lesson.Subject, &lesson.SubgroupNumber, &storedDateTime)
 		if err != nil {
 			return nil, err
 		}
-		lesson.Date, err = time.Parse(savedFormat, storedDate)
-		if err != nil {
-			return nil, err
-		}
-		lesson.Time, err = time.Parse(savedFormat, storedTime)
-		if err != nil {
-			return nil, err
-		}
+		lesson.DateTime = time.Unix(storedDateTime, 0)
 		i++
 		lessons = append(lessons, *lesson)
 	}
@@ -95,27 +87,20 @@ func (repo *LessonsRepository) GetAll(ctx context.Context, groupName string) ([]
 
 func (repo *LessonsRepository) GetNext(ctx context.Context, subject string, groupId int64) ([]persistance.Lesson, error) {
 	date := time.Now().UTC().Unix()
-	query := fmt.Sprintf("SELECT id, group_id, lesson_type, subject, subgroup_number, date, time FROM %s WHERE strftime('%%s', date+time)>$1 AND subject=$2 AND group_id = $3 ORDER BY date LIMIT 4", LESSONS_TABLE)
+	query := fmt.Sprintf("SELECT id, group_id, lesson_type, subject, subgroup_number, date_time FROM %s WHERE date_time>$1 AND subject=$2 AND group_id = $3 ORDER BY date_time LIMIT 4", LESSONS_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query, fmt.Sprint(date), subject, groupId)
 	if err != nil {
 		return nil, err
 	}
 	lessons := make([]persistance.Lesson, 4)
 	i := 0
-	var storedDate, storedTime = "", ""
+	var storedDateTime int
 	for rows.Next() {
-		err = rows.Scan(&lessons[i].Id, &lessons[i].GroupId, &lessons[i].LessonType, &lessons[i].Subject, &lessons[i].SubgroupNumber, &storedDate, &storedTime)
+		err = rows.Scan(&lessons[i].Id, &lessons[i].GroupId, &lessons[i].LessonType, &lessons[i].Subject, &lessons[i].SubgroupNumber, &storedDateTime)
 		if err != nil {
 			return nil, err
 		}
-		lessons[i].Date, err = time.Parse(savedFormat, storedDate)
-		if err != nil {
-			return nil, err
-		}
-		lessons[i].Time, err = time.Parse(savedFormat, storedTime)
-		if err != nil {
-			return nil, err
-		}
+		lessons[i].DateTime = time.Unix(int64(storedDateTime), 0)
 		i++
 	}
 	if i == 0 {
@@ -125,8 +110,8 @@ func (repo *LessonsRepository) GetNext(ctx context.Context, subject string, grou
 }
 
 func (repo *LessonsRepository) GetSubjects(ctx context.Context, groupId int64) ([]string, error) {
-	query := fmt.Sprintf("SELECT DISTINCT subject FROM %s WHERE group_id=$1 AND strftime('%%s', date+time)>$1  ORDER BY subject", LESSONS_TABLE)
-	rows, err := repo.db.Query(query, groupId)
+	query := fmt.Sprintf("SELECT DISTINCT subject FROM %s WHERE group_id=$1 AND date_time > $2 ORDER BY subject", LESSONS_TABLE)
+	rows, err := repo.db.Query(query, groupId, time.Now().UTC().Unix())
 	if err != nil {
 		return nil, err
 	}
@@ -181,10 +166,7 @@ func (repo *LessonsRepository) getSortedLessons(ctx context.Context, lessons []*
 		}
 
 		sort.Slice(storedLessons, func(i, j int) bool {
-			if !storedLessons[i].Date.Equal(storedLessons[j].Date) {
-				return storedLessons[i].Date.Before(storedLessons[j].Date)
-			}
-			return storedLessons[i].Time.Before(storedLessons[j].Time)
+			return storedLessons[i].DateTime.Before(storedLessons[j].DateTime)
 		})
 		resChan <- storedLessons
 	}(resChan)
@@ -209,58 +191,44 @@ func areLessonsEqual(self *entities.Lesson) func(other *entities.Lesson) bool {
 
 func (repo *LessonsRepository) GetEndedLessons(ctx context.Context, before time.Time) ([]persistance.Lesson, error) {
 	lessons := []persistance.Lesson{}
-	query := fmt.Sprintf("SELECT id, group_id, subject, lesson_type, subgroup_number, date, time FROM %s WHERE date >= date('now') ORDER BY date", LESSONS_TABLE)
-	rows, err := repo.db.QueryContext(ctx, query)
+	query := fmt.Sprintf("SELECT id, group_id, subject, lesson_type, subgroup_number, date_time FROM %s WHERE date_time >= $1 ORDER BY date", LESSONS_TABLE)
+	rows, err := repo.db.QueryContext(ctx, query, time.Now().UTC().Unix())
 	if err != nil {
 		return nil, err
 	}
 	var (
-		appendedLesson         persistance.Lesson
-		storedTime, storedDate string
+		appendedLesson persistance.Lesson
+		storedDateTime int64
 	)
 	for rows.Next() {
 		if rows.Err() != nil {
 			return nil, rows.Err()
 		}
-		err := rows.Scan(appendedLesson.Id, appendedLesson.GroupId, appendedLesson.Subject, appendedLesson.SubgroupNumber, storedDate, storedTime)
+		err := rows.Scan(appendedLesson.Id, appendedLesson.GroupId, appendedLesson.Subject, appendedLesson.SubgroupNumber, storedDateTime)
 		if err != nil {
 			return nil, err
 		}
-		appendedLesson.Date, err = time.Parse(savedFormat, storedDate)
-		if err != nil {
-			return nil, err
-		}
-		appendedLesson.Time, err = time.Parse(savedFormat, storedTime)
-		if err != nil {
-			return nil, err
-		}
+		appendedLesson.DateTime = time.Unix(storedDateTime, 0)
 		lessons = append(lessons, appendedLesson)
 	}
 	return lessons, nil
 }
 
 func (repo *LessonsRepository) GetLessonByRequest(ctx context.Context, requestId int64) (*persistance.Lesson, error) {
-	query := fmt.Sprintf("SELECT l.id, l.group_id, l.lesson_type, l.subject, l.subgroup_number, l.date, l.time FROM %s AS l INNER JOIN %s as r ON r.lesson_id = l.id WHERE r.id=$1 ", LESSONS_TABLE, LESSONS_REQUESTS_TABLE)
+	query := fmt.Sprintf("SELECT l.id, l.group_id, l.lesson_type, l.subject, l.subgroup_number, l.date_time FROM %s AS l INNER JOIN %s as r ON r.lesson_id = l.id WHERE r.id=$1 ", LESSONS_TABLE, LESSONS_REQUESTS_TABLE)
 	row := repo.db.QueryRowContext(ctx, query, requestId)
 	if row.Err() != nil {
 		return nil, row.Err()
 	}
 	var (
-		lesson                 persistance.Lesson
-		storedDate, storedTime string
+		lesson         persistance.Lesson
+		storedDateTime int64
 	)
-	err := row.Scan(&lesson.Id, &lesson.GroupId, &lesson.LessonType, &lesson.Subject, &lesson.SubgroupNumber, &storedDate, &storedTime)
+	err := row.Scan(&lesson.Id, &lesson.GroupId, &lesson.LessonType, &lesson.Subject, &lesson.SubgroupNumber, &storedDateTime)
 	if err != nil {
 		return nil, err
 	}
-	lesson.Date, err = time.Parse(savedFormat, storedDate)
-	if err != nil {
-		return nil, err
-	}
-	lesson.Time, err = time.Parse(savedFormat, storedTime)
-	if err != nil {
-		return nil, err
-	}
+	lesson.DateTime = time.Unix(storedDateTime, 0)
 	return &lesson, nil
 }
 

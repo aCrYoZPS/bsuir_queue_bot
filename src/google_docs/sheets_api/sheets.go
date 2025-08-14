@@ -154,7 +154,7 @@ func (serv *SheetsApiService) createLists(ctx context.Context, groupName string,
 }
 
 func (serv *SheetsApiService) createLessonName(lesson persistance.Lesson) string {
-	updateTitle := lesson.Subject + " " + serv.formatDateToEuropean(lesson.Date)
+	updateTitle := lesson.Subject + " " + serv.formatDateToEuropean(lesson.DateTime)
 	if iis_api_entities.Subgroup(lesson.SubgroupNumber) != iis_api_entities.AllSubgroups {
 		updateTitle += fmt.Sprintf(" (%s)", fmt.Sprint(int(lesson.SubgroupNumber)))
 	}
@@ -364,7 +364,7 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistance.Lesso
 	sheetIndex := 0
 	sheetTitle := serv.createLessonName(*lesson)
 	for i, sheet := range sheet.Sheets {
-		if _, date, _ := parseLessonName(sheet.Properties.Title); date.After(lesson.Date) {
+		if _, date, _ := parseLessonName(sheet.Properties.Title); date.After(lesson.DateTime.Round(24 * time.Hour)) {
 			sheetIndex = i + 1
 			break
 		}

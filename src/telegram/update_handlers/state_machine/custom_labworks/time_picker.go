@@ -230,12 +230,7 @@ func (callbackHandler *TimePickerCallbackHandler) handleTimeSubmitCallback(ctx c
 		return fmt.Errorf("failed to unmarshal jsoned info into lesson request during handling time submit callback: %w", err)
 	}
 
-	requestDate := request.DateTime.Round(24 * time.Hour)
-	requestTimeDuration := request.DateTime.Sub(requestDate)
-	base := time.Time{}
-	requestTime := base.Add(requestTimeDuration)
-
-	err = callbackHandler.lessons.Add(ctx, persistance.NewPersistedLesson(request.GroupId, iis_api_entities.AllSubgroups, iis_api_entities.Labwork, request.Name, requestDate, requestTime))
+	err = callbackHandler.lessons.Add(ctx, persistance.NewPersistedLesson(request.GroupId, iis_api_entities.AllSubgroups, iis_api_entities.Labwork, request.Name, request.DateTime))
 	if err != nil {
 		return callbackHandler.wrapLessonsServiceError(ctx, err, update)
 	}

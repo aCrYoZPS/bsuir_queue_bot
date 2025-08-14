@@ -25,16 +25,14 @@ func (*LessonsRepositoryMock) GetAllLabworks(int64) ([]persistance.Lesson, error
 			Subject:        "ООП",
 			LessonType:     "ЛР",
 			SubgroupNumber: 0,
-			Date:           start,
-			Time:           startTime,
+			DateTime:       start.Add(time.Duration(startTime.Unix())),
 			GroupId:        0,
 		},
 		{
 			Subject:        "AВС",
 			LessonType:     "ЛР",
 			SubgroupNumber: 0,
-			Date:           end,
-			Time:           secondStartTime,
+			DateTime:       end.Add(time.Duration(secondStartTime.Unix())),
 			GroupId:        0,
 		},
 	}, nil

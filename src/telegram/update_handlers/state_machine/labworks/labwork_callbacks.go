@@ -170,11 +170,11 @@ func (handler *LabworksCallbackHandler) createDisciplinesKeyboard(lessons []pers
 	for chunk := range slices.Chunk(lessons, CHUNK_SIZE) {
 		row := []tgbotapi.InlineKeyboardButton{}
 		for _, discipline := range chunk {
-			formattedDate := fmt.Sprintf("%02d/%02d/%d", discipline.Date.Day(), discipline.Date.Month(), discipline.Date.Year())
+			formattedDate := fmt.Sprintf("%02d/%02d/%d", discipline.DateTime.Day(), discipline.DateTime.Month(), discipline.DateTime.Year())
 			if discipline.SubgroupNumber != iis_api_entities.AllSubgroups {
 				formattedDate += fmt.Sprintf(" (%d)", discipline.SubgroupNumber)
 			}
-			row = append(row, tgbotapi.NewInlineKeyboardButtonData(formattedDate, createLabworkTimeCallback(discipline.Id, discipline.Date, discipline.SubgroupNumber)))
+			row = append(row, tgbotapi.NewInlineKeyboardButtonData(formattedDate, createLabworkTimeCallback(discipline.Id, discipline.DateTime, discipline.SubgroupNumber)))
 		}
 		markup = append(markup, row)
 	}
