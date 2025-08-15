@@ -18,6 +18,7 @@ const (
 	ASSIGN_COMMAND      = "/assign"
 	JOIN_GROUP_COMMAND  = "/join"
 	ADD_LABWORK_COMMAND = "/add"
+	START_COMMAND       = "/start"
 )
 
 var userCommands = []tgbotapi.BotCommand{
@@ -48,7 +49,7 @@ type MessagesService struct {
 }
 
 func NewMessagesHandler(stateMachine StateMachine, cache interfaces.HandlersCache) *MessagesService {
-	tgbotapi.NewSetMyCommands(userCommands...)
+	tgbotapi.NewSetMyCommands(slices.Concat(userCommands, adminCommands)...)
 	return &MessagesService{cache: cache, stateMachine: stateMachine}
 }
 
@@ -62,7 +63,7 @@ func (srv *MessagesService) HandleCommands(update *tgbotapi.Update, bot *tgutils
 				return compared == commandText
 			}
 		}
-		if !slices.ContainsFunc(slices.Concat(userCommands, adminCommands), isCommand(update.Message.Command())) {
+		if !slices.ContainsFunc(slices.Concat(userCommands, adminCommands, []tgbotapi.BotCommand{{Command: START_COMMAND, Description: ""}}), isCommand(update.Message.Command())) {
 			if _, err := bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Незнакомая команда")); err != nil {
 				slog.Error(err.Error())
 			}

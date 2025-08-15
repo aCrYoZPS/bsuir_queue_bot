@@ -29,7 +29,7 @@ func newIdleState(cache interfaces.HandlersCache, bot *tgutils.Bot, usersRepo in
 func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	var currentState State
 	switch message.Text {
-	case update_handlers.ASSIGN_COMMAND:
+	case update_handlers.ASSIGN_COMMAND, tgutils.ASSIGN_KEYBOARD:
 		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMIT_START_STATE))
 		if err != nil {
 			return fmt.Errorf("failed to transition from idle to admin submit state: %w", err)
@@ -61,7 +61,7 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 			return fmt.Errorf("failed to send message during help command: %w", err)
 		}
 		return nil
-	case update_handlers.JOIN_GROUP_COMMAND:
+	case update_handlers.JOIN_GROUP_COMMAND, tgutils.JOIN_GROUP_KEYBOARD:
 		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_SUBMIT_START_STATE))
 		if err != nil {
 			return err
@@ -70,7 +70,7 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 		if currentState == nil {
 			return fmt.Errorf("couldn't find state for %s command", update_handlers.JOIN_GROUP_COMMAND)
 		}
-	case update_handlers.SUBMIT_COMMAND:
+	case update_handlers.SUBMIT_COMMAND, tgutils.SUBMIT_KEYBOARD:
 		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.LABWORK_SUBMIT_START_STATE))
 		if err != nil {
 			return fmt.Errorf("failed to transition from idle state to labwork submit state")
@@ -79,7 +79,7 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 		if currentState == nil {
 			return fmt.Errorf("couldn't find state for %s command", constants.LABWORK_SUBMIT_START_STATE)
 		}
-	case update_handlers.ADD_LABWORK_COMMAND:
+	case update_handlers.ADD_LABWORK_COMMAND, tgutils.ADD_LABWORK_KEYBOARD:
 		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.LABWORK_ADD_START_STATE))
 		if err != nil {
 			return fmt.Errorf("failed to transition from idle state to labwork add state")
@@ -88,12 +88,18 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 		if currentState == nil {
 			return fmt.Errorf("couldn't find state for %s command", constants.LABWORK_ADD_START_STATE)
 		}
-	case "/start":
-		_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, `Воспользуйтесь /help для получения списка команд. Для отправки заявок на лабораторные
-		 вы должны либо стать админом группы,с одобрения владельца бота,либо же членом группы,если у неё уже есть админ.`))
+	case update_handlers.START_COMMAND:
+		user, err := state.usersRepo.GetByTgId(ctx, message.From.ID)
 		if err != nil {
-			return fmt.Errorf("failed to send message during help command: %w", err)
+			return fmt.Errorf("failed to get user by id during handling start command: %w", err)
 		}
+		msg := tgbotapi.NewMessage(message.Chat.ID, `Воспользуйтесь /help для получения списка команд. Для отправки заявок на лабораторные
+		 вы должны либо стать админом группы,с одобрения владельца бота,либо же членом группы,если у неё уже есть админ.`)
+		err = tgutils.CreateStartReplyMarkup(ctx, &msg, user, state.bot)
+		if err != nil {
+			return fmt.Errorf("failed to create start reply markup during start command: %w", err)
+		}
+		return nil
 	default:
 		return errors.Join(errors.ErrUnsupported, errors.New("answers are only to commands"))
 	}

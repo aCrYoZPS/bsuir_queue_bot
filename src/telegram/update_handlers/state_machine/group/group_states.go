@@ -162,7 +162,10 @@ func (state *groupSubmitNameState) Handle(ctx context.Context, message *tgbotapi
 	fullName := strings.Fields(name)
 	if len(fullName) != 2 {
 		_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Введите фамилию и имя как в предоставленном образце"))
-		return fmt.Errorf("failed to send message when submiting name for attendance to group: %w", err)
+		if err != nil {
+			return fmt.Errorf("failed to send message when submiting name for attendance to group: %w", err)
+		}
+		return nil
 	}
 
 	info, err := state.cache.GetInfo(ctx, message.Chat.ID)
@@ -194,7 +197,7 @@ func (state *groupSubmitNameState) Handle(ctx context.Context, message *tgbotapi
 		return fmt.Errorf("failed to get group admins during group name submit: %w", err)
 	}
 
-	err = state.SendMessagesToAdmins(ctx, admins, form)
+	err = state.SendMessagesToAdmins(ctx, message, admins, form)
 	if err != nil {
 		return fmt.Errorf("failed to send messages to admins during group submit name state: %w", err)
 	}
@@ -205,7 +208,7 @@ func (state *groupSubmitNameState) Handle(ctx context.Context, message *tgbotapi
 	return nil
 }
 
-func (state *groupSubmitNameState) SendMessagesToAdmins(ctx context.Context, admins []entities.User, form *groupSubmitForm) error {
+func (state *groupSubmitNameState) SendMessagesToAdmins(ctx context.Context, senderMessage *tgbotapi.Message, admins []entities.User, form *groupSubmitForm) error {
 	if len(admins) == 0 {
 		return errors.New("no admins found in group")
 	}
@@ -216,6 +219,15 @@ func (state *groupSubmitNameState) SendMessagesToAdmins(ctx context.Context, adm
 		msg.ReplyMarkup = createMarkupKeyboard(form)
 		sentMsg, err := state.bot.SendCtx(ctx, msg)
 		if err != nil {
+			if errors.Is(err, tgutils.ErrMsgInvalidLen) {
+				resp := tgbotapi.NewMessage(senderMessage.Chat.ID, "Ваше сообщение превосходит лимиты размера сообщений в телеграме. Пожалуйста, измените его и отправьте снова")
+				resp.ReplyToMessageID = senderMessage.MessageID
+				_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(senderMessage.Chat.ID, "Ваше сообщение превосходит лимиты размера сообщений в телеграме. Пожалуйста, измените его и отправьте снова"))
+				if err != nil {
+					return fmt.Errorf("failed to send too large message as a response during group submit name state: %w", err)
+				}
+				return nil
+			}
 			return fmt.Errorf("failed to send messages to admin during submitting group name: %w", err)
 		}
 		err = state.requests.SaveRequest(ctx, interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))

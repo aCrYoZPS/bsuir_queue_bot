@@ -85,9 +85,16 @@ func (handler *AdminCallbackHandler) handleAcceptCallback(ctx context.Context, m
 	}
 
 	resp := tgbotapi.NewMessage(form.UserId, fmt.Sprintf("Ваша заявка была одобрена. Ссылка на гугл-таблицу: %s", url))
-	if _, err := bot.Send(resp); err != nil {
-		return err
+	
+	user, err := handler.usersRepo.GetByTgId(ctx, form.UserId)
+	if err != nil {
+		return fmt.Errorf("failed to get user by tg id (%d) during group accept callback handling: %w", msg.From.ID, err)
 	}
+	err = tgutils.CreateStartReplyMarkup(ctx, &resp, user, bot)
+	if err != nil {
+		return fmt.Errorf("failed to create start reply markup during group accept callback handling: %w", err)
+	}
+
 	err = handler.RemoveMarkupFromOwners(ctx, msg, bot)
 	return err
 }

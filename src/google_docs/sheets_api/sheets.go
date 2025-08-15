@@ -72,6 +72,10 @@ func (serv *SheetsApiService) CreateSheet(ctx context.Context, groupName string,
 		if err != nil {
 			return "", err
 		}
+		err = serv.createLists(ctx, groupName, lessons)
+		if err != nil {
+			return "", err
+		}
 		return sheet.SpreadsheetUrl, nil
 	}
 	newSpreadsheet := sheets.Spreadsheet{Properties: &sheets.SpreadsheetProperties{
@@ -128,12 +132,9 @@ func (serv *SheetsApiService) createLists(ctx context.Context, groupName string,
 			return err
 		}
 	}(&resp))()
-	if err != nil {
-		return err
-	}
 
 	if resp.UpdatedSpreadsheet == nil {
-		return errNoSheetCreated
+		return nil
 	}
 
 	if len(resp.UpdatedSpreadsheet.Sheets) > 0 {

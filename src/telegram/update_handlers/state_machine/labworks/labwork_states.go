@@ -245,10 +245,6 @@ func (state *labworkSubmitProofState) Handle(ctx context.Context, message *tgbot
 	if err != nil {
 		return err
 	}
-	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE))
-	if err != nil {
-		return err
-	}
 	admins, err := state.groups.GetAdmins(ctx, req.GroupName)
 	if err != nil {
 		return err
@@ -261,6 +257,10 @@ func (state *labworkSubmitProofState) Handle(ctx context.Context, message *tgbot
 				return fmt.Errorf("failed to send no document response during labwork submit proof state handling: %w", err)
 			}
 		}
+	}
+	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE))
+	if err != nil {
+		return err
 	}
 	return err
 }
@@ -275,6 +275,13 @@ func (state *labworkSubmitProofState) handleDocumentType(ctx context.Context, ad
 		err = state.handleDocumentProof(ctx, admins, message, form)
 	default:
 		return errNoDocument
+	}
+	if errors.Is(err, tgutils.ErrMsgInvalidLen) {
+		_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Извините,ваше сообщение слишком большое для отправки. Измените его и отправьте снова"))
+		if err != nil {
+			return fmt.Errorf("failed to send too large message during labwork submit proof state: %w", err)
+		}
+		return nil
 	}
 	return err
 }
@@ -296,7 +303,7 @@ func (state *labworkSubmitProofState) handleDocumentProof(ctx context.Context, a
 	if err != nil {
 		return err
 	}
-	msg := tgbotapi.NewDocument(message.Chat.ID, tgbotapi.FileBytes{Name: "rnd_name", Bytes: fileBytes})
+	msg := tgbotapi.NewDocument(message.Chat.ID, tgbotapi.FileBytes{Name: message.Document.FileName, Bytes: fileBytes})
 	err = state.SendDocumentsToAdmins(ctx, admins, &msg, form)
 	return err
 }

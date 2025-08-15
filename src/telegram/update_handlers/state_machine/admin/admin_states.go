@@ -240,7 +240,7 @@ func (state *adminSubmittingProofState) Handle(ctx context.Context, message *tgb
 	}
 
 	msg := state.createTemplateResponse(message.Chat.ID, form, fileBytes)
-	return state.sendPhotoToOwners(ctx, *msg, state.bot)
+	return state.sendPhotoToOwners(ctx, message.Chat.ID, *msg, state.bot)
 }
 
 type adminWaitingState struct {
@@ -313,7 +313,7 @@ func (state *adminSubmittingProofState) getFileBytes(fileId string) ([]byte, err
 	return bytes, nil
 }
 
-func (state *adminSubmittingProofState) sendPhotoToOwners(ctx context.Context, msg tgbotapi.PhotoConfig, bot *tgutils.Bot) error {
+func (state *adminSubmittingProofState) sendPhotoToOwners(ctx context.Context, senderChatId int64, msg tgbotapi.PhotoConfig, bot *tgutils.Bot) error {
 	owners := strings.Split(os.Getenv("OWNERS"), ",")
 
 	for _, owner := range owners {
@@ -324,6 +324,13 @@ func (state *adminSubmittingProofState) sendPhotoToOwners(ctx context.Context, m
 		msg.ChatID = chatId
 		sentMsg, err := bot.SendCtx(ctx, msg)
 		if err != nil {
+			if errors.Is(err, tgutils.ErrMsgInvalidLen) {
+				_, err := bot.SendCtx(ctx, tgbotapi.NewMessage(senderChatId, "Ваша заявка превысила допустимый лимит длины. Пожалуйста,перепишите её и отправьте снова"))
+				if err != nil {
+					return fmt.Errorf("failed to send too long response during admin submitting proof state: %w", err)
+				}
+				return nil
+			}
 			return fmt.Errorf("failed to send msg to owner id %s during admin proof submit: %w", owner, err)
 		}
 		err = state.requests.SaveRequest(ctx, interfaces.NewAdminRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, uuid.NewString()))

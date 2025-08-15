@@ -75,11 +75,15 @@ func (handler *GroupCallbackHandler) handleAcceptCallback(ctx context.Context, m
 		return err
 	}
 	resp := tgbotapi.NewMessage(form.UserId, "Ваша заявка была одобрена")
-	_, err = bot.SendCtx(ctx, resp)
+	user, err := handler.users.GetByTgId(ctx, msg.From.ID)
 	if err != nil {
-		return fmt.Errorf("failed to send response in group accept callback: %w", err)
+		return fmt.Errorf("failed to get user by tg id (%d) during group accept callback handling: %w", msg.From.ID, err)
 	}
-	return err
+	err = tgutils.CreateStartReplyMarkup(ctx, &resp, user, bot)
+	if err != nil {
+		return fmt.Errorf("failed to create start reply markup during group accept callback handling: %w", err)
+	}
+	return nil
 }
 
 func (handler *GroupCallbackHandler) handleDeclineCallback(ctx context.Context, msg *tgbotapi.Message, command string, bot *tgutils.Bot) error {
