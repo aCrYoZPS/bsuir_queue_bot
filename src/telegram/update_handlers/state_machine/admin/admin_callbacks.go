@@ -85,7 +85,7 @@ func (handler *AdminCallbackHandler) handleAcceptCallback(ctx context.Context, m
 	}
 
 	resp := tgbotapi.NewMessage(form.UserId, fmt.Sprintf("Ваша заявка была одобрена. Ссылка на гугл-таблицу: %s", url))
-	
+
 	user, err := handler.usersRepo.GetByTgId(ctx, form.UserId)
 	if err != nil {
 		return fmt.Errorf("failed to get user by tg id (%d) during group accept callback handling: %w", msg.From.ID, err)
@@ -106,6 +106,7 @@ func (handler *AdminCallbackHandler) addAdmin(ctx context.Context, form *adminSu
 	}
 	if slices.Contains(user.Roles, entities.Admin) {
 		slog.Warn("admin accept callback: user is already admin")
+		return nil
 	}
 	if user.Id != 0 {
 		user.Roles = append(user.Roles, entities.Admin)

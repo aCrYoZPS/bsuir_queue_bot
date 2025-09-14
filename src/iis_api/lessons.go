@@ -40,15 +40,19 @@ func (serv *LessonsService) AddGroupLessons(ctx context.Context, groupName strin
 		return "", err
 	}
 
+	lessons, err := serv.GetAll(ctx, groupName)
+	if err != nil {
+		return "", fmt.Errorf("failed to get group %s lessons during addition in lessons service: %w", groupName, err)
+	}
 	totalLessons := serv.getTotalLessons(responseJson)
 	err = serv.AddRange(ctx, totalLessons)
 	if err != nil {
 		return "", fmt.Errorf("failed to add lessons from response json to the database during lessons sevice add group lessons: %w", err)
 	}
 
-	lessons, err := serv.GetAll(ctx, groupName)
+	lessons, err = serv.GetAll(ctx, groupName)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get group %s lessons during addition in lessons service: %w", groupName, err)
 	}
 	if len(lessons) != 0 {
 		return serv.CreateFilledSheet(ctx, groupName, lessons)
