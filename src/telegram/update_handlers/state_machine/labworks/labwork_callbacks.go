@@ -167,15 +167,13 @@ func (handler *LabworksCallbackHandler) handleDisciplineCallback(ctx context.Con
 
 func (handler *LabworksCallbackHandler) createDisciplinesKeyboard(lessons []persistance.Lesson) *tgbotapi.InlineKeyboardMarkup {
 	markup := [][]tgbotapi.InlineKeyboardButton{}
-	for chunk := range slices.Chunk(lessons, CHUNK_SIZE) {
+	for _, lesson := range lessons {
 		row := []tgbotapi.InlineKeyboardButton{}
-		for _, discipline := range chunk {
-			formattedDate := fmt.Sprintf("%02d/%02d/%d", discipline.DateTime.Day(), discipline.DateTime.Month(), discipline.DateTime.Year())
-			if discipline.SubgroupNumber != iis_api_entities.AllSubgroups {
-				formattedDate += fmt.Sprintf(" (%d)", discipline.SubgroupNumber)
+		formattedDate := fmt.Sprintf("%02d/%02d/%d", lesson.DateTime.Day(), lesson.DateTime.Month(), lesson.DateTime.Year())
+			if lesson.SubgroupNumber != iis_api_entities.AllSubgroups {
+				formattedDate += fmt.Sprintf(" (%d)", lesson.SubgroupNumber)
 			}
-			row = append(row, tgbotapi.NewInlineKeyboardButtonData(formattedDate, createLabworkTimeCallback(discipline.Id, discipline.DateTime, discipline.SubgroupNumber)))
-		}
+			row = append(row, tgbotapi.NewInlineKeyboardButtonData(formattedDate, createLabworkTimeCallback(lesson.Id, lesson.DateTime, lesson.SubgroupNumber)))
 		markup = append(markup, row)
 	}
 	markup = append(markup, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Назад", constants.LABWORK_TIME_CANCEL_CALLBACKS)))

@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+	_ "time/tzdata"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/ioc"
 	logging "github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
@@ -14,6 +16,12 @@ import (
 
 func main() {
 	logging.InitLogging()
+
+	loc, err := time.LoadLocation("Europe/Minsk")
+	if err != nil {
+		panic(err)
+	}
+	time.Local = loc
 
 	_, exists := os.LookupEnv("ENVIRONMENT")
 	if !exists {

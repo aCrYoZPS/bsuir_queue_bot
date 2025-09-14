@@ -86,7 +86,7 @@ func (repo *LessonsRepository) GetAll(ctx context.Context, groupName string) ([]
 }
 
 func (repo *LessonsRepository) GetNext(ctx context.Context, subject string, groupId int64) ([]persistance.Lesson, error) {
-	date := time.Now().UTC().Unix()
+	date := time.Now().UTC().Add(-time.Duration(time.Now().Hour() * 60 * 60 * 1000)).Unix()
 	query := fmt.Sprintf("SELECT id, group_id, lesson_type, subject, subgroup_number, date_time FROM %s WHERE date_time>$1 AND subject=$2 AND group_id = $3 ORDER BY date_time LIMIT 4", LESSONS_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query, fmt.Sprint(date), subject, groupId)
 	if err != nil {
@@ -94,13 +94,13 @@ func (repo *LessonsRepository) GetNext(ctx context.Context, subject string, grou
 	}
 	lessons := make([]persistance.Lesson, 4)
 	i := 0
-	var storedDateTime int
 	for rows.Next() {
+		var storedDateTime int64
 		err = rows.Scan(&lessons[i].Id, &lessons[i].GroupId, &lessons[i].LessonType, &lessons[i].Subject, &lessons[i].SubgroupNumber, &storedDateTime)
 		if err != nil {
 			return nil, err
 		}
-		lessons[i].DateTime = time.Unix(int64(storedDateTime), 0)
+		lessons[i].DateTime = time.Unix(storedDateTime, 0)
 		i++
 	}
 	if i == 0 {
@@ -233,7 +233,7 @@ func (repo *LessonsRepository) GetLessonByRequest(ctx context.Context, requestId
 }
 
 func (repo *LessonsRepository) DeleteLessons(ctx context.Context, before time.Time) error {
-	query := fmt.Sprintf("DELETE FROM %s WHERE date-$1 < 0", LESSONS_TABLE)
-	_, err := repo.db.ExecContext(ctx, query, before)
+	query := fmt.Sprintf("DELETE FROM %s WHERE date_time-$1 < 0", LESSONS_TABLE)
+	_, err := repo.db.ExecContext(ctx, query, before.Unix())
 	return err
 }
