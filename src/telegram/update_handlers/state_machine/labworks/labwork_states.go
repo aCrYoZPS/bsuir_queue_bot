@@ -255,6 +255,7 @@ func (state *labworkSubmitProofState) Handle(ctx context.Context, message *tgbot
 			return err
 		}
 		msg := tgbotapi.NewMessage(message.Chat.ID, "")
+		req.Notes = message.Text
 		err = state.SendMessagesToAdmins(ctx, admins, &msg, req)
 		if err != nil {
 			return fmt.Errorf("failed to send messages to admins during labwork proof submit state: %w", err)
