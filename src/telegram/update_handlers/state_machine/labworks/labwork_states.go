@@ -251,13 +251,14 @@ func (state *labworkSubmitProofState) Handle(ctx context.Context, message *tgbot
 	}
 	err = state.handleDocumentType(ctx, admins, message, req)
 	if err != nil {
-		if errors.Is(err, errNoDocument) {
-			_, err = state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Отправьте как минимум один файл"))
-			if err != nil {
-				return fmt.Errorf("failed to send no document response during labwork submit proof state handling: %w", err)
-			}
+		if !errors.Is(err, errNoDocument) {
+			return err
 		}
-		return err
+		msg := tgbotapi.NewMessage(message.Chat.ID, "")
+		err = state.SendMessagesToAdmins(ctx, admins, &msg, req)
+		if err != nil {
+			return fmt.Errorf("failed to send messages to admins during labwork proof submit state: %w", err)
+		}
 	}
 	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE))
 	if err != nil {
@@ -353,6 +354,29 @@ func (state *labworkSubmitProofState) SendPhotosToAdmins(ctx context.Context, ad
 	for _, admin := range admins {
 		photo.ChatID = admin.TgId
 		sentMsg, err := state.bot.SendCtx(ctx, photo)
+		if err != nil {
+			return err
+		}
+		err = state.requests.SaveRequest(ctx, interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (state *labworkSubmitProofState) SendMessagesToAdmins(ctx context.Context, admins []entities.User, msg *tgbotapi.MessageConfig, form *LabworkRequest) error {
+	var buf bytes.Buffer
+	err := adminSendingTmpl.Execute(&buf, form)
+	if err != nil {
+		return err
+	}
+	msg.ReplyMarkup = createMarkupKeyboard(form)
+	msg.Text = buf.String()
+	reqUUID := uuid.NewString()
+	for _, admin := range admins {
+		msg.ChatID = admin.TgId
+		sentMsg, err := state.bot.SendCtx(ctx, msg)
 		if err != nil {
 			return err
 		}
