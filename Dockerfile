@@ -27,5 +27,5 @@ COPY --from=0 /bin/main ./bin/main
 
 RUN --mount=type=secret,id=credentials.json
 RUN --mount=type=secret,id=token.json
-WORKDIR /bin
+WORKDIR ./bin
 ENTRYPOINT ["/app/bin/main"]
