@@ -257,6 +257,7 @@ func (state *labworkSubmitProofState) Handle(ctx context.Context, message *tgbot
 				return fmt.Errorf("failed to send no document response during labwork submit proof state handling: %w", err)
 			}
 		}
+		return err
 	}
 	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE))
 	if err != nil {

@@ -86,8 +86,9 @@ func (repo *LessonsRepository) GetAll(ctx context.Context, groupName string) ([]
 }
 
 func (repo *LessonsRepository) GetNext(ctx context.Context, subject string, groupId int64) ([]persistance.Lesson, error) {
-	date := time.Now().UTC().Add(-time.Duration(time.Now().Hour() * 60 * 60 * 1000)).Unix()
-	query := fmt.Sprintf("SELECT id, group_id, lesson_type, subject, subgroup_number, date_time FROM %s WHERE date_time>$1 AND subject=$2 AND group_id = $3 ORDER BY date_time LIMIT 4", LESSONS_TABLE)
+	utcTime := time.Now().UTC()
+	date := time.Date(utcTime.Year(), utcTime.Month(), utcTime.Day(), 0, 0, 0, 0, nil)
+	query := fmt.Sprintf("SELECT id, group_id, lesson_type, subject, subgroup_number, date_time FROM %s WHERE date_time>=$1 AND subject=$2 AND group_id = $3 ORDER BY date_time LIMIT 4", LESSONS_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query, fmt.Sprint(date), subject, groupId)
 	if err != nil {
 		return nil, err

@@ -139,12 +139,13 @@ func (serv *SheetsApiService) createLists(ctx context.Context, groupName string,
 
 	if len(resp.UpdatedSpreadsheet.Sheets) > 0 {
 		err = serv.WithRetries(ctx, func(ctx context.Context) error {
-			_, err := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{
+			table, err := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{
 				Requests: []*sheets.Request{
 					{DeleteSheet: &sheets.DeleteSheetRequest{SheetId: resp.UpdatedSpreadsheet.Sheets[0].Properties.SheetId}},
 				},
 			},
 			).Context(ctx).Do()
+		    print(table)
 			return err
 		})()
 	}
