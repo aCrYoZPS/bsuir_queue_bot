@@ -85,7 +85,10 @@ func (serv *CallbacksService) HandleCallbacks(update *tgbotapi.Update, bot *tgut
 		return
 	}
 	mu := serv.cache.AcquireLock(ctx, msg.Chat.ID)
-	mu.Lock()
+	locked := mu.TryLock()
+	if !locked {
+		return
+	}
 
 	defer mu.Unlock()
 	defer serv.cache.ReleaseLock(ctx, msg.Chat.ID)
