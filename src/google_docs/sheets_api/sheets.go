@@ -145,7 +145,7 @@ func (serv *SheetsApiService) createLists(ctx context.Context, groupName string,
 				},
 			},
 			).Context(ctx).Do()
-		    print(table)
+			print(table)
 			return err
 		})()
 	}
@@ -250,9 +250,10 @@ func (serv *SheetsApiService) AddLabworkRequest(ctx context.Context, req *labwor
 		titleSubject, titleDate, subgroupNum := parseLessonName(sheet.Properties.Title)
 		if titleSubject == req.DisciplineName && req.RequestedDate.Equal(titleDate) && req.SubgroupNumber == subgroupNum {
 			if len(sheet.Tables) == 0 {
-				requests := serv.GetTableRequests(sheet)
+				requests := serv.getTableRequests(sheet)
 				err = serv.WithRetries(ctx, func(ctx context.Context) error {
-					_, err := serv.api.Spreadsheets.BatchUpdate(spreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{Requests: requests}).Context(ctx).Do()
+					sheet, err := serv.api.Spreadsheets.BatchUpdate(spreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{Requests: requests}).Context(ctx).Do()
+					print(sheet)
 					return err
 				})()
 				if err != nil {
@@ -266,16 +267,19 @@ func (serv *SheetsApiService) AddLabworkRequest(ctx context.Context, req *labwor
 	return errors.New("no such labwork found")
 }
 
-func (serv *SheetsApiService) GetTableRequests(sheet *sheets.Sheet) []*sheets.Request {
+var unallowedSymbols = "!@#$%^&*()+={}[]|\\;:'\"<>/?~"
+
+func (serv *SheetsApiService) getTableRequests(sheet *sheets.Sheet) []*sheets.Request {
 	requests := []*sheets.Request{}
 	for _, bandedRange := range sheet.BandedRanges {
 		requests = append(requests, &sheets.Request{DeleteBanding: &sheets.DeleteBandingRequest{BandedRangeId: bandedRange.BandedRangeId}})
 	}
+
 	requests = append(requests, []*sheets.Request{
 		{
 			AddTable: &sheets.AddTableRequest{
 				Table: &sheets.Table{
-					Name: "Очередь" + " " + sheet.Properties.Title,
+					Name: serv.createTableName(sheet),
 					Range: &sheets.GridRange{
 						SheetId:          sheet.Properties.SheetId,
 						StartColumnIndex: 0,
@@ -311,6 +315,13 @@ func (serv *SheetsApiService) GetTableRequests(sheet *sheets.Sheet) []*sheets.Re
 	return requests
 }
 
+func (serv *SheetsApiService) createTableName(sheet *sheets.Sheet) string {
+	name := "Очередь " + sheet.Properties.Title
+	for _, char := range unallowedSymbols {
+		name = strings.ReplaceAll(name, string(char), "")
+	}
+	return name
+}
 func (serv *SheetsApiService) appendToSheet(ctx context.Context, spreadsheetId string, sheet *sheets.Sheet, req *labworks.AppendedLabwork) error {
 	tableSearchRange := fmt.Sprintf("'%s'!A1:B5", sheet.Properties.Title)
 	err := serv.WithRetries(ctx, func(ctx context.Context) error {
@@ -411,7 +422,7 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistance.Lesso
 		return errNoSheetCreated
 	}
 	if len(createdSheet.UpdatedSpreadsheet.Sheets[sheetIndex].Tables) == 0 {
-		requests := serv.GetTableRequests(createdSheet.UpdatedSpreadsheet.Sheets[sheetIndex])
+		requests := serv.getTableRequests(createdSheet.UpdatedSpreadsheet.Sheets[sheetIndex])
 		err = serv.WithRetries(ctx, func(ctx context.Context) error {
 			_, err := serv.api.Spreadsheets.BatchUpdate(createdSheet.SpreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{Requests: requests}).Context(ctx).Do()
 			return err
