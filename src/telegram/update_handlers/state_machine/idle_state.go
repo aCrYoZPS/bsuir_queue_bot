@@ -15,15 +15,18 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+var _ (State) = (*idleState)(nil)
+
 type idleState struct {
-	cache     interfaces.HandlersCache
-	bot       *tgutils.Bot
-	usersRepo interfaces.UsersRepository
+	cache      interfaces.HandlersCache
+	bot        *tgutils.Bot
+	usersRepo  interfaces.UsersRepository
+	groupsRepo interfaces.GroupsRepository
 	State
 }
 
-func newIdleState(cache interfaces.HandlersCache, bot *tgutils.Bot, usersRepo interfaces.UsersRepository) *idleState {
-	return &idleState{cache: cache, bot: bot, usersRepo: usersRepo}
+func newIdleState(cache interfaces.HandlersCache, bot *tgutils.Bot, usersRepo interfaces.UsersRepository, groupsRepo interfaces.GroupsRepository) *idleState {
+	return &idleState{cache: cache, bot: bot, usersRepo: usersRepo, groupsRepo: groupsRepo}
 }
 
 func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) error {
@@ -59,6 +62,12 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 		_, err = state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, builder.String()))
 		if err != nil {
 			return fmt.Errorf("failed to send message during help command: %w", err)
+		}
+		return nil
+	case update_handlers.QUEUE_COMMAND:
+		err := state.HandleQueueCommand(ctx, message)
+		if err != nil {
+			return err
 		}
 		return nil
 	case update_handlers.JOIN_GROUP_COMMAND, tgutils.JOIN_GROUP_KEYBOARD:
@@ -112,4 +121,31 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 
 func (*idleState) StateName() string {
 	return constants.IDLE_STATE
+}
+
+func (state *idleState) HandleQueueCommand(ctx context.Context, msg *tgbotapi.Message) error {
+	usr, err := state.usersRepo.GetByTgId(ctx, msg.From.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get user by tg id during queue command handling: %w", err)
+	}
+	if usr.GroupId == 0 {
+		_, err = state.bot.SendCtx(ctx, tgbotapi.NewMessage(msg.Chat.ID, "Вы пока не принадлежите ни к одной группе"))
+		if err != nil {
+			return fmt.Errorf("failed to send no group message during queue command handling: %w", err)
+		}
+		return nil
+	}
+	group, err := state.groupsRepo.GetById(ctx, int(usr.GroupId))
+	if err != nil {
+		return fmt.Errorf("failed to get group by id during queue command handling: %w", err)
+	}
+	_, err = state.bot.SendCtx(ctx, tgbotapi.NewMessage(msg.Chat.ID, state.createSheetUrl(group.SpreadsheetId)))
+	if err != nil {
+		return fmt.Errorf("failed to send spreadsheet url during queue command handling: %w", err)
+	}
+	return nil
+}
+
+func (state *idleState) createSheetUrl(spreadsheetId string) string {
+	return fmt.Sprintf("https://docs.google.com/spreadsheets/d/%s/edit#gid=0", spreadsheetId)
 }

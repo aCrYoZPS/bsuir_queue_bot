@@ -19,6 +19,7 @@ const (
 	JOIN_GROUP_COMMAND  = "/join"
 	ADD_LABWORK_COMMAND = "/add"
 	START_COMMAND       = "/start"
+	QUEUE_COMMAND       = "/queue"
 )
 
 var userCommands = []tgbotapi.BotCommand{
@@ -26,6 +27,7 @@ var userCommands = []tgbotapi.BotCommand{
 	{Command: SUBMIT_COMMAND, Description: "Запись на сдачу лабораторной"},
 	{Command: ASSIGN_COMMAND, Description: "Отправка заявки на роль администратора группы"},
 	{Command: JOIN_GROUP_COMMAND, Description: "Отправка заявки на участие в группе"},
+	{Command: QUEUE_COMMAND, Description: "Получение таблицы с очередями своей группы"},
 }
 
 var adminCommands = []tgbotapi.BotCommand{

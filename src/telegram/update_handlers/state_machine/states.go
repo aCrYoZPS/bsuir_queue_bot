@@ -22,7 +22,7 @@ var once sync.Once
 func InitStates(conf *statesConfig) {
 	once.Do(
 		func() {
-			states = []State{newIdleState(conf.cache, conf.bot, conf.usersRepo)}
+			states = []State{newIdleState(conf.cache, conf.bot, conf.usersRepo, conf.groupsRepo)}
 			states = slices.Concat(states, createAdminStates(conf), createGroupStates(conf), createLabworksStates(conf), createCustomLabworkStates(conf))
 		},
 	)
