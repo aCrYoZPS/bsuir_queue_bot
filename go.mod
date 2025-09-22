@@ -1,6 +1,6 @@
 module github.com/aCrYoZPS/bsuir_queue_bot
 
-go 1.24.7
+go 1.23.9
 
 require (
 	github.com/go-co-op/gocron/v2 v2.16.3
