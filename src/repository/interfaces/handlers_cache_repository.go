@@ -39,4 +39,5 @@ type HandlersCache interface {
 	GetInfo(ctx context.Context, chatId int64) (string, error)
 	AcquireLock(ctx context.Context, chatId int64) *sync.Mutex
 	ReleaseLock(ctx context.Context, chatId int64)
+	RemoveInfo(ctx context.Context, chatId int64) error
 }

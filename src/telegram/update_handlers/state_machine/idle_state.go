@@ -108,7 +108,7 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 		if err != nil {
 			return fmt.Errorf("failed to create start reply markup during start command: %w", err)
 		}
-		return nil
+		return nil	
 	default:
 		return errors.Join(errors.ErrUnsupported, errors.New("answers are only to commands"))
 	}
@@ -148,4 +148,8 @@ func (state *idleState) HandleQueueCommand(ctx context.Context, msg *tgbotapi.Me
 
 func (state *idleState) createSheetUrl(spreadsheetId string) string {
 	return fmt.Sprintf("https://docs.google.com/spreadsheets/d/%s/edit#gid=0", spreadsheetId)
+}
+
+func (state *idleState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
+	return nil
 }

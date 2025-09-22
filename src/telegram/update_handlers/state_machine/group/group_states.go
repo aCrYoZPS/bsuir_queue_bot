@@ -73,6 +73,10 @@ func (state *groupSubmitStartState) Handle(ctx context.Context, message *tgbotap
 	return err
 }
 
+func (state *groupSubmitStartState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
+	return nil
+}
+
 type groupSubmitGroupNameState struct {
 	cache  interfaces.HandlersCache
 	bot    *tgutils.Bot
@@ -134,6 +138,10 @@ func (state *groupSubmitGroupNameState) Handle(ctx context.Context, message *tgb
 	if err != nil {
 		return fmt.Errorf("failed to send message for submitting user info: %w", err)
 	}
+	return nil
+}
+
+func (state *groupSubmitGroupNameState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
 	return nil
 }
 
@@ -208,6 +216,10 @@ func (state *groupSubmitNameState) Handle(ctx context.Context, message *tgbotapi
 	return nil
 }
 
+func (state *groupSubmitNameState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
+	return nil
+}
+
 func (state *groupSubmitNameState) SendMessagesToAdmins(ctx context.Context, senderMessage *tgbotapi.Message, admins []entities.User, form *groupSubmitForm) error {
 	if len(admins) == 0 {
 		return errors.New("no admins found in group")
@@ -256,6 +268,10 @@ func (state *groupWaitingState) Handle(ctx context.Context, message *tgbotapi.Me
 	if err != nil {
 		return fmt.Errorf("failed to send message to user waiting for group submit: %w", err)
 	}
+	return nil
+}
+
+func (state *groupWaitingState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
 	return nil
 }
 

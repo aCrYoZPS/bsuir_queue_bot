@@ -88,6 +88,10 @@ func (state *adminSubmitStartState) TransitionAndSend(ctx context.Context, newSt
 	return nil
 }
 
+func (state *adminSubmitStartState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
+	return nil
+}
+
 type adminSubmittingNameState struct {
 	cache interfaces.HandlersCache
 	bot   *tgutils.Bot
@@ -124,6 +128,10 @@ func (state *adminSubmittingNameState) Handle(ctx context.Context, message *tgbo
 	if err != nil {
 		return fmt.Errorf("failed to send message during admin submitting name: %w", err)
 	}
+	return nil
+}
+
+func (state *adminSubmittingNameState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
 	return nil
 }
 
@@ -194,6 +202,10 @@ func (state *adminSubmitingGroupState) Handle(ctx context.Context, message *tgbo
 	return nil
 }
 
+func (state *adminSubmitingGroupState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
+	return nil
+}
+
 type adminSubmittingProofState struct {
 	cache    interfaces.HandlersCache
 	bot      *tgutils.Bot
@@ -243,6 +255,10 @@ func (state *adminSubmittingProofState) Handle(ctx context.Context, message *tgb
 	return state.sendPhotoToOwners(ctx, message.Chat.ID, *msg, state.bot)
 }
 
+func (state *adminSubmittingProofState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
+	return nil
+}
+
 type adminWaitingState struct {
 	cache interfaces.HandlersCache
 	bot   *tgutils.Bot
@@ -262,6 +278,10 @@ func (state *adminWaitingState) Handle(ctx context.Context, message *tgbotapi.Me
 	if err != nil {
 		return fmt.Errorf("failed to send message to user during admin waiting state: %w", err)
 	}
+	return nil
+}
+
+func (state *adminWaitingState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
 	return nil
 }
 

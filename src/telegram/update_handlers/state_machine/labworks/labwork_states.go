@@ -71,8 +71,27 @@ func (state *labworkSubmitStartState) Handle(ctx context.Context, message *tgbot
 	}
 	resp := tgbotapi.NewMessage(message.Chat.ID, "Выберите предмет и дату пары")
 	resp.ReplyMarkup = replyMarkup
-	err = state.TransitionAndSend(ctx, resp, interfaces.NewCachedInfo(message.Chat.ID, constants.LABWORK_SUBMIT_WAITING_STATE))
-	return err
+	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.LABWORK_SUBMIT_WAITING_STATE))
+	if err != nil {
+		return fmt.Errorf("failed to transition to labwork submit waiting state during labwork submit start state: %w", err)
+	}
+	sent, err := state.bot.SendCtx(ctx, resp)
+	if err != nil {
+		return fmt.Errorf("failed to send response during labwork submit start state: %w", err)
+	}
+	json, err := json.Marshal(&LabworkRequest{MarkupMessageId: sent.MessageID})
+	if err != nil {
+		return fmt.Errorf("failed to marshal labwork request in labwork submit start state: %w", err)
+	}
+	err = state.cache.SaveInfo(ctx, message.Chat.ID, string(json))
+	if err != nil {
+		return fmt.Errorf("failed to save labwork request in labwork submit start state: %w", err)
+	}
+	return nil
+}
+
+func (state *labworkSubmitStartState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
+	return nil
 }
 
 const CHUNK_SIZE = 4
@@ -137,11 +156,12 @@ func parseLabworkDisciplineCallback(callback string) (discipline string, userTgI
 }
 
 type labworkSubmitWaitingState struct {
-	bot *tgutils.Bot
+	cache interfaces.HandlersCache
+	bot   *tgutils.Bot
 }
 
-func NewLabworkSubmitWaitingState(bot *tgutils.Bot) *labworkSubmitWaitingState {
-	return &labworkSubmitWaitingState{bot: bot}
+func NewLabworkSubmitWaitingState(bot *tgutils.Bot, cache interfaces.HandlersCache) *labworkSubmitWaitingState {
+	return &labworkSubmitWaitingState{bot: bot, cache: cache}
 }
 
 func (*labworkSubmitWaitingState) StateName() string {
@@ -156,17 +176,47 @@ func (state *labworkSubmitWaitingState) Handle(ctx context.Context, message *tgb
 	return nil
 }
 
+func (state *labworkSubmitWaitingState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
+	info, err := state.cache.GetInfo(ctx, msg.Chat.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get info from cache during reverting labwork submit waiting state: %w", err)
+	}
+	request := LabworkRequest{}
+	err = json.Unmarshal([]byte(info), &request)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal info into labwork request in %s: %w", state.StateName(), err)
+	}
+
+	_, err = state.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, request.MarkupMessageId,
+		tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
+	if err != nil {
+		return fmt.Errorf("failed to remove markup during %s from message in chat with %d: %w", state.StateName(), msg.Chat.ID, err)
+	}
+	err = state.cache.RemoveInfo(ctx, msg.Chat.ID)
+	if err != nil {
+		return fmt.Errorf("failed to remove cache in %s: %w", state.StateName(), err)
+	}
+
+	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.IDLE_STATE))
+	if err != nil {
+		return fmt.Errorf("failed to save idle state during reverting labwork submit waiting state: %w", err)
+	}
+	return nil
+}
+
 type GroupsService interface {
 	GetAdmins(ctx context.Context, groupName string) ([]entities.User, error)
 }
 
 type labworkSubmitNumberState struct {
-	bot   *tgutils.Bot
-	cache interfaces.HandlersCache
+	bot      *tgutils.Bot
+	cache    interfaces.HandlersCache
+	users    UsersService
+	labworks LabworksService
 }
 
-func NewLabworkSubmitNumberState(bot *tgutils.Bot, cache interfaces.HandlersCache) *labworkSubmitNumberState {
-	return &labworkSubmitNumberState{bot: bot, cache: cache}
+func NewLabworkSubmitNumberState(bot *tgutils.Bot, cache interfaces.HandlersCache, labworks LabworksService, users UsersService) *labworkSubmitNumberState {
+	return &labworkSubmitNumberState{bot: bot, cache: cache, labworks: labworks, users: users}
 }
 
 func (*labworkSubmitNumberState) StateName() string {
@@ -207,6 +257,66 @@ func (state *labworkSubmitNumberState) Handle(ctx context.Context, message *tgbo
 		return fmt.Errorf("failed to send response during labwork number submit state: %w", err)
 	}
 	return nil
+}
+
+func (state *labworkSubmitNumberState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
+	user, err := state.users.GetByTgId(ctx, msg.From.ID)
+	if err != nil {
+		return err
+	}
+	if user.Id == 0 {
+		err := state.TransitionAndSend(ctx, tgbotapi.NewMessage(msg.Chat.ID, "Вы ещё не присоединились к какой-либо группе"), interfaces.NewCachedInfo(msg.Chat.ID, constants.IDLE_STATE))
+		return err
+	}
+	replyMarkup, err := state.createDisciplinesKeyboard(ctx, msg.Chat.ID, msg.From.ID)
+	if err != nil {
+		if errors.Is(err, errNoLabworks) {
+			return nil
+		}
+		return err
+	}
+	resp := tgbotapi.NewMessage(msg.Chat.ID, "Выберите предмет и дату пары")
+	resp.ReplyMarkup = replyMarkup
+	err = state.TransitionAndSend(ctx, resp, interfaces.NewCachedInfo(msg.Chat.ID, constants.LABWORK_SUBMIT_WAITING_STATE))
+	return err
+}
+
+func (state *labworkSubmitNumberState) createDisciplinesKeyboard(ctx context.Context, chatId, userTgId int64) (*tgbotapi.InlineKeyboardMarkup, error) {
+	markup := [][]tgbotapi.InlineKeyboardButton{{}}
+	user, err := state.users.GetByTgId(ctx, userTgId)
+	if err != nil {
+		return nil, err
+	}
+	disciplines, err := state.labworks.GetSubjects(ctx, user.GroupId)
+	if err != nil {
+		return nil, err
+	}
+	if len(disciplines) == 0 {
+		newState := interfaces.NewCachedInfo(chatId, constants.IDLE_STATE)
+		err = state.TransitionAndSend(ctx, tgbotapi.NewMessage(chatId, "Больше не осталось лабораторных. Отдохните"), newState)
+		if err != nil {
+			return nil, err
+		}
+		return nil, errNoLabworks
+	}
+	for chunk := range slices.Chunk(disciplines, CHUNK_SIZE) {
+		row := []tgbotapi.InlineKeyboardButton{}
+		for _, discipline := range chunk {
+			row = append(row, tgbotapi.NewInlineKeyboardButtonData(discipline, createLabworkDisciplineCallback(userTgId, discipline)))
+		}
+		markup = append(markup, row)
+	}
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(markup...)
+	return &keyboard, nil
+}
+
+func (state *labworkSubmitNumberState) TransitionAndSend(ctx context.Context, msg tgbotapi.MessageConfig, newState *interfaces.CachedInfo) error {
+	err := state.cache.SaveState(ctx, *newState)
+	if err != nil {
+		return err
+	}
+	_, err = state.bot.SendCtx(ctx, msg)
+	return err
 }
 
 type labworkSubmitProofState struct {
@@ -266,6 +376,14 @@ func (state *labworkSubmitProofState) Handle(ctx context.Context, message *tgbot
 		return err
 	}
 	return err
+}
+
+func (state *labworkSubmitProofState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
+	err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.LABWORK_SUBMIT_NUMBER_STATE))
+	if err != nil {
+		return fmt.Errorf("failed to change state while reverting labwork submit proof state: %w", err)
+	}
+	return nil
 }
 
 func (state *labworkSubmitProofState) handleDocumentType(ctx context.Context, admins []entities.User, message *tgbotapi.Message, form *LabworkRequest) error {

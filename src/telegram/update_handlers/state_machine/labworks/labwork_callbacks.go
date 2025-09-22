@@ -52,17 +52,18 @@ func NewAppendedLabwork(RequestedDate time.Time, SentProofTime time.Time, Discip
 }
 
 type LabworkRequest struct {
-	LabworkId      int64     `json:"lab_id,omitempty"`
-	RequestedDate  time.Time `json:"requested_time,omitempty"`
-	SentProofTime  time.Time `json:"sent_prof,omitempty"`
-	DisciplineName string    `json:"discipline,omitempty"`
-	GroupName      string    `json:"group,omitempty"`
-	SubgroupNumber int8      `json:"subgroup,omitempty"`
-	TgId           int64     `json:"tg_id,omitempty"`
-	FullName       string    `json:"name,omitempty"`
-	LabworkNumber  int8      `json:"lab_num,omitempty"`
-	MessageId      int64     `json:"msg_id. omitempty"`
-	Notes          string    `json:"notes,omitempty"`
+	MarkupMessageId int       `json:"markup_id,omitempty"`
+	LabworkId       int64     `json:"lab_id,omitempty"`
+	RequestedDate   time.Time `json:"requested_time,omitempty"`
+	SentProofTime   time.Time `json:"sent_prof,omitempty"`
+	DisciplineName  string    `json:"discipline,omitempty"`
+	GroupName       string    `json:"group,omitempty"`
+	SubgroupNumber  int8      `json:"subgroup,omitempty"`
+	TgId            int64     `json:"tg_id,omitempty"`
+	FullName        string    `json:"name,omitempty"`
+	LabworkNumber   int8      `json:"lab_num,omitempty"`
+	MessageId       int64     `json:"msg_id,omitempty"`
+	Notes           string    `json:"notes,omitempty"`
 }
 
 type LabworksCallbackHandler struct {
@@ -149,7 +150,7 @@ func (handler *LabworksCallbackHandler) handleDisciplineCallback(ctx context.Con
 	if lessons == nil {
 		return errNoLessons
 	}
-	json, err := json.Marshal(&LabworkRequest{DisciplineName: discipline, GroupName: user.GroupName, FullName: user.FullName, TgId: user.TgId})
+	json, err := json.Marshal(&LabworkRequest{MarkupMessageId: message.MessageID, DisciplineName: discipline, GroupName: user.GroupName, FullName: user.FullName, TgId: user.TgId})
 	if err != nil {
 		return fmt.Errorf("failed to marshal labwork request during labworks discipline callback: %w", err)
 	}
@@ -170,10 +171,10 @@ func (handler *LabworksCallbackHandler) createDisciplinesKeyboard(lessons []pers
 	for _, lesson := range lessons {
 		row := []tgbotapi.InlineKeyboardButton{}
 		formattedDate := fmt.Sprintf("%02d/%02d/%d", lesson.DateTime.Day(), lesson.DateTime.Month(), lesson.DateTime.Year())
-			if lesson.SubgroupNumber != iis_api_entities.AllSubgroups {
-				formattedDate += fmt.Sprintf(" (%d)", lesson.SubgroupNumber)
-			}
-			row = append(row, tgbotapi.NewInlineKeyboardButtonData(formattedDate, createLabworkTimeCallback(lesson.Id, lesson.DateTime, lesson.SubgroupNumber)))
+		if lesson.SubgroupNumber != iis_api_entities.AllSubgroups {
+			formattedDate += fmt.Sprintf(" (%d)", lesson.SubgroupNumber)
+		}
+		row = append(row, tgbotapi.NewInlineKeyboardButtonData(formattedDate, createLabworkTimeCallback(lesson.Id, lesson.DateTime, lesson.SubgroupNumber)))
 		markup = append(markup, row)
 	}
 	markup = append(markup, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Назад", constants.LABWORK_TIME_CANCEL_CALLBACKS)))

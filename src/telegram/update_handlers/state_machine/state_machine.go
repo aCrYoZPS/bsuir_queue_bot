@@ -3,6 +3,7 @@ package stateMachine
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers"
@@ -58,7 +59,7 @@ func (machine *StateMachine) HandleState(ctx context.Context, message *tgbotapi.
 
 	info, err := machine.cache.GetState(ctx, message.Chat.ID)
 	if err != nil {
-		return fmt.Errorf("couldn't get state in state machine: %w",err)
+		return fmt.Errorf("couldn't get state in state machine: %w", err)
 	}
 
 	var state State
@@ -72,6 +73,9 @@ func (machine *StateMachine) HandleState(ctx context.Context, message *tgbotapi.
 		if state == nil {
 			return fmt.Errorf("failed to get idle state for name %s", info.State())
 		}
+	}
+	if message.Command() == strings.Trim(update_handlers.REVERT_COMMAND, "/") {
+		return state.Revert(ctx, message)
 	}
 	return state.Handle(ctx, message)
 }

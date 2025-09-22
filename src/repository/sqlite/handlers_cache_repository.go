@@ -10,9 +10,8 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 )
 
-// TODO: create background processes to clean the maps for GC
-
 var _ interfaces.HandlersCache = (*HandlersCache)(nil)
+
 type HandlersCache struct {
 	db    *sql.DB
 	locks sync.Map
@@ -84,4 +83,13 @@ func (cache *HandlersCache) GetInfo(ctx context.Context, chatId int64) (string, 
 		return "", err
 	}
 	return json, nil
+}
+
+func (cache *HandlersCache) RemoveInfo(ctx context.Context, chatId int64) error {
+	query := fmt.Sprintf("DELETE FROM %s WHERE chat_id=$1", INFO_TABLE)
+	_, err := cache.db.ExecContext(ctx, query, chatId)
+	if err != nil {
+		return err
+	}
+	return nil
 }

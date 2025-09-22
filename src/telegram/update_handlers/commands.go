@@ -20,6 +20,7 @@ const (
 	ADD_LABWORK_COMMAND = "/add"
 	START_COMMAND       = "/start"
 	QUEUE_COMMAND       = "/queue"
+	REVERT_COMMAND      = "/revert"
 )
 
 var userCommands = []tgbotapi.BotCommand{
@@ -28,6 +29,7 @@ var userCommands = []tgbotapi.BotCommand{
 	{Command: ASSIGN_COMMAND, Description: "Отправка заявки на роль администратора группы"},
 	{Command: JOIN_GROUP_COMMAND, Description: "Отправка заявки на участие в группе"},
 	{Command: QUEUE_COMMAND, Description: "Получение таблицы с очередями своей группы"},
+	{Command: REVERT_COMMAND, Description: "Откат к предыдущему состоянию"},
 }
 
 var adminCommands = []tgbotapi.BotCommand{

@@ -80,6 +80,10 @@ func (state *labworkAddStartState) Handle(ctx context.Context, message *tgbotapi
 	return nil
 }
 
+func (state *labworkAddStartState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
+	return nil
+}
+
 type labworkAddSubmitNameState struct {
 	bot   *tgutils.Bot
 	cache HandlersCache
@@ -147,6 +151,10 @@ func (state *labworkAddSubmitNameState) Handle(ctx context.Context, message *tgb
 	return nil
 }
 
+func (state *labworkAddSubmitNameState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
+	return nil
+}
+
 type LabworkAddWaitingState struct {
 	bot *tgutils.Bot
 }
@@ -164,5 +172,9 @@ func (state *LabworkAddWaitingState) Handle(ctx context.Context, message *tgbota
 	if err != nil {
 		return fmt.Errorf("failed to send message during labwork add waiting state: %w", err)
 	}
+	return nil
+}
+
+func (state *LabworkAddWaitingState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
 	return nil
 }
