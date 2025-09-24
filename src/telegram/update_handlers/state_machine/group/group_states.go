@@ -142,7 +142,19 @@ func (state *groupSubmitGroupNameState) Handle(ctx context.Context, message *tgb
 }
 
 func (state *groupSubmitGroupNameState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
+	err := state.cache.RemoveInfo(ctx, msg.Chat.ID)
+	if err != nil {
+		return fmt.Errorf("failed to remove info during group submit name state reversal: %w", err)
+	}
+	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.IDLE_STATE))
+	if err != nil {
+		return fmt.Errorf("failed to transition to idle state during reversal of group submit groupname state: %w", err)
+	}
 	return nil
+}
+
+type StateMachine interface {
+	HandleState(ctx context.Context, msg *tgbotapi.Message) error
 }
 
 type groupSubmitNameState struct {
@@ -150,14 +162,16 @@ type groupSubmitNameState struct {
 	bot      *tgutils.Bot
 	groups   GroupsRepository
 	requests interfaces.RequestsRepository
+	machine  StateMachine
 }
 
-func NewGroupSubmitNameState(cache interfaces.HandlersCache, bot *tgutils.Bot, groups GroupsRepository, requests interfaces.RequestsRepository) *groupSubmitNameState {
+func NewGroupSubmitNameState(cache interfaces.HandlersCache, bot *tgutils.Bot, groups GroupsRepository, requests interfaces.RequestsRepository, machine StateMachine) *groupSubmitNameState {
 	return &groupSubmitNameState{
 		cache:    cache,
 		bot:      bot,
 		groups:   groups,
 		requests: requests,
+		machine:  machine,
 	}
 }
 
@@ -217,7 +231,12 @@ func (state *groupSubmitNameState) Handle(ctx context.Context, message *tgbotapi
 }
 
 func (state *groupSubmitNameState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
-	return nil
+	err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.GROUP_SUBMIT_GROUPNAME_STATE))
+	if err != nil {
+		return fmt.Errorf("failed to transition to group submit groupname state during group submit name state reversal: %w", err)
+	}
+	msg.Text = ""
+	return state.machine.HandleState(ctx, msg)
 }
 
 func (state *groupSubmitNameState) SendMessagesToAdmins(ctx context.Context, senderMessage *tgbotapi.Message, admins []entities.User, form *groupSubmitForm) error {

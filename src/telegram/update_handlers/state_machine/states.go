@@ -36,7 +36,7 @@ func createAdminStates(conf *statesConfig) []State {
 }
 
 func createGroupStates(conf *statesConfig) []State {
-	return []State{groups.NewGroupSubmitState(conf.cache, conf.bot, conf.groupsRepo, conf.usersRepo), groups.NewGroupSubmitNameState(conf.cache, conf.bot, conf.groupsRepo, conf.requests),
+	return []State{groups.NewGroupSubmitState(conf.cache, conf.bot, conf.groupsRepo, conf.usersRepo), groups.NewGroupSubmitNameState(conf.cache, conf.bot, conf.groupsRepo, conf.requests, conf.machine),
 		groups.NewGroupSubmitGroupNameState(conf.cache, conf.bot, conf.groupsRepo), groups.NewGroupWaitingState(conf.cache, conf.bot)}
 }
 
