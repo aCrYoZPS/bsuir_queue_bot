@@ -25,5 +25,8 @@ func CalculateWeeksDistance(weeks []Week, current Week) int8 {
 	if dist == 0 {
 		return 4
 	}
+	if dist < 0 {
+		return -dist
+	}
 	return dist
 }

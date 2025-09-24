@@ -83,21 +83,10 @@ func (to *TimeOnly) UnmarshalJSON(json []byte) error {
 		*to = TimeOnly{}
 		return errors.New("null time field")
 	}
-	hourMinutes := strings.Split(timeString, ":")
-	if len(hourMinutes) != 2 {
-		return errors.New("time is not in format 09:00")
-	}
-	hours, err := strconv.Atoi(hourMinutes[0])
-	if err != nil {
-		return err
-	}
-	minutes, err := strconv.Atoi(hourMinutes[1])
-	if err != nil {
-		return err
-	}
-	timeVal := time.Date(0, time.January, 1, hours, minutes, 0, 0, time.UTC)
-	*to = (TimeOnly)(timeVal)
-	return nil
+	layout := "15:04"
+	timeVal, err := time.Parse(layout, timeString)
+	*to = TimeOnly(timeVal)
+	return err
 }
 
 func (to TimeOnly) MarshalJSON() ([]byte, error) {

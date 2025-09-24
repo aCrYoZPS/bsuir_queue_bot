@@ -40,6 +40,6 @@ func FromLessonEntity(lesson *entities.Lesson, date time.Time) *Lesson {
 		LessonType:     lesson.LessonType,
 		Subject:        lesson.Subject,
 		SubgroupNumber: int8(lesson.SubgroupNumber),
-		DateTime:       date.Add(time.Duration(time.Time(lesson.StartTime).UTC().Unix())),
+		DateTime:       date.Add(time.Time(lesson.StartTime).Sub(time.Time{})).AddDate(1, 0, 1),
 	}
 }
