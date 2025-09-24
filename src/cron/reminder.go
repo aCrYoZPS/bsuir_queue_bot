@@ -66,7 +66,7 @@ func (task *ReminderTask) Run(ctx context.Context) {
 
 		requests := make([]entities.LessonRequest, 0, len(endedLessons))
 		for _, lesson := range endedLessons {
-			storedRequests, err := task.lessonsRequest.GetLessonRequests(ctx, lesson.GroupId)
+			storedRequests, err := task.lessonsRequest.GetLessonRequests(ctx, lesson.Id)
 			if err != nil {
 				slog.Error(fmt.Errorf("failed getting lessons request for reminder task: %w", err).Error())
 			}
