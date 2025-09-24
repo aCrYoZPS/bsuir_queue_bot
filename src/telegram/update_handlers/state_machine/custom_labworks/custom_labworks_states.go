@@ -20,6 +20,7 @@ type HandlersCache interface {
 	GetState(ctx context.Context, chatId int64) (*interfaces.CachedInfo, error)
 	SaveInfo(ctx context.Context, chatId int64, json string) error
 	GetInfo(ctx context.Context, chatId int64) (string, error)
+	RemoveInfo(ctx context.Context, chatId int64) error
 }
 
 type LabworksService interface {
@@ -101,9 +102,10 @@ func (*labworkAddSubmitNameState) StateName() string {
 }
 
 type LessonRequest struct {
-	DateTime time.Time
-	Name     string
-	GroupId  int64
+	MarkupMessageId int
+	DateTime        time.Time
+	Name            string
+	GroupId         int64
 }
 
 func (state *labworkAddSubmitNameState) Handle(ctx context.Context, message *tgbotapi.Message) error {
@@ -125,24 +127,25 @@ func (state *labworkAddSubmitNameState) Handle(ctx context.Context, message *tgb
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal jsoned req (%s) in custom labwork name submit state: %w", jsonedReq, err)
 	}
-	req.Name = name
-	json, err := json.Marshal(req)
-	if err != nil {
-		return fmt.Errorf("failed to marshal lesson request in custom labwork submit name state: %w", err)
-	}
-	err = state.cache.SaveInfo(ctx, message.Chat.ID, string(json))
-	if err != nil {
-		return fmt.Errorf("failed to save json string into cache in custom labwork submit name state %w", err)
-	}
 
 	resp := tgbotapi.NewMessage(message.Chat.ID, "Выберите дату добавленной пары")
 	resp.ReplyMarkup = createCalendar(time.Now(), true)
 
-	_, err = state.bot.SendCtx(ctx, resp)
+	sent, err := state.bot.SendCtx(ctx, resp)
 	if err != nil {
 		return fmt.Errorf("failed to send response during custom labwork name submit: %w", err)
 	}
 
+	req.Name, req.MarkupMessageId = name, sent.MessageID
+	json, err := json.Marshal(req)
+	if err != nil {
+		return fmt.Errorf("failed to marshal lesson request in custom labwork submit name state: %w", err)
+	}
+
+	err = state.cache.SaveInfo(ctx, message.Chat.ID, string(json))
+	if err != nil {
+		return fmt.Errorf("failed to save json string into cache in custom labwork submit name state %w", err)
+	}
 	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.LABWORK_ADD_WAITING_STATE))
 	if err != nil {
 		return err
@@ -152,15 +155,28 @@ func (state *labworkAddSubmitNameState) Handle(ctx context.Context, message *tgb
 }
 
 func (state *labworkAddSubmitNameState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
+	err := state.cache.RemoveInfo(ctx, msg.Chat.ID)
+	if err != nil {
+		return fmt.Errorf("failed to remove info during labwork add submit name reversal: %w", err)
+	}
+	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.IDLE_STATE))
+	if err != nil {
+		return fmt.Errorf("failed to transition to idle state during labwork add submit name state reversal: %w", err)
+	}
 	return nil
 }
 
+type StateMachine interface {
+	HandleState(ctx context.Context, msg *tgbotapi.Message) error
+}
 type LabworkAddWaitingState struct {
-	bot *tgutils.Bot
+	bot     *tgutils.Bot
+	cache   HandlersCache
+	machine StateMachine
 }
 
-func NewLabworkAddWaitingState(bot *tgutils.Bot) *LabworkAddWaitingState {
-	return &LabworkAddWaitingState{bot: bot}
+func NewLabworkAddWaitingState(bot *tgutils.Bot, cache HandlersCache, machine StateMachine) *LabworkAddWaitingState {
+	return &LabworkAddWaitingState{bot: bot, cache: cache, machine: machine}
 }
 
 func (*LabworkAddWaitingState) StateName() string {
@@ -176,5 +192,26 @@ func (state *LabworkAddWaitingState) Handle(ctx context.Context, message *tgbota
 }
 
 func (state *LabworkAddWaitingState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
-	return nil
+	info, err := state.cache.GetInfo(ctx, msg.Chat.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get info during labwork add waiting state reversal: %w", err)
+	}
+
+	req := &LessonRequest{}
+	err = json.Unmarshal([]byte(info), &req)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal info (%s) in custom labwork add waiting state: %w", info, err)
+	}
+
+	_, err = state.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, req.MarkupMessageId, tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
+	if err != nil {
+		return fmt.Errorf("failed to edit message markup during labwork add waiting state: %w", err)
+	}
+	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.LABWORK_ADD_START_STATE))
+	if err != nil {
+		return fmt.Errorf("failed to save idle state during labwork add waiting state reversal: %w", err)
+	}
+	msg.Text = "placeholder"
+	err = state.machine.HandleState(ctx, msg)
+	return err
 }

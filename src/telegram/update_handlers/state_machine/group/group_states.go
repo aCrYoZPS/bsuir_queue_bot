@@ -231,11 +231,11 @@ func (state *groupSubmitNameState) Handle(ctx context.Context, message *tgbotapi
 }
 
 func (state *groupSubmitNameState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
-	err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.GROUP_SUBMIT_GROUPNAME_STATE))
+	err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.GROUP_SUBMIT_START_STATE))
 	if err != nil {
 		return fmt.Errorf("failed to transition to group submit groupname state during group submit name state reversal: %w", err)
 	}
-	msg.Text = ""
+	msg.Text = "placeholder"
 	return state.machine.HandleState(ctx, msg)
 }
 
