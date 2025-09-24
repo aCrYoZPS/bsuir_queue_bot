@@ -65,8 +65,7 @@ func (controller *TasksController) InitTasks(ctx context.Context) {
 	}
 
 	clearLessons := NewClearLessonsTask(controller.sheets, controller.lessons, controller.drive)
-	monthly := gocron.MonthlyJob(1, gocron.NewDaysOfTheMonth(15, -1), gocron.NewAtTimes(gocron.NewAtTime(22, 0, 0)))
-	_, err = scheduler.NewJob(monthly, gocron.NewTask(func() { clearLessons.Run(ctx) }))
+	_, err = scheduler.NewJob(daily, gocron.NewTask(func() { clearLessons.Run(ctx) }))
 	if err != nil {
 		slog.Error(fmt.Errorf("failed to init sheets refresh cron: %w", err).Error())
 	}

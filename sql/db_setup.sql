@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS lessons (
 	lesson_type     TEXT NOT NULL, 
     subgroup_number INTEGER NOT NULL,
     date_time       INTEGER NOT NULL,
-    FOREIGN KEY (group_id) REFERENCES groups(id)
+    FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS lessons_group_id_idx ON lessons(group_id);
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
     group_id INTEGER,
     full_name TEXT NOT NULL, 
     CONSTRAINT tg_id_ak UNIQUE (tg_id),
-    FOREIGN KEY (group_id) REFERENCES groups(id)
+    FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS lessons_requests (
@@ -33,8 +33,8 @@ CREATE TABLE IF NOT EXISTS lessons_requests (
     msg_id INTEGER,
     chat_id INTEGER NOT NULL,
     submit_time INTEGER NOT NULL,
-    FOREIGN KEY (lesson_id) REFERENCES lessons(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE, 
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS lessons_requests_lesson_id_idx ON lessons_requests(lesson_id);
@@ -43,7 +43,7 @@ CREATE INDEX IF NOT EXISTS lessons_requests_user_id_idx ON lessons_requests(user
 CREATE TABLE IF NOT EXISTS users_roles (
     user_id INTEGER,
     role_name TEXT,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS group_requests (
