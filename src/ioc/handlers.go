@@ -7,12 +7,14 @@ import (
 
 var useStateMachine = provider(
 	func() update_handlers.StateMachine {
-		return stateMachine.NewStateMachine(
-			stateMachine.NewStatesConfig(
+		stateMachine := stateMachine.NewStateMachine(
+			stateMachine.NewStatesConfig(nil,
 				useHandlersCache(), useTgBot(),
 				useGroupsService(), useUsersRepository(),
 				useRequestsRepository(), useAdminRequestsRepository(),
 				useLessonsService()),
 		)
+		stateMachine.StateMachine = stateMachine
+		return stateMachine
 	},
 )

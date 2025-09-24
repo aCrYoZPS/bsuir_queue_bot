@@ -45,7 +45,7 @@ func GetAdminCommands() []tgbotapi.BotCommand {
 }
 
 type StateMachine interface {
-	HandleState(ctx context.Context, message *tgbotapi.Message) error
+	HandleStateMu(ctx context.Context, message *tgbotapi.Message) error
 }
 type MessagesService struct {
 	cache        interfaces.HandlersCache
@@ -73,7 +73,7 @@ func (srv *MessagesService) HandleCommands(update *tgbotapi.Update, bot *tgutils
 			}
 			return
 		}
-		err := srv.stateMachine.HandleState(ctx, update.Message)
+		err := srv.stateMachine.HandleStateMu(ctx, update.Message)
 		if err != nil {
 			slog.Error(err.Error())
 			return
@@ -84,7 +84,7 @@ func (srv *MessagesService) HandleCommands(update *tgbotapi.Update, bot *tgutils
 func (srv *MessagesService) HandleMessages(update *tgbotapi.Update, bot *tgutils.Bot) {
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DEFAULT_TIMEOUT)
 	defer cancel()
-	err := srv.stateMachine.HandleState(ctx, update.Message)
+	err := srv.stateMachine.HandleStateMu(ctx, update.Message)
 	if err != nil {
 		slog.Error(err.Error())
 	}

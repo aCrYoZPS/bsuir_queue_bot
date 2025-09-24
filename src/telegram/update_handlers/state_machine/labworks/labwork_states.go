@@ -155,13 +155,17 @@ func parseLabworkDisciplineCallback(callback string) (discipline string, userTgI
 	return discipline, userTgId
 }
 
+type StateMachine interface {
+	HandleState(ctx context.Context, msg *tgbotapi.Message) error
+}
 type labworkSubmitWaitingState struct {
-	cache interfaces.HandlersCache
-	bot   *tgutils.Bot
+	cache   interfaces.HandlersCache
+	bot     *tgutils.Bot
+	machine StateMachine
 }
 
-func NewLabworkSubmitWaitingState(bot *tgutils.Bot, cache interfaces.HandlersCache) *labworkSubmitWaitingState {
-	return &labworkSubmitWaitingState{bot: bot, cache: cache}
+func NewLabworkSubmitWaitingState(bot *tgutils.Bot, cache interfaces.HandlersCache, machine StateMachine) *labworkSubmitWaitingState {
+	return &labworkSubmitWaitingState{bot: bot, cache: cache, machine: machine}
 }
 
 func (*labworkSubmitWaitingState) StateName() string {
@@ -209,14 +213,15 @@ type GroupsService interface {
 }
 
 type labworkSubmitNumberState struct {
-	bot      *tgutils.Bot
-	cache    interfaces.HandlersCache
-	users    UsersService
-	labworks LabworksService
+	bot          *tgutils.Bot
+	cache        interfaces.HandlersCache
+	users        UsersService
+	labworks     LabworksService
+	stateMachine StateMachine
 }
 
-func NewLabworkSubmitNumberState(bot *tgutils.Bot, cache interfaces.HandlersCache, labworks LabworksService, users UsersService) *labworkSubmitNumberState {
-	return &labworkSubmitNumberState{bot: bot, cache: cache, labworks: labworks, users: users}
+func NewLabworkSubmitNumberState(bot *tgutils.Bot, cache interfaces.HandlersCache, labworks LabworksService, users UsersService, stateMachine StateMachine) *labworkSubmitNumberState {
+	return &labworkSubmitNumberState{bot: bot, cache: cache, labworks: labworks, users: users, stateMachine: stateMachine}
 }
 
 func (*labworkSubmitNumberState) StateName() string {
@@ -260,62 +265,12 @@ func (state *labworkSubmitNumberState) Handle(ctx context.Context, message *tgbo
 }
 
 func (state *labworkSubmitNumberState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
-	user, err := state.users.GetByTgId(ctx, msg.From.ID)
+	err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.LABWORK_SUBMIT_START_STATE))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to save %s state during labwork submit number state reversion: %w, err", constants.LABWORK_SUBMIT_NUMBER_STATE, err)
 	}
-	if user.Id == 0 {
-		err := state.TransitionAndSend(ctx, tgbotapi.NewMessage(msg.Chat.ID, "Вы ещё не присоединились к какой-либо группе"), interfaces.NewCachedInfo(msg.Chat.ID, constants.IDLE_STATE))
-		return err
-	}
-	replyMarkup, err := state.createDisciplinesKeyboard(ctx, msg.Chat.ID, msg.From.ID)
-	if err != nil {
-		if errors.Is(err, errNoLabworks) {
-			return nil
-		}
-		return err
-	}
-	resp := tgbotapi.NewMessage(msg.Chat.ID, "Выберите предмет и дату пары")
-	resp.ReplyMarkup = replyMarkup
-	err = state.TransitionAndSend(ctx, resp, interfaces.NewCachedInfo(msg.Chat.ID, constants.LABWORK_SUBMIT_WAITING_STATE))
-	return err
-}
-
-func (state *labworkSubmitNumberState) createDisciplinesKeyboard(ctx context.Context, chatId, userTgId int64) (*tgbotapi.InlineKeyboardMarkup, error) {
-	markup := [][]tgbotapi.InlineKeyboardButton{{}}
-	user, err := state.users.GetByTgId(ctx, userTgId)
-	if err != nil {
-		return nil, err
-	}
-	disciplines, err := state.labworks.GetSubjects(ctx, user.GroupId)
-	if err != nil {
-		return nil, err
-	}
-	if len(disciplines) == 0 {
-		newState := interfaces.NewCachedInfo(chatId, constants.IDLE_STATE)
-		err = state.TransitionAndSend(ctx, tgbotapi.NewMessage(chatId, "Больше не осталось лабораторных. Отдохните"), newState)
-		if err != nil {
-			return nil, err
-		}
-		return nil, errNoLabworks
-	}
-	for chunk := range slices.Chunk(disciplines, CHUNK_SIZE) {
-		row := []tgbotapi.InlineKeyboardButton{}
-		for _, discipline := range chunk {
-			row = append(row, tgbotapi.NewInlineKeyboardButtonData(discipline, createLabworkDisciplineCallback(userTgId, discipline)))
-		}
-		markup = append(markup, row)
-	}
-	keyboard := tgbotapi.NewInlineKeyboardMarkup(markup...)
-	return &keyboard, nil
-}
-
-func (state *labworkSubmitNumberState) TransitionAndSend(ctx context.Context, msg tgbotapi.MessageConfig, newState *interfaces.CachedInfo) error {
-	err := state.cache.SaveState(ctx, *newState)
-	if err != nil {
-		return err
-	}
-	_, err = state.bot.SendCtx(ctx, msg)
+	msg.Text = "/submit"
+	err = state.stateMachine.HandleState(ctx, msg)
 	return err
 }
 
