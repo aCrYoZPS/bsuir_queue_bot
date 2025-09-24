@@ -23,7 +23,7 @@ type StateMachine struct {
 }
 
 type statesConfig struct {
-	states        *StateMachine
+	machine       *StateMachine
 	cache         interfaces.HandlersCache
 	bot           *tgutils.Bot
 	groupsRepo    interfaces.GroupsRepository
@@ -36,7 +36,7 @@ type statesConfig struct {
 func NewStatesConfig(state *StateMachine, cache interfaces.HandlersCache, bot *tgutils.Bot, groupsRepo interfaces.GroupsRepository, usersRepo interfaces.UsersRepository,
 	requests interfaces.RequestsRepository, adminRequests interfaces.AdminRequestsRepository, labworks labworks.LabworksService) *statesConfig {
 	return &statesConfig{
-		states:        state,
+		machine:       state,
 		cache:         cache,
 		bot:           bot,
 		groupsRepo:    groupsRepo,
@@ -49,7 +49,7 @@ func NewStatesConfig(state *StateMachine, cache interfaces.HandlersCache, bot *t
 
 func NewStateMachine(conf *statesConfig) *StateMachine {
 	machine := &StateMachine{cache: conf.cache, bot: conf.bot, usersRepo: conf.usersRepo}
-	conf.states = machine
+	conf.machine = machine
 	InitStates(conf)
 	return machine
 }
@@ -84,7 +84,7 @@ func (machine *StateMachine) HandleStateMu(ctx context.Context, message *tgbotap
 	return state.Handle(ctx, message)
 }
 
-//Only for recursion calls, when we know that state is concurrently safe!
+// Only for recursion calls, when we know that state is concurrently safe!
 func (machine *StateMachine) HandleState(ctx context.Context, message *tgbotapi.Message) error {
 	info, err := machine.cache.GetState(ctx, message.Chat.ID)
 	if err != nil {

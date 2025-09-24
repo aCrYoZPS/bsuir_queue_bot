@@ -89,16 +89,29 @@ func (state *adminSubmitStartState) TransitionAndSend(ctx context.Context, newSt
 }
 
 func (state *adminSubmitStartState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
+	err := state.cache.RemoveInfo(ctx, msg.Chat.ID)
+	if err != nil {
+		return fmt.Errorf("failed to remove info during admin submit start state reversal: %w", err)
+	}
+	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.IDLE_STATE))
+	if err != nil {
+		return fmt.Errorf("failed to transition to idle state during admin submit start state reversal: %w", err)
+	}
 	return nil
 }
 
-type adminSubmittingNameState struct {
-	cache interfaces.HandlersCache
-	bot   *tgutils.Bot
+type StateMachine interface {
+	HandleState(ctx context.Context, msg *tgbotapi.Message) error
 }
 
-func NewAdminSubmittingNameState(cache interfaces.HandlersCache, bot *tgutils.Bot) *adminSubmittingNameState {
-	return &adminSubmittingNameState{cache: cache, bot: bot}
+type adminSubmittingNameState struct {
+	cache   interfaces.HandlersCache
+	bot     *tgutils.Bot
+	machine StateMachine
+}
+
+func NewAdminSubmittingNameState(cache interfaces.HandlersCache, bot *tgutils.Bot, machine StateMachine) *adminSubmittingNameState {
+	return &adminSubmittingNameState{cache: cache, bot: bot, machine: machine}
 }
 
 func (*adminSubmittingNameState) StateName() string {
@@ -132,7 +145,13 @@ func (state *adminSubmittingNameState) Handle(ctx context.Context, message *tgbo
 }
 
 func (state *adminSubmittingNameState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
-	return nil
+	err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.ADMIN_SUBMIT_START_STATE))
+	if err != nil {
+		return fmt.Errorf("failed to transition to admin submit start state during admin submitting name state reversal: %w", err)
+	}
+	msg.Text = "/assign"
+	err = state.machine.HandleState(ctx, msg)
+	return err
 }
 
 type GroupsService interface {
@@ -140,13 +159,14 @@ type GroupsService interface {
 }
 
 type adminSubmitingGroupState struct {
-	cache interfaces.HandlersCache
-	bot   *tgutils.Bot
-	srv   GroupsService
+	cache   interfaces.HandlersCache
+	bot     *tgutils.Bot
+	srv     GroupsService
+	machine StateMachine
 }
 
-func NewAdminSubmitingGroupState(cache interfaces.HandlersCache, bot *tgutils.Bot, srv GroupsService) *adminSubmitingGroupState {
-	return &adminSubmitingGroupState{cache: cache, bot: bot, srv: srv}
+func NewAdminSubmitingGroupState(cache interfaces.HandlersCache, bot *tgutils.Bot, srv GroupsService, machine StateMachine) *adminSubmitingGroupState {
+	return &adminSubmitingGroupState{cache: cache, bot: bot, srv: srv, machine: machine}
 }
 
 func (*adminSubmitingGroupState) StateName() string {
@@ -203,17 +223,24 @@ func (state *adminSubmitingGroupState) Handle(ctx context.Context, message *tgbo
 }
 
 func (state *adminSubmitingGroupState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
-	return nil
+	err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.ADMIN_SUBMITTING_NAME_STATE))
+	if err != nil {
+		return fmt.Errorf("failed to save admin submitting name state during admin submitting group state reversal: %w", err)
+	}
+	msg.Text = ""
+	err = state.machine.HandleState(ctx, msg)
+	return err
 }
 
 type adminSubmittingProofState struct {
 	cache    interfaces.HandlersCache
 	bot      *tgutils.Bot
 	requests interfaces.AdminRequestsRepository
+	machine  StateMachine
 }
 
-func NewAdminSubmitingProofState(cache interfaces.HandlersCache, bot *tgutils.Bot, requests interfaces.AdminRequestsRepository) *adminSubmittingProofState {
-	return &adminSubmittingProofState{cache: cache, bot: bot, requests: requests}
+func NewAdminSubmitingProofState(cache interfaces.HandlersCache, bot *tgutils.Bot, requests interfaces.AdminRequestsRepository, machine StateMachine) *adminSubmittingProofState {
+	return &adminSubmittingProofState{cache: cache, bot: bot, requests: requests, machine: machine}
 }
 
 func (state *adminSubmittingProofState) StateName() string {
@@ -256,12 +283,18 @@ func (state *adminSubmittingProofState) Handle(ctx context.Context, message *tgb
 }
 
 func (state *adminSubmittingProofState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
-	return nil
+	err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.ADMIN_SUBMITTING_GROUP_STATE))
+	if err != nil {
+		return fmt.Errorf("failed to transition to admin submitting group state during reversal of admin submitting proof state: %w", err)
+	}
+	msg.Text = ""
+	err = state.machine.HandleState(ctx, msg)
+	return err
 }
 
 type adminWaitingState struct {
-	cache interfaces.HandlersCache
-	bot   *tgutils.Bot
+	cache   interfaces.HandlersCache
+	bot     *tgutils.Bot
 }
 
 func NewAdminWaitingProofState(cache interfaces.HandlersCache, bot *tgutils.Bot) *adminWaitingState {

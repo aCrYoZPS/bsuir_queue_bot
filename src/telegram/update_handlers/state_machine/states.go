@@ -31,8 +31,8 @@ func InitStates(conf *statesConfig) {
 
 func createAdminStates(conf *statesConfig) []State {
 	return []State{admin.NewAdminSubmitState(conf.cache, conf.bot, conf.usersRepo),
-		admin.NewAdminSubmittingNameState(conf.cache, conf.bot), admin.NewAdminSubmitingGroupState(conf.cache, conf.bot, conf.groupsRepo),
-		admin.NewAdminSubmitingProofState(conf.cache, conf.bot, conf.adminRequests), admin.NewAdminWaitingProofState(conf.cache, conf.bot)}
+		admin.NewAdminSubmittingNameState(conf.cache, conf.bot, conf.machine), admin.NewAdminSubmitingGroupState(conf.cache, conf.bot, conf.groupsRepo, conf.machine),
+		admin.NewAdminSubmitingProofState(conf.cache, conf.bot, conf.adminRequests, conf.machine), admin.NewAdminWaitingProofState(conf.cache, conf.bot)}
 }
 
 func createGroupStates(conf *statesConfig) []State {
@@ -41,8 +41,8 @@ func createGroupStates(conf *statesConfig) []State {
 }
 
 func createLabworksStates(conf *statesConfig) []State {
-	return []State{labworks.NewLabworkSubmitProofState(conf.bot, conf.cache, conf.groupsRepo, conf.requests), labworks.NewLabworkSubmitNumberState(conf.bot, conf.cache, conf.labworks, conf.usersRepo, conf.states),
-		labworks.NewLabworkSubmitStartState(conf.bot, conf.cache, conf.labworks, conf.usersRepo), labworks.NewLabworkSubmitWaitingState(conf.bot, conf.cache, conf.states)}
+	return []State{labworks.NewLabworkSubmitProofState(conf.bot, conf.cache, conf.groupsRepo, conf.requests), labworks.NewLabworkSubmitNumberState(conf.bot, conf.cache, conf.labworks, conf.usersRepo, conf.machine),
+		labworks.NewLabworkSubmitStartState(conf.bot, conf.cache, conf.labworks, conf.usersRepo), labworks.NewLabworkSubmitWaitingState(conf.bot, conf.cache, conf.machine)}
 }
 
 func createCustomLabworkStates(conf *statesConfig) []State {
