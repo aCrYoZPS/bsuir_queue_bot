@@ -13,5 +13,5 @@ type LessonRequest struct {
 }
 
 func NewLessonRequest(LessonId, UserId, MsgId, ChatId int64, LabworkNumber int8) *LessonRequest {
-	return &LessonRequest{LessonId: LessonId, UserId: UserId, MsgId: MsgId, LabworkNumber: LabworkNumber, SubmitTime: time.Now()}
+	return &LessonRequest{LessonId: LessonId, UserId: UserId, MsgId: MsgId, ChatId: ChatId, LabworkNumber: LabworkNumber, SubmitTime: time.Now()}
 }

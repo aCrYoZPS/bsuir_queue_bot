@@ -47,13 +47,13 @@ func (repo *LessonsRequestsRepository) Get(ctx context.Context, id int64) (*enti
 }
 
 func (repo *LessonsRequestsRepository) GetByUserId(ctx context.Context, userId int64) (*entities.LessonRequest, error) {
-	query := fmt.Sprintf("SELECT id, user_id, group_id FROM %s WHERE user_id=$1", LESSONS_REQUESTS_TABLE)
+	query := fmt.Sprintf("SELECT id, user_id, chat_id,group_id FROM %s WHERE user_id=$1", LESSONS_REQUESTS_TABLE)
 	row := repo.db.QueryRowContext(ctx, query, userId)
 	if row.Err() != nil {
 		return nil, row.Err()
 	}
 	req := &entities.LessonRequest{}
-	err := row.Scan(&req.Id, &req.UserId, &req.LessonId)
+	err := row.Scan(&req.Id, &req.UserId, &req.ChatId, &req.LessonId)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func (repo *LessonsRequestsRepository) GetLessonRequests(ctx context.Context, le
 		if rows.Err() != nil {
 			return nil, rows.Err()
 		}
-		err := rows.Scan(&req.Id, &req.UserId, &req.LessonId, &req.MsgId)
+		err := rows.Scan(&req.Id, &req.UserId, &req.LessonId, &req.MsgId, &req.ChatId)
 		if err != nil {
 			return nil, err
 		}
@@ -88,7 +88,7 @@ func (repo *LessonsRequestsRepository) Delete(ctx context.Context, requestId int
 }
 
 func (repo *LessonsRequestsRepository) SetToNextLesson(ctx context.Context, requestId int64) error {
-	query := fmt.Sprintf("UPDATE %s SET lesson_id = (SELECT id FROM %s WHERE date > datetime('now') ORDER BY DATE LIMIT 1)", LESSONS_REQUESTS_TABLE, LESSONS_TABLE)
+	query := fmt.Sprintf("UPDATE %s AS lr SET lesson_id = (SELECT id FROM lessons WHERE id>lr.lesson_id AND subject=(SELECT subject FROM %s WHERE id=(SELECT lesson_id FROM %[1]s WHERE id=$1))) WHERE id=$1", LESSONS_REQUESTS_TABLE, LESSONS_TABLE)
 	_, err := repo.db.ExecContext(ctx, query, requestId)
 	return err
 }
