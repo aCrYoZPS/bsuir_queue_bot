@@ -192,7 +192,7 @@ func areLessonsEqual(self *entities.Lesson) func(other *entities.Lesson) bool {
 
 func (repo *LessonsRepository) GetEndedLessons(ctx context.Context, before time.Time) ([]persistance.Lesson, error) {
 	lessons := []persistance.Lesson{}
-	query := fmt.Sprintf("SELECT id, group_id, subject, lesson_type, subgroup_number, date_time FROM %s WHERE date_time >= $1 ORDER BY date_time", LESSONS_TABLE)
+	query := fmt.Sprintf("SELECT id, group_id, subject, lesson_type, subgroup_number, date_time FROM %s WHERE date_time <= $1 ORDER BY date_time", LESSONS_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query, time.Now().UTC().Unix())
 	if err != nil {
 		return nil, err
@@ -205,7 +205,7 @@ func (repo *LessonsRepository) GetEndedLessons(ctx context.Context, before time.
 		if rows.Err() != nil {
 			return nil, rows.Err()
 		}
-		err := rows.Scan(appendedLesson.Id, appendedLesson.GroupId, appendedLesson.Subject, appendedLesson.SubgroupNumber, storedDateTime)
+		err := rows.Scan(&appendedLesson.Id, &appendedLesson.GroupId, &appendedLesson.Subject, &appendedLesson.LessonType, &appendedLesson.SubgroupNumber, &storedDateTime)
 		if err != nil {
 			return nil, err
 		}

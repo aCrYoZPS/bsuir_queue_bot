@@ -47,7 +47,7 @@ func (repo *LessonsRequestsRepository) Get(ctx context.Context, id int64) (*enti
 }
 
 func (repo *LessonsRequestsRepository) GetByUserId(ctx context.Context, userId int64) (*entities.LessonRequest, error) {
-	query := fmt.Sprintf("SELECT id, user_id, chat_id,group_id FROM %s WHERE user_id=$1", LESSONS_REQUESTS_TABLE)
+	query := fmt.Sprintf("SELECT id, user_id, chat_id,lesson_id FROM %s WHERE user_id=$1", LESSONS_REQUESTS_TABLE)
 	row := repo.db.QueryRowContext(ctx, query, userId)
 	if row.Err() != nil {
 		return nil, row.Err()

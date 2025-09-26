@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/labworks"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
@@ -23,13 +22,9 @@ func NewSheetsRefreshCallbackHandler(lessonsRequests LessonsRequestsRepositoryRe
 }
 
 func (handler *ReminderCallbackHandler) HandleCallback(ctx context.Context, update *tgbotapi.Update, bot *tgutils.Bot) error {
-	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
-	if _, err := bot.Request(callback); err != nil {
-		return fmt.Errorf("failed to create labwork callback while handling: %w", err)
-	}
 	if strings.HasPrefix(update.CallbackData(), REMINDER_CALLBACKS) {
 		requestId, accepted := parseSheetsRefreshCallbackData(update.CallbackData())
-		if !accepted {
+		if accepted {
 			err := handler.lessonsRequests.Delete(ctx, requestId)
 			if err != nil {
 				return fmt.Errorf("failed to delete lesson request in sheets refresh: %w", err)
@@ -39,6 +34,10 @@ func (handler *ReminderCallbackHandler) HandleCallback(ctx context.Context, upda
 			if err != nil {
 				return err
 			}
+		}
+		_, err := bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.FromChat().ID, update.CallbackQuery.Message.MessageID, tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
+		if err != nil {
+			return fmt.Errorf("failed to delete reply markup on a reminder message: %w", err)
 		}
 	} else {
 		return fmt.Errorf("wrong callback data (%s) passed to sheets refresh callback handler", update.CallbackData())
@@ -63,7 +62,7 @@ func (handler *ReminderCallbackHandler) SetNextLesson(ctx context.Context, reque
 	if err != nil {
 		return fmt.Errorf("failed to get lesson request by id in sheets refresh cron: %w", err)
 	}
-	err = handler.sheets.AddLabworkRequest(ctx, labworks.NewAppendedLabwork(lesson.DateTime.Round(24*time.Hour), req.SubmitTime, lesson.Subject, usr.GroupName, usr.FullName, lesson.SubgroupNumber, req.LabworkNumber))
+	err = handler.sheets.AddLabworkRequest(ctx, labworks.NewAppendedLabwork(lesson.DateTime, req.SubmitTime, lesson.Subject, usr.GroupName, usr.FullName, lesson.SubgroupNumber, req.LabworkNumber))
 	if err != nil {
 		return fmt.Errorf("failed to add labwork to sheets during sheets refresh cron: %w", err)
 	}

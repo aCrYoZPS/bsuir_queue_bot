@@ -139,13 +139,12 @@ func (serv *SheetsApiService) createLists(ctx context.Context, groupName string,
 
 	if len(resp.UpdatedSpreadsheet.Sheets) > 0 {
 		err = serv.WithRetries(ctx, func(ctx context.Context) error {
-			table, err := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{
+			_, err := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{
 				Requests: []*sheets.Request{
 					{DeleteSheet: &sheets.DeleteSheetRequest{SheetId: resp.UpdatedSpreadsheet.Sheets[0].Properties.SheetId}},
 				},
 			},
 			).Context(ctx).Do()
-			print(table)
 			return err
 		})()
 	}
@@ -248,12 +247,11 @@ func (serv *SheetsApiService) AddLabworkRequest(ctx context.Context, req *labwor
 	}
 	for _, sheet := range spreadsheet.Sheets {
 		titleSubject, titleDate, subgroupNum := parseLessonName(sheet.Properties.Title)
-		if titleSubject == req.DisciplineName && req.RequestedDate.Equal(titleDate) && req.SubgroupNumber == subgroupNum {
+		if titleSubject == req.DisciplineName && req.RequestedDate.Truncate(24 * time.Hour).Equal(titleDate) && req.SubgroupNumber == subgroupNum {
 			if len(sheet.Tables) == 0 {
 				requests := serv.getTableRequests(sheet)
 				err = serv.WithRetries(ctx, func(ctx context.Context) error {
-					sheet, err := serv.api.Spreadsheets.BatchUpdate(spreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{Requests: requests}).Context(ctx).Do()
-					print(sheet)
+					_, err := serv.api.Spreadsheets.BatchUpdate(spreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{Requests: requests}).Context(ctx).Do()
 					return err
 				})()
 				if err != nil {

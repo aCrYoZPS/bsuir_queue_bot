@@ -34,10 +34,11 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 	controller := ioc.UseBotController()
-	controller.Start(ctx)
+	go controller.Start(ctx)
 
 	tasks := ioc.UseTasksController()
-	tasks.InitTasks(ctx)
+	go tasks.InitTasks(ctx)
 
 	ioc.Reset()
+	<-ctx.Done()
 }
