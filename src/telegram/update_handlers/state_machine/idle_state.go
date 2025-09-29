@@ -82,7 +82,7 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 	case update_handlers.SUBMIT_COMMAND, tgutils.SUBMIT_KEYBOARD:
 		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.LABWORK_SUBMIT_START_STATE))
 		if err != nil {
-			return fmt.Errorf("failed to transition from idle state to labwork submit state")
+			return fmt.Errorf("failed to transition from idle state to labwork submit state: %w", err)
 		}
 		currentState = getStateByName(constants.LABWORK_SUBMIT_START_STATE)
 		if currentState == nil {
@@ -91,7 +91,7 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 	case update_handlers.ADD_LABWORK_COMMAND, tgutils.ADD_LABWORK_KEYBOARD:
 		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.LABWORK_ADD_START_STATE))
 		if err != nil {
-			return fmt.Errorf("failed to transition from idle state to labwork add state")
+			return fmt.Errorf("failed to transition from idle state to labwork add state: %w", err)
 		}
 		currentState = getStateByName(constants.LABWORK_ADD_START_STATE)
 		if currentState == nil {

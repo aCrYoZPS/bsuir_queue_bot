@@ -112,7 +112,7 @@ func (repo *LessonsRepository) GetNext(ctx context.Context, subject string, grou
 
 func (repo *LessonsRepository) GetSubjects(ctx context.Context, groupId int64) ([]string, error) {
 	query := fmt.Sprintf("SELECT DISTINCT subject FROM %s WHERE group_id=$1 AND date_time > $2 ORDER BY subject", LESSONS_TABLE)
-	rows, err := repo.db.Query(query, groupId, time.Now().UTC().Unix())
+	rows, err := repo.db.Query(query, groupId, time.Now().Truncate(24*time.Hour).Add(24*time.Hour-1).Unix())
 	if err != nil {
 		return nil, err
 	}

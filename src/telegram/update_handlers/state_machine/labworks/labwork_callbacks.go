@@ -150,6 +150,7 @@ func (handler *LabworksCallbackHandler) handleDisciplineCallback(ctx context.Con
 	if lessons == nil {
 		return errNoLessons
 	}
+
 	json, err := json.Marshal(&LabworkRequest{MarkupMessageId: message.MessageID, DisciplineName: discipline, GroupName: user.GroupName, FullName: user.FullName, TgId: user.TgId})
 	if err != nil {
 		return fmt.Errorf("failed to marshal labwork request during labworks discipline callback: %w", err)
@@ -251,7 +252,7 @@ func (handler *LabworksCallbackHandler) handleTimeCallback(ctx context.Context, 
 	if err != nil {
 		return fmt.Errorf("failed to marshal info during labwork time callback handling: %w", err)
 	}
-	err = handler.cache.SaveInfo(ctx, msg.Chat.ID, string(infoBytes))
+	err = handler.cache.SaveInfo(ctx, msg.From.ID, string(infoBytes))
 	if err != nil {
 		return fmt.Errorf("failed to save info during time callback handling: %w", err)
 	}
@@ -327,6 +328,7 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(ctx context.Context
 					return fmt.Errorf("failed to send google errors failure response during labworks accept callback handling: %w", err)
 				}
 			}
+			return err
 		}
 		return fmt.Errorf("failed to add labwork to sheets during labwork accept callback handling: %w", err)
 	}
