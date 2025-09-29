@@ -19,6 +19,7 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
+	datetime "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/date_time"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/uuid"
@@ -54,7 +55,7 @@ func (*labworkSubmitStartState) StateName() string {
 }
 
 func (state *labworkSubmitStartState) Handle(ctx context.Context, message *tgbotapi.Message) error {
-	user, err := state.users.GetByTgId(ctx, message.From.ID)
+	user, err := state.users.GetByTgId(ctx, message.Chat.ID)
 	if err != nil {
 		return err
 	}
@@ -241,8 +242,8 @@ func (state *labworkSubmitNumberState) Handle(ctx context.Context, message *tgbo
 	if err != nil {
 		return err
 	}
-	req := &LabworkRequest{}
-	err = json.Unmarshal([]byte(jsonString), req)
+	req := LabworkRequest{}
+	err = json.Unmarshal([]byte(jsonString), &req)
 	if err != nil {
 		return err
 	}
@@ -299,9 +300,9 @@ func (state *labworkSubmitProofState) Handle(ctx context.Context, message *tgbot
 	if err != nil {
 		return err
 	}
-	req.SentProofTime = time.Now()
+	req.SentProofTime = datetime.TimeWithSeconds(time.Now())
 	req.MessageId = int64(message.MessageID)
-	
+
 	jsonedReq, err := json.Marshal(req)
 	if err != nil {
 		return err
@@ -406,9 +407,11 @@ func (state *labworkSubmitProofState) GetFileBytes(fileId string) ([]byte, error
 	return bytes, nil
 }
 
-var funcMap = template.FuncMap{"dateTime": func(t time.Time) string {
+var funcMap = template.FuncMap{"dateTime": func(ts datetime.TimeWithSeconds) string {
+	t := time.Time(ts)
 	return fmt.Sprintf("%02d.%02d.%02d %02d:%02d:%02d", t.Day(), t.Month(), t.Year(), t.Hour(), t.Minute(), t.Second())
-}, "date": func(t time.Time) string {
+}, "date": func(dt datetime.DateTime) string {
+	t := time.Time(dt)
 	return fmt.Sprintf("%02d.%02d.%d", t.Day(), t.Month(), t.Year())
 }}
 

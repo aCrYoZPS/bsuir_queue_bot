@@ -16,6 +16,7 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
+	datetime "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/date_time"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"golang.org/x/text/cases"
@@ -30,8 +31,8 @@ type SheetsService interface {
 }
 
 type AppendedLabwork struct {
-	RequestedDate  time.Time
-	SentProofTime  time.Time
+	RequestedDate  datetime.DateTime
+	SentProofTime  datetime.TimeWithSeconds
 	DisciplineName string
 	GroupName      string
 	FullName       string
@@ -41,8 +42,8 @@ type AppendedLabwork struct {
 
 func NewAppendedLabwork(RequestedDate time.Time, SentProofTime time.Time, DisciplineName string, GroupName string, FullName string, SubgroupNumber, LabworkNumber int8) *AppendedLabwork {
 	return &AppendedLabwork{
-		RequestedDate:  RequestedDate,
-		SentProofTime:  SentProofTime,
+		RequestedDate:  datetime.DateTime(RequestedDate),
+		SentProofTime:  datetime.TimeWithSeconds(SentProofTime),
 		DisciplineName: DisciplineName,
 		GroupName:      GroupName,
 		FullName:       FullName,
@@ -52,18 +53,18 @@ func NewAppendedLabwork(RequestedDate time.Time, SentProofTime time.Time, Discip
 }
 
 type LabworkRequest struct {
-	MarkupMessageId int       `json:"markup_id,omitempty"`
-	LabworkId       int64     `json:"lab_id,omitempty"`
-	RequestedDate   time.Time `json:"requested_time,omitempty"`
-	SentProofTime   time.Time `json:"sent_prof,omitempty"`
-	DisciplineName  string    `json:"discipline,omitempty"`
-	GroupName       string    `json:"group,omitempty"`
-	SubgroupNumber  int8      `json:"subgroup,omitempty"`
-	TgId            int64     `json:"tg_id,omitempty"`
-	FullName        string    `json:"name,omitempty"`
-	LabworkNumber   int8      `json:"lab_num,omitempty"`
-	MessageId       int64     `json:"msg_id,omitempty"`
-	Notes           string    `json:"notes,omitempty"`
+	MarkupMessageId int                      `json:"markup_id,omitempty"`
+	LabworkId       int64                    `json:"lab_id,omitempty"`
+	RequestedDate   datetime.DateTime        `json:"requested_time"`
+	SentProofTime   datetime.TimeWithSeconds `json:"sent_proof"`
+	DisciplineName  string                   `json:"discipline,omitempty"`
+	GroupName       string                   `json:"group,omitempty"`
+	SubgroupNumber  int8                     `json:"subgroup,omitempty"`
+	TgId            int64                    `json:"tg_id,omitempty"`
+	FullName        string                   `json:"name,omitempty"`
+	LabworkNumber   int8                     `json:"lab_num,omitempty"`
+	MessageId       int64                    `json:"msg_id,omitempty"`
+	Notes           string                   `json:"notes,omitempty"`
 }
 
 type LabworksCallbackHandler struct {
@@ -244,7 +245,7 @@ func (handler *LabworksCallbackHandler) handleTimeCallback(ctx context.Context, 
 		return fmt.Errorf("failed to unmarshal info during labwork time callback handling: %w", err)
 	}
 
-	info.RequestedDate = date
+	info.RequestedDate = datetime.DateTime(date)
 	info.LabworkId = labworkId
 	info.SubgroupNumber = subgroup
 
@@ -252,7 +253,7 @@ func (handler *LabworksCallbackHandler) handleTimeCallback(ctx context.Context, 
 	if err != nil {
 		return fmt.Errorf("failed to marshal info during labwork time callback handling: %w", err)
 	}
-	err = handler.cache.SaveInfo(ctx, msg.From.ID, string(infoBytes))
+	err = handler.cache.SaveInfo(ctx, msg.Chat.ID, string(infoBytes))
 	if err != nil {
 		return fmt.Errorf("failed to save info during time callback handling: %w", err)
 	}
@@ -286,7 +287,7 @@ func (handler *LabworksCallbackHandler) handleTimeCancelCallback(ctx context.Con
 	for chunk := range slices.Chunk(disciplines, CHUNK_SIZE) {
 		row := []tgbotapi.InlineKeyboardButton{}
 		for _, discipline := range chunk {
-			row = append(row, tgbotapi.NewInlineKeyboardButtonData(discipline, createLabworkDisciplineCallback(msg.From.ID, discipline)))
+			row = append(row, tgbotapi.NewInlineKeyboardButtonData(discipline, createLabworkDisciplineCallback(msg.Chat.ID, discipline)))
 		}
 		markup = append(markup, row)
 	}
@@ -355,8 +356,8 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(ctx context.Context
 
 func (handler *LabworksCallbackHandler) AppendedLabwork(req *LabworkRequest) *AppendedLabwork {
 	return &AppendedLabwork{
-		RequestedDate:  req.RequestedDate,
-		SentProofTime:  req.SentProofTime,
+		RequestedDate:  datetime.DateTime(req.RequestedDate),
+		SentProofTime:  datetime.TimeWithSeconds(req.SentProofTime),
 		DisciplineName: req.DisciplineName,
 		GroupName:      req.GroupName,
 		FullName:       req.FullName,

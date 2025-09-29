@@ -4,6 +4,7 @@ import (
 	"time"
 
 	entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
+	datetime "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/date_time"
 )
 
 type Lesson struct {
@@ -30,7 +31,7 @@ func ToLessonEntity(lesson *Lesson) *entities.Lesson {
 		GroupId:        lesson.GroupId,
 		Subject:        lesson.Subject,
 		SubgroupNumber: entities.Subgroup(lesson.SubgroupNumber),
-		StartTime:      entities.TimeOnly(lesson.DateTime.AddDate(lesson.DateTime.Year(), int(lesson.DateTime.Month()), lesson.DateTime.Day())),
+		StartTime:      datetime.TimeOnly(lesson.DateTime.AddDate(lesson.DateTime.Year(), int(lesson.DateTime.Month()), lesson.DateTime.Day())),
 	}
 }
 
