@@ -32,7 +32,7 @@ type SheetsService interface {
 
 type AppendedLabwork struct {
 	RequestedDate  datetime.DateTime
-	SentProofTime  datetime.TimeWithSeconds
+	SentProofTime  datetime.DateTime
 	DisciplineName string
 	GroupName      string
 	FullName       string
@@ -43,7 +43,7 @@ type AppendedLabwork struct {
 func NewAppendedLabwork(RequestedDate time.Time, SentProofTime time.Time, DisciplineName string, GroupName string, FullName string, SubgroupNumber, LabworkNumber int8) *AppendedLabwork {
 	return &AppendedLabwork{
 		RequestedDate:  datetime.DateTime(RequestedDate),
-		SentProofTime:  datetime.TimeWithSeconds(SentProofTime),
+		SentProofTime:  datetime.DateTime(SentProofTime),
 		DisciplineName: DisciplineName,
 		GroupName:      GroupName,
 		FullName:       FullName,
@@ -53,18 +53,18 @@ func NewAppendedLabwork(RequestedDate time.Time, SentProofTime time.Time, Discip
 }
 
 type LabworkRequest struct {
-	MarkupMessageId int                      `json:"markup_id,omitempty"`
-	LabworkId       int64                    `json:"lab_id,omitempty"`
-	RequestedDate   datetime.DateTime        `json:"requested_time"`
-	SentProofTime   datetime.TimeWithSeconds `json:"sent_proof"`
-	DisciplineName  string                   `json:"discipline,omitempty"`
-	GroupName       string                   `json:"group,omitempty"`
-	SubgroupNumber  int8                     `json:"subgroup,omitempty"`
-	TgId            int64                    `json:"tg_id,omitempty"`
-	FullName        string                   `json:"name,omitempty"`
-	LabworkNumber   int8                     `json:"lab_num,omitempty"`
-	MessageId       int64                    `json:"msg_id,omitempty"`
-	Notes           string                   `json:"notes,omitempty"`
+	MarkupMessageId int               `json:"markup_id,omitempty"`
+	LabworkId       int64             `json:"lab_id,omitempty"`
+	RequestedDate   datetime.DateTime `json:"requested_time"`
+	SentProofTime   datetime.DateTime `json:"sent_proof"`
+	DisciplineName  string            `json:"discipline,omitempty"`
+	GroupName       string            `json:"group,omitempty"`
+	SubgroupNumber  int8              `json:"subgroup,omitempty"`
+	TgId            int64             `json:"tg_id,omitempty"`
+	FullName        string            `json:"name,omitempty"`
+	LabworkNumber   int8              `json:"lab_num,omitempty"`
+	MessageId       int64             `json:"msg_id,omitempty"`
+	Notes           string            `json:"notes,omitempty"`
 }
 
 type LabworksCallbackHandler struct {
@@ -357,7 +357,7 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(ctx context.Context
 func (handler *LabworksCallbackHandler) AppendedLabwork(req *LabworkRequest) *AppendedLabwork {
 	return &AppendedLabwork{
 		RequestedDate:  datetime.DateTime(req.RequestedDate),
-		SentProofTime:  datetime.TimeWithSeconds(req.SentProofTime),
+		SentProofTime:  datetime.DateTime(req.SentProofTime),
 		DisciplineName: req.DisciplineName,
 		GroupName:      req.GroupName,
 		FullName:       req.FullName,

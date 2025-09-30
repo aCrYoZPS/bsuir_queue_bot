@@ -300,7 +300,7 @@ func (state *labworkSubmitProofState) Handle(ctx context.Context, message *tgbot
 	if err != nil {
 		return err
 	}
-	req.SentProofTime = datetime.TimeWithSeconds(time.Now())
+	req.SentProofTime = datetime.DateTime(time.Now())
 	req.MessageId = int64(message.MessageID)
 
 	jsonedReq, err := json.Marshal(req)
