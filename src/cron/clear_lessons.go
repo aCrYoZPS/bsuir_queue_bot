@@ -29,6 +29,7 @@ func NewClearLessonsTask(sheets SheetsApiClear, lessons LessonsRepoClear, drive 
 
 func (task *ClearLessonsTask) Run(ctx context.Context) {
 	done := make(chan struct{}, 1)
+	slog.Info("Started clear lessons cron")
 	go func(chan struct{}) {
 		defer func() { <-done }()
 		spreadsheetIds, err := task.drive.GetSpreadsheets(ctx)

@@ -407,7 +407,7 @@ func (state *labworkSubmitProofState) GetFileBytes(fileId string) ([]byte, error
 	return bytes, nil
 }
 
-var funcMap = template.FuncMap{"dateTime": func(ts datetime.TimeWithSeconds) string {
+var funcMap = template.FuncMap{"dateTime": func(ts datetime.DateTime) string {
 	t := time.Time(ts)
 	return fmt.Sprintf("%02d.%02d.%02d %02d:%02d:%02d", t.Day(), t.Month(), t.Year(), t.Hour(), t.Minute(), t.Second())
 }, "date": func(dt datetime.DateTime) string {

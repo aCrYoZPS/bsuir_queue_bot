@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	"github.com/go-co-op/gocron/v2"
@@ -52,13 +53,16 @@ type LessonsRequestRepo interface {
 }
 
 func (controller *TasksController) InitTasks(ctx context.Context) {
+	gocron.WithLocation(time.Local)
+	gocron.WithContext(ctx)
 	scheduler, err := gocron.NewScheduler()
 	if err != nil {
 		slog.Error(fmt.Errorf("failed to init cron scheduler: %w", err).Error())
 	}
 
 	sheetsRefresh := NewReminderTask(controller.sheets, controller.lessons, controller.lessonsRequest, controller.users, controller.bot)
-	daily := gocron.DailyJob(1, gocron.NewAtTimes(gocron.NewAtTime(22, 0, 0)))
+	daily := gocron.CronJob("00 22 * * *", false)
+
 	_, err = scheduler.NewJob(daily, gocron.NewTask(func() { sheetsRefresh.Run(ctx) }), gocron.WithContext(ctx))
 	if err != nil {
 		slog.Error(fmt.Errorf("failed to init sheets refresh cron: %w", err).Error())

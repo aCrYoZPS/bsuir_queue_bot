@@ -57,6 +57,7 @@ const REMIND_TIMEOUT = 30 * time.Second
 
 func (task *ReminderTask) Run(ctx context.Context) {
 	done := make(chan struct{}, 1)
+	slog.Info("Started reminder cron")
 	go func(chan struct{}) {
 		defer func() { done <- struct{}{} }()
 		endedLessons, err := task.lessons.GetEndedLessons(ctx, time.Now().AddDate(0, 0, 0))
