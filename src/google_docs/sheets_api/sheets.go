@@ -204,15 +204,13 @@ func parseLessonName(name string) (subject string, date time.Time, subgroup iis_
 }
 
 func (serv *SheetsApiService) ClearSpreadsheet(ctx context.Context, spreadsheetId string, before time.Time) error {
-	getSpreadsheetRequest := sheets.SpreadsheetsGetCall{}
-
 	var (
 		spreadsheet sheets.Spreadsheet
 		err         error
 	)
 	err = serv.WithRetries(ctx, func(spreadsheet *sheets.Spreadsheet) func(ctx context.Context) error {
 		return func(ctx context.Context) error {
-			spreadsheet, err = getSpreadsheetRequest.Context(ctx).Do()
+			spreadsheet, err = 	serv.api.Spreadsheets.Get(spreadsheetId).Context(ctx).Do()
 			return err
 		}
 	}(&spreadsheet))()

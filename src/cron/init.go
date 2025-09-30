@@ -61,7 +61,7 @@ func (controller *TasksController) InitTasks(ctx context.Context) {
 	}
 
 	sheetsRefresh := NewReminderTask(controller.sheets, controller.lessons, controller.lessonsRequest, controller.users, controller.bot)
-	daily := gocron.CronJob("00 22 * * *", false)
+	daily := gocron.CronJob("55 23 * * *", false)
 
 	_, err = scheduler.NewJob(daily, gocron.NewTask(func() { sheetsRefresh.Run(ctx) }), gocron.WithContext(ctx))
 	if err != nil {

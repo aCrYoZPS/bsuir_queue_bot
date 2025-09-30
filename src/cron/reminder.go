@@ -89,7 +89,7 @@ func (task *ReminderTask) Run(ctx context.Context) {
 }
 
 func (task *ReminderTask) sendMessageForRequested(ctx context.Context, request *entities.LessonRequest) error {
-	msg := tgbotapi.NewMessage(request.UserId, "Вы сдали данную лабораторную?")
+	msg := tgbotapi.NewMessage(request.ChatId, "Вы сдавали данную лабораторную?")
 	msg.ReplyToMessageID = int(request.MsgId)
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Да", createSheetsRefreshCallbackData(request.Id, true)),
 		tgbotapi.NewInlineKeyboardButtonData("Нет", createSheetsRefreshCallbackData(request.Id, false))})

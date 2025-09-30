@@ -31,7 +31,7 @@ func (task *ClearLessonsTask) Run(ctx context.Context) {
 	done := make(chan struct{}, 1)
 	slog.Info("Started clear lessons cron")
 	go func(chan struct{}) {
-		defer func() { <-done }()
+		defer func() { done<-struct{}{} }()
 		spreadsheetIds, err := task.drive.GetSpreadsheets(ctx)
 		if err != nil {
 			slog.Error(fmt.Errorf("failed to get spreadsheets in clear lessons task: %w", err).Error())

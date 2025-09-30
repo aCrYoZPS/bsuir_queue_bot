@@ -22,7 +22,7 @@ func main() {
 		panic(err)
 	}
 	time.Local = loc
-	
+
 	_, exists := os.LookupEnv("ENVIRONMENT")
 	if !exists {
 		err := godotenv.Load("../.env.local")
