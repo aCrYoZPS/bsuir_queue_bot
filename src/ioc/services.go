@@ -90,7 +90,7 @@ var UseMessageService = provider(
 	},
 )
 
-var useLessonsService = provider(
+var UseLessonsService = provider(
 	func() *iis_api.LessonsService {
 		return iis_api.NewLessonsService(useLessonsRepository(), UseSheetsApiService())
 	},
@@ -100,6 +100,6 @@ var UseCallbacksService = provider(
 	func() bot.CallbacksService {
 		return stateMachine.NewCallbackService(
 			useUsersRepository(), useHandlersCache(), useLessonsRequestsRepository(),
-			useRequestsRepository(), useAdminRequestsRepository(), useLessonsService(), UseSheetsApiService(), useLessonsRepository())
+			useRequestsRepository(), useAdminRequestsRepository(), UseLessonsService(), UseSheetsApiService(), useLessonsRepository())
 	},
 )

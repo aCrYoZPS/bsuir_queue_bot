@@ -12,7 +12,7 @@ var useStateMachine = provider(
 				useHandlersCache(), useTgBot(),
 				useGroupsService(), useUsersRepository(),
 				useRequestsRepository(), useAdminRequestsRepository(),
-				useLessonsService()),
+				UseLessonsService()),
 		)
 		stateMachine.StateMachine = stateMachine
 		return stateMachine

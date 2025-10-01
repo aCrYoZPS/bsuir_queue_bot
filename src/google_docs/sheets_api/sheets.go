@@ -210,7 +210,10 @@ func (serv *SheetsApiService) ClearSpreadsheet(ctx context.Context, spreadsheetI
 	)
 	err = serv.WithRetries(ctx, func(spreadsheet *sheets.Spreadsheet) func(ctx context.Context) error {
 		return func(ctx context.Context) error {
-			spreadsheet, err = 	serv.api.Spreadsheets.Get(spreadsheetId).Context(ctx).Do()
+			val, err := serv.api.Spreadsheets.Get(spreadsheetId).Context(ctx).Do()
+			if val != nil {
+				*spreadsheet = *val
+			}
 			return err
 		}
 	}(&spreadsheet))()

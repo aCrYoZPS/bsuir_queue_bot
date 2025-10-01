@@ -36,7 +36,7 @@ func (task *ClearLessonsTask) Run(ctx context.Context) {
 		if err != nil {
 			slog.Error(fmt.Errorf("failed to get spreadsheets in clear lessons task: %w", err).Error())
 		}
-		deletionTime := time.Now().AddDate(0, 0, -14)
+		deletionTime := time.Now().AddDate(0, 0, -12)
 		for _, id := range spreadsheetIds {
 			err = task.sheets.ClearSpreadsheet(ctx, id, deletionTime)
 			if err != nil {
