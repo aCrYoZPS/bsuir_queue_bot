@@ -26,9 +26,9 @@ type Lesson struct {
 	LessonType     LessonType        `json:"lessonTypeAbbrev,omitempty" db:"lesson_type"`
 	SubgroupNumber Subgroup          `json:"numSubgroup,omitempty" db:"subgroup_number"`
 	WeekNumber     []int8            `json:"weekNumber,omitempty" db:"week_number"`
-	StartDate      datetime.DateTime `json:"startLessonDate" db:"start_date"`
+	StartDate      datetime.DateOnly `json:"startLessonDate" db:"start_date"`
 	StartTime      datetime.TimeOnly `json:"startLessonTime" db:"start_time"`
-	EndDate        datetime.DateTime `json:"endLessonDate" db:"end_date"`
+	EndDate        datetime.DateOnly `json:"endLessonDate" db:"end_date"`
 	GroupId        int64             `json:"-" db:"group_id"`
 }
 

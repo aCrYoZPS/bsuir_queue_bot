@@ -31,7 +31,7 @@ type SheetsService interface {
 }
 
 type AppendedLabwork struct {
-	RequestedDate  datetime.DateTime
+	RequestedDate  datetime.DateOnly
 	SentProofTime  datetime.DateTime
 	DisciplineName string
 	GroupName      string
@@ -42,7 +42,7 @@ type AppendedLabwork struct {
 
 func NewAppendedLabwork(RequestedDate time.Time, SentProofTime time.Time, DisciplineName string, GroupName string, FullName string, SubgroupNumber, LabworkNumber int8) *AppendedLabwork {
 	return &AppendedLabwork{
-		RequestedDate:  datetime.DateTime(RequestedDate),
+		RequestedDate:  datetime.DateOnly(RequestedDate),
 		SentProofTime:  datetime.DateTime(SentProofTime),
 		DisciplineName: DisciplineName,
 		GroupName:      GroupName,
@@ -55,8 +55,8 @@ func NewAppendedLabwork(RequestedDate time.Time, SentProofTime time.Time, Discip
 type LabworkRequest struct {
 	MarkupMessageId int               `json:"markup_id,omitempty"`
 	LabworkId       int64             `json:"lab_id,omitempty"`
-	RequestedDate   datetime.DateTime `json:"requested_time"`
-	SentProofTime   datetime.DateTime `json:"sent_proof"`
+	RequestedDate   datetime.DateOnly `json:"requested_time"`
+	SentProofTime   datetime.DateOnly `json:"sent_proof"`
 	DisciplineName  string            `json:"discipline,omitempty"`
 	GroupName       string            `json:"group,omitempty"`
 	SubgroupNumber  int8              `json:"subgroup,omitempty"`
@@ -245,7 +245,7 @@ func (handler *LabworksCallbackHandler) handleTimeCallback(ctx context.Context, 
 		return fmt.Errorf("failed to unmarshal info during labwork time callback handling: %w", err)
 	}
 
-	info.RequestedDate = datetime.DateTime(date)
+	info.RequestedDate = datetime.DateOnly(date)
 	info.LabworkId = labworkId
 	info.SubgroupNumber = subgroup
 
@@ -356,7 +356,7 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(ctx context.Context
 
 func (handler *LabworksCallbackHandler) AppendedLabwork(req *LabworkRequest) *AppendedLabwork {
 	return &AppendedLabwork{
-		RequestedDate:  datetime.DateTime(req.RequestedDate),
+		RequestedDate:  datetime.DateOnly(req.RequestedDate),
 		SentProofTime:  datetime.DateTime(req.SentProofTime),
 		DisciplineName: req.DisciplineName,
 		GroupName:      req.GroupName,
