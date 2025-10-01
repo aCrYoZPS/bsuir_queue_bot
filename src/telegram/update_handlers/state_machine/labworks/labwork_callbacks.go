@@ -53,6 +53,7 @@ func NewAppendedLabwork(RequestedDate time.Time, SentProofTime time.Time, Discip
 }
 
 type LabworkRequest struct {
+	// Id of bot msg, which has markup attached to it
 	MarkupMessageId int               `json:"markup_id,omitempty"`
 	LabworkId       int64             `json:"lab_id,omitempty"`
 	RequestedDate   datetime.DateOnly `json:"requested_time"`
@@ -61,10 +62,12 @@ type LabworkRequest struct {
 	GroupName       string            `json:"group,omitempty"`
 	SubgroupNumber  int8              `json:"subgroup,omitempty"`
 	TgId            int64             `json:"tg_id,omitempty"`
+	ChatId          int64             `json:"chat_id,omitempty"`
 	FullName        string            `json:"name,omitempty"`
 	LabworkNumber   int8              `json:"lab_num,omitempty"`
-	MessageId       int64             `json:"msg_id,omitempty"`
-	Notes           string            `json:"notes,omitempty"`
+	//Id of msg sended with proof of labwork.
+	MessageId int64  `json:"msg_id,omitempty"`
+	Notes     string `json:"notes,omitempty"`
 }
 
 type LabworksCallbackHandler struct {
@@ -152,7 +155,7 @@ func (handler *LabworksCallbackHandler) handleDisciplineCallback(ctx context.Con
 		return errNoLessons
 	}
 
-	json, err := json.Marshal(&LabworkRequest{MarkupMessageId: message.MessageID, DisciplineName: discipline, GroupName: user.GroupName, FullName: user.FullName, TgId: user.TgId})
+	json, err := json.Marshal(&LabworkRequest{ChatId: message.Chat.ID, MarkupMessageId: message.MessageID, DisciplineName: discipline, GroupName: user.GroupName, FullName: user.FullName, TgId: user.TgId})
 	if err != nil {
 		return fmt.Errorf("failed to marshal labwork request during labworks discipline callback: %w", err)
 	}
@@ -334,7 +337,7 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(ctx context.Context
 		return fmt.Errorf("failed to add labwork to sheets during labwork accept callback handling: %w", err)
 	}
 
-	err = handler.labworkRequests.Add(ctx, entities.NewLessonRequest(form.LabworkId, form.TgId, int64(msg.MessageID), msg.Chat.ID, form.LabworkNumber))
+	err = handler.labworkRequests.Add(ctx, entities.NewLessonRequest(form.LabworkId, form.TgId, form.MessageId, form.ChatId, form.LabworkNumber))
 	if err != nil {
 		return fmt.Errorf("failed to add labwork request during labwork accept callback handling: %w", err)
 	}

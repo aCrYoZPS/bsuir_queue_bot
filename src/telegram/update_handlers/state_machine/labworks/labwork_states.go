@@ -80,7 +80,7 @@ func (state *labworkSubmitStartState) Handle(ctx context.Context, message *tgbot
 	if err != nil {
 		return fmt.Errorf("failed to send response during labwork submit start state: %w", err)
 	}
-	json, err := json.Marshal(&LabworkRequest{MarkupMessageId: sent.MessageID})
+	json, err := json.Marshal(&LabworkRequest{MarkupMessageId: sent.MessageID, ChatId: message.Chat.ID})
 	if err != nil {
 		return fmt.Errorf("failed to marshal labwork request in labwork submit start state: %w", err)
 	}
