@@ -263,7 +263,7 @@ func (serv *SheetsApiService) AddLabworkRequest(ctx context.Context, req *labwor
 	return errors.New("no such labwork found")
 }
 
-var unallowedSymbols = "!@#$%^&*()+={}[]|\\;:'\"<>/?~"
+var unallowedSymbols = "-!@#$%^&*()+={}[]|\\;:'\"<>/?~"
 
 func (serv *SheetsApiService) getTableRequests(sheet *sheets.Sheet) []*sheets.Request {
 	requests := []*sheets.Request{}
@@ -314,7 +314,7 @@ func (serv *SheetsApiService) getTableRequests(sheet *sheets.Sheet) []*sheets.Re
 func (serv *SheetsApiService) createTableName(sheet *sheets.Sheet) string {
 	name := "Очередь " + sheet.Properties.Title
 	for _, char := range unallowedSymbols {
-		name = strings.ReplaceAll(name, string(char), "")
+		name = strings.ReplaceAll(name, string(char), "_")
 	}
 	return name
 }
