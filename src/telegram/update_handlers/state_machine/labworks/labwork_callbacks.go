@@ -57,7 +57,7 @@ type LabworkRequest struct {
 	MarkupMessageId int               `json:"markup_id,omitempty"`
 	LabworkId       int64             `json:"lab_id,omitempty"`
 	RequestedDate   datetime.DateOnly `json:"requested_time"`
-	SentProofTime   datetime.DateOnly `json:"sent_proof"`
+	SentProofTime   datetime.DateTime `json:"sent_proof"`
 	DisciplineName  string            `json:"discipline,omitempty"`
 	GroupName       string            `json:"group,omitempty"`
 	SubgroupNumber  int8              `json:"subgroup,omitempty"`
