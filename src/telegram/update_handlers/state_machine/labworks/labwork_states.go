@@ -350,6 +350,8 @@ func (state *labworkSubmitProofState) handleDocumentType(ctx context.Context, ad
 		err = state.handlePhotoProof(ctx, admins, message, form)
 	case message.Document != nil:
 		err = state.handleDocumentProof(ctx, admins, message, form)
+	case message.Video != nil:
+		err = state.handleVideoProof(ctx, admins, message, form)
 	default:
 		return errNoDocument
 	}
@@ -382,6 +384,17 @@ func (state *labworkSubmitProofState) handleDocumentProof(ctx context.Context, a
 	}
 	msg := tgbotapi.NewDocument(message.Chat.ID, tgbotapi.FileBytes{Name: message.Document.FileName, Bytes: fileBytes})
 	err = state.SendDocumentsToAdmins(ctx, admins, &msg, form)
+	return err
+}
+
+func (state *labworkSubmitProofState) handleVideoProof(ctx context.Context, admins []entities.User, message *tgbotapi.Message, form *LabworkRequest) error {
+	maxSizeId := message.Video.FileID
+	fileBytes, err := state.GetFileBytes(maxSizeId)
+	if err != nil {
+		return err
+	}
+	msg := tgbotapi.NewVideo(message.Chat.ID, tgbotapi.FileBytes{Name: message.Document.FileName, Bytes: fileBytes})
+	err = state.SendVideoToAdmins(ctx, admins, &msg, form)
 	return err
 }
 
@@ -466,6 +479,29 @@ func (state *labworkSubmitProofState) SendMessagesToAdmins(ctx context.Context, 
 }
 
 func (state *labworkSubmitProofState) SendDocumentsToAdmins(ctx context.Context, admins []entities.User, msg *tgbotapi.DocumentConfig, form *LabworkRequest) error {
+	var buf bytes.Buffer
+	err := adminSendingTmpl.Execute(&buf, form)
+	if err != nil {
+		return err
+	}
+	msg.ReplyMarkup = createMarkupKeyboard(form)
+	msg.Caption = buf.String()
+	reqUUID := uuid.NewString()
+	for _, admin := range admins {
+		msg.ChatID = admin.TgId
+		sentMsg, err := state.bot.SendCtx(ctx, msg)
+		if err != nil {
+			return fmt.Errorf("couldn't send documents to admins as proof: %v", err)
+		}
+		err = state.requests.SaveRequest(ctx, interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
+		if err != nil {
+			return fmt.Errorf("couldn't send documents to admins as proof: %v", err)
+		}
+	}
+	return nil
+}
+
+func (state *labworkSubmitProofState) SendVideoToAdmins(ctx context.Context, admins []entities.User, msg *tgbotapi.VideoConfig, form *LabworkRequest) error {
 	var buf bytes.Buffer
 	err := adminSendingTmpl.Execute(&buf, form)
 	if err != nil {
