@@ -248,7 +248,7 @@ func (serv *SheetsApiService) AddLabworkRequest(ctx context.Context, req *labwor
 	}
 	for _, sheet := range spreadsheet.Sheets {
 		titleSubject, titleDate, subgroupNum := parseLessonName(sheet.Properties.Title)
-		if titleSubject == req.DisciplineName && time.Time(req.RequestedDate).Truncate(24*time.Hour).Equal(titleDate) && req.SubgroupNumber == subgroupNum {
+		if titleSubject == req.DisciplineName && time.Time(req.RequestedDate).Truncate(24*time.Hour).Equal(titleDate.Truncate(24*time.Hour)) && req.SubgroupNumber == subgroupNum {
 			if len(sheet.Tables) == 0 {
 				requests := serv.getTableRequests(sheet)
 				err = serv.WithRetries(ctx, func(ctx context.Context) error {
