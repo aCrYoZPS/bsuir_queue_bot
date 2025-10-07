@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	reference_date      = time.Date(2025, time.June, 23, 0, 0, 0, 0, time.UTC)
+	reference_date      = time.Date(2025, time.June, 23, 0, 0, 0, 0, time.Local)
 	reference_date_week = 4
 )
 

@@ -199,7 +199,7 @@ func parseLessonName(name string) (subject string, date time.Time, subgroup iis_
 	if err != nil {
 		return "", time.Time{}, iis_api_entities.AllSubgroups
 	}
-	date = time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+	date = time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.Local)
 	return subject, date, subgroup
 }
 

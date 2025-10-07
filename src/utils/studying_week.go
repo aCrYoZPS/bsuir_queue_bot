@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-var firstWeek = time.Date(2025, time.September, 1, 0, 0, 0, 0, time.UTC)
+var firstWeek = time.Date(2025, time.September, 1, 0, 0, 0, 0, time.Local)
 
 func CalculateWeek(date time.Time) int8 {
 	duration := date.Sub(firstWeek)

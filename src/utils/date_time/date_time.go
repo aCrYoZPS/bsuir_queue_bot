@@ -39,7 +39,7 @@ func (dt *DateOnly) UnmarshalJSON(json []byte) error {
 	if err != nil {
 		return err
 	}
-	dateVal := time.Date(year, time.Month(months), days, 0, 0, 0, 0, time.UTC)
+	dateVal := time.Date(year, time.Month(months), days, 0, 0, 0, 0, time.Local)
 	*dt = (DateOnly)(dateVal)
 	return nil
 }
@@ -141,7 +141,7 @@ func (dt *DateTime) UnmarshalJSON(json []byte) error {
 	if err != nil {
 		return fmt.Errorf("time is not in format 14:05:53")
 	}
-	dateVal := time.Date(year, time.Month(months), days, hours, minutes, seconds, 0, time.UTC)
+	dateVal := time.Date(year, time.Month(months), days, hours, minutes, seconds, 0, time.Local)
 	*dt = (DateTime)(dateVal)
 	return nil
 }

@@ -226,7 +226,7 @@ func parseLabworkTimeCallback(callback string) (date time.Time, labworkId int64,
 	if err != nil {
 		return time.Time{}, 0, subgroup
 	}
-	date = time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+	date = time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.Local)
 	if subgroupString != "" {
 		subgroupVal, err := strconv.Atoi(subgroupString)
 		if err != nil {

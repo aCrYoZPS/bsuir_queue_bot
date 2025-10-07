@@ -8,21 +8,21 @@ import (
 )
 
 func TestCalculateWeek(t *testing.T) {
-	tested_date := time.Date(2025, time.June, 22, 0, 0, 0, 0, time.UTC)
-	want := int8(3)
+	tested_date := time.Date(2025, time.October, 22, 0, 0, 0, 0, time.Local)
+	want := int8(4)
 	result := utils.CalculateWeek(tested_date)
 	if want != result {
 		t.Errorf(`CalculateWeek(%s) = %d, want %d`, tested_date.String(), result, want)
 	}
 
-	tested_date = time.Date(2025, time.June, 22, 23, 59, 59, 59, time.UTC)
-	want = int8(3)
+	tested_date = time.Date(2025, time.October, 22, 23, 59, 59, 59, time.Local)
+	want = int8(4)
 	result = utils.CalculateWeek(tested_date)
 
 	if want != result {
 		t.Errorf(`CalculateWeek(%s) = %d, want %d`, tested_date.String(), result, want)
 	}
-	tested_date = time.Date(2025, time.June, 23, 0, 0, 0, 0, time.UTC)
+	tested_date = time.Date(2025, time.October, 20, 0, 0, 0, 0, time.Local)
 	want = 4
 	for i := range 100000 {
 		if i%7 == 6 {
