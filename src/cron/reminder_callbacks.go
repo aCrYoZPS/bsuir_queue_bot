@@ -50,6 +50,7 @@ func (handler *ReminderCallbackHandler) SetNextLesson(ctx context.Context, reque
 	if err != nil {
 		return fmt.Errorf("failed to set lesson request to next lesson in sheets refresh cron: %w", err)
 	}
+
 	usr, err := handler.users.GetByRequestId(ctx, requestId)
 	if err != nil {
 		return fmt.Errorf("failed to get user by request id in sheets refresh cron: %w", err)
@@ -58,6 +59,7 @@ func (handler *ReminderCallbackHandler) SetNextLesson(ctx context.Context, reque
 	if err != nil {
 		return fmt.Errorf("failed to get lessons by request id in sheets refresh cron: %w", err)
 	}
+	
 	req, err := handler.lessonsRequests.Get(ctx, requestId)
 	if err != nil {
 		return fmt.Errorf("failed to get lesson request by id in sheets refresh cron: %w", err)

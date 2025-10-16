@@ -25,20 +25,20 @@ func NewLessonsRequestsRepository(db *sql.DB) *LessonsRequestsRepository {
 }
 
 func (repo *LessonsRequestsRepository) Add(ctx context.Context, req *entities.LessonRequest) error {
-	query := fmt.Sprintf("INSERT INTO %s (user_id, lesson_id, msg_id, chat_id, submit_time) values ($1, $2, $3, $4, $5)", LESSONS_REQUESTS_TABLE)
-	_, err := repo.db.ExecContext(ctx, query, req.UserId, req.LessonId, req.MsgId, req.ChatId, req.SubmitTime.Format(savedFormat))
+	query := fmt.Sprintf("INSERT INTO %s (user_id, lesson_id, msg_id, chat_id, submit_time, subgroup_num) values ($1, $2, $3, $4, $5, $6)", LESSONS_REQUESTS_TABLE)
+	_, err := repo.db.ExecContext(ctx, query, req.UserId, req.LessonId, req.MsgId, req.ChatId, req.SubmitTime.Format(savedFormat), req.LabworkNumber)
 	return err
 }
 
 func (repo *LessonsRequestsRepository) Get(ctx context.Context, id int64) (*entities.LessonRequest, error) {
-	query := fmt.Sprintf("SELECT id, user_id, lesson_id, msg_id, chat_id, submit_time FROM %s WHERE id=$1", LESSONS_REQUESTS_TABLE)
+	query := fmt.Sprintf("SELECT id, user_id, lesson_id, msg_id, chat_id, subgroup_num, submit_time FROM %s WHERE id=$1", LESSONS_REQUESTS_TABLE)
 	row := repo.db.QueryRowContext(ctx, query, id)
 	if row.Err() != nil {
 		return nil, row.Err()
 	}
 	req := &entities.LessonRequest{}
 	var storedTime = ""
-	err := row.Scan(&req.Id, &req.UserId, &req.LessonId, &req.MsgId, &req.ChatId, &storedTime)
+	err := row.Scan(&req.Id, &req.UserId, &req.LessonId, &req.MsgId, &req.ChatId, &req.LabworkNumber, &storedTime)
 	if err != nil {
 		return nil, err
 	}
@@ -47,13 +47,13 @@ func (repo *LessonsRequestsRepository) Get(ctx context.Context, id int64) (*enti
 }
 
 func (repo *LessonsRequestsRepository) GetByUserId(ctx context.Context, userId int64) (*entities.LessonRequest, error) {
-	query := fmt.Sprintf("SELECT id, user_id, chat_id,lesson_id FROM %s WHERE user_id=$1", LESSONS_REQUESTS_TABLE)
+	query := fmt.Sprintf("SELECT id, user_id, chat_id,lesson_id, msg_id, subgroup_num FROM %s WHERE user_id=$1", LESSONS_REQUESTS_TABLE)
 	row := repo.db.QueryRowContext(ctx, query, userId)
 	if row.Err() != nil {
 		return nil, row.Err()
 	}
 	req := &entities.LessonRequest{}
-	err := row.Scan(&req.Id, &req.UserId, &req.ChatId, &req.LessonId)
+	err := row.Scan(&req.Id, &req.UserId, &req.ChatId, &req.LessonId, &req.MsgId, &req.LabworkNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (repo *LessonsRequestsRepository) GetByUserId(ctx context.Context, userId i
 }
 
 func (repo *LessonsRequestsRepository) GetLessonRequests(ctx context.Context, lessonId int64) ([]entities.LessonRequest, error) {
-	query := fmt.Sprintf("SELECT id, user_id, lesson_id, msg_id, chat_id FROM %s WHERE lesson_id=$1", LESSONS_REQUESTS_TABLE)
+	query := fmt.Sprintf("SELECT id, user_id, lesson_id, msg_id, chat_id, subgroup_num FROM %s WHERE lesson_id=$1", LESSONS_REQUESTS_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query, lessonId)
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func (repo *LessonsRequestsRepository) GetLessonRequests(ctx context.Context, le
 		if rows.Err() != nil {
 			return nil, rows.Err()
 		}
-		err := rows.Scan(&req.Id, &req.UserId, &req.LessonId, &req.MsgId, &req.ChatId)
+		err := rows.Scan(&req.Id, &req.UserId, &req.LessonId, &req.MsgId, &req.ChatId, &req.LabworkNumber)
 		if err != nil {
 			return nil, err
 		}
