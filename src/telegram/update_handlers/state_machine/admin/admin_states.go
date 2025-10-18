@@ -145,7 +145,7 @@ func (state *adminSubmittingNameState) Handle(ctx context.Context, message *tgbo
 }
 
 func (state *adminSubmittingNameState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
-	err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.ADMIN_SUBMIT_START_STATE))
+	err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.IDLE_STATE))
 	if err != nil {
 		return fmt.Errorf("failed to transition to admin submit start state during admin submitting name state reversal: %w", err)
 	}
