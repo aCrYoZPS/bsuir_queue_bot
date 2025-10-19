@@ -67,7 +67,7 @@ func (repo *LessonsRepository) GetAll(ctx context.Context, groupName string) ([]
 	if err != nil {
 		return nil, err
 	}
-	rows.Close()
+	defer rows.Close()
 	lessons := make([]persistance.Lesson, 0, 100)
 	i := 0
 	var storedDateTime int64
@@ -95,7 +95,7 @@ func (repo *LessonsRepository) GetNext(ctx context.Context, subject string, grou
 	if err != nil {
 		return nil, err
 	}
-	rows.Close()
+	defer rows.Close()
 	lessons := make([]persistance.Lesson, 4)
 	i := 0
 	for rows.Next() {
@@ -200,7 +200,7 @@ func (repo *LessonsRepository) GetEndedLessons(ctx context.Context, before time.
 	if err != nil {
 		return nil, err
 	}
-	rows.Close()
+	defer rows.Close()
 	var (
 		appendedLesson persistance.Lesson
 		storedDateTime int64

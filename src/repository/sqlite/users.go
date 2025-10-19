@@ -34,7 +34,7 @@ func (repo *UsersRepository) GetById(ctx context.Context, id int64) (*entities.U
 	if err != nil {
 		return nil, err
 	}
-	rows.Close()
+	defer rows.Close()
 	user := &entities.User{}
 	for rows.Next() {
 		var roleName string
@@ -56,7 +56,7 @@ func (repo *UsersRepository) GetByTgId(ctx context.Context, tgId int64) (*entiti
 		}
 		return nil, err
 	}
-	rows.Close()
+	defer rows.Close()
 	user := &entities.User{}
 	for rows.Next() {
 		var roleName string
@@ -92,7 +92,7 @@ func (repo *UsersRepository) GetAll(ctx context.Context) ([]entities.User, error
 	if err != nil {
 		return nil, err
 	}
-	rows.Close()
+	defer rows.Close()
 	users := make([]entities.User, 0)
 
 	user := &entities.User{}

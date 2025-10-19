@@ -66,7 +66,7 @@ func (repo *LessonsRequestsRepository) GetLessonRequests(ctx context.Context, le
 	if err != nil {
 		return nil, err
 	}
-	rows.Close()
+	defer rows.Close()
 	requests := []entities.LessonRequest{}
 	var req = &entities.LessonRequest{}
 	for rows.Next() {
