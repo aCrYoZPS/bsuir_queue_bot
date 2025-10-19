@@ -82,10 +82,10 @@ type LabworksCallbackHandler struct {
 
 func NewLabworksCallbackHandler(bot *tgutils.Bot, cache interfaces.HandlersCache, labworks LabworksService, requests interfaces.RequestsRepository, labworkRequests interfaces.LessonsRequestsRepository, users UsersService, sheets SheetsService) *LabworksCallbackHandler {
 	return &LabworksCallbackHandler{
-		bot:             bot,
-		cache:           cache,
-		labworks:    	//Id of msg sended with proof of labwork.
-    labworks,
+		bot:   bot,
+		cache: cache,
+		labworks://Id of msg sended with proof of labwork.
+		labworks,
 		requests:        requests,
 		labworkRequests: labworkRequests,
 		users:           users,
@@ -124,18 +124,11 @@ func (handler *LabworksCallbackHandler) HandleCallback(ctx context.Context, upda
 		}
 		return nil
 	}
-	if strings.HasPrefix(update.CallbackData(), constants.LABWORK_CONSIDERATION_CALLBACKS) {
-		command := strings.TrimPrefix(update.CallbackQuery.Data, constants.LABWORK_CONSIDERATION_CALLBACKS)
-		var err error
-		switch {
-		case strings.HasPrefix(command, "accept"):
-			err = handler.handleAcceptCallback(ctx, update.CallbackQuery.Message, command, bot)
-		case strings.HasPrefix(command, "decline"):
-			err = handler.handleDeclineCallback(ctx, update.CallbackQuery.Message, command, bot)
-		default:
-			err = fmt.Errorf("no such callback for labworks (%s)", command)
-		}
-		return err
+	if strings.HasPrefix(update.CallbackData(), constants.LABWORK_ACCEPT_CALLBACKS) {
+		return handler.handleAcceptCallback(ctx, update.CallbackQuery.Message, update.CallbackQuery.Data, bot)
+	}
+	if strings.HasPrefix(update.CallbackData(), constants.LABWORK_DECLINE_CALLBACK) {
+		return handler.handleDeclineCallback(ctx, update.CallbackQuery.Message, update.CallbackQuery.Data, bot)
 	}
 	if strings.HasPrefix(update.CallbackData(), constants.LABWORK_TIME_CANCEL_CALLBACKS) {
 		return handler.handleTimeCancelCallback(ctx, update.CallbackQuery.Message)
@@ -304,19 +297,16 @@ func (handler *LabworksCallbackHandler) handleTimeCancelCallback(ctx context.Con
 }
 
 func (handler *LabworksCallbackHandler) handleAcceptCallback(ctx context.Context, msg *tgbotapi.Message, command string, bot *tgutils.Bot) error {
-	var chatId int64
-	chatId, err := strconv.ParseInt(strings.TrimPrefix(command, "accept"), 10, 64)
+	chatId, msgId := parseAcceptCallback(command)
+
+	request, err := handler.labworkRequests.GetByTgIds(ctx, msgId, chatId)
 	if err != nil {
-		return fmt.Errorf("failed to get chat id from command (%s) during labwork accept callback handling: %w", strings.TrimPrefix(command, "accept"), err)
+		return fmt.Errorf("failed to get labwork request by tg ids during labwork accept callback handling: %w", err)
 	}
-	info, err := handler.cache.GetInfo(ctx, chatId)
+
+	err = handler.labworkRequests.SetAccepted(ctx, request.Id)
 	if err != nil {
-		return fmt.Errorf("failed to get info during labwork accept callback handling: %w", err)
-	}
-	form := &LabworkRequest{}
-	err = json.Unmarshal([]byte(info), form)
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal info during labwork accept callback handling: %w", err)
+		return fmt.Errorf("failed to set labwork as accepted during labwork accept callback handling: %w", err)
 	}
 
 	err = handler.cache.SaveState(ctx, *interfaces.NewCachedInfo(chatId, constants.IDLE_STATE))
@@ -324,7 +314,17 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(ctx context.Context
 		return fmt.Errorf("failed to save idle state during labwork accept callback handling: %w", err)
 	}
 
-	err = handler.sheets.AddLabworkRequest(ctx, handler.AppendedLabwork(form))
+	lesson, err := handler.labworks.GetLessonByRequest(ctx, request.Id)
+	if err != nil {
+		return fmt.Errorf("failed to get lesson by request during labwork accept callback handling: %w", err)
+	}
+
+	user, err := handler.users.GetByTgId(ctx, chatId)
+	if err != nil {
+		return fmt.Errorf("failed to get user by tg id during labwork accept callback handling")
+	}
+
+	err = handler.sheets.AddLabworkRequest(ctx, handler.AppendedLabwork(request, lesson, user))
 	if err != nil {
 		if googleErr, ok := err.(*googleapi.Error); ok {
 			if googleErr.Code == http.StatusInternalServerError {
@@ -338,7 +338,7 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(ctx context.Context
 		return fmt.Errorf("failed to add labwork to sheets during labwork accept callback handling: %w", err)
 	}
 
-	err = handler.labworkRequests.Add(ctx, entities.NewLessonRequest(form.LabworkId, form.TgId, form.MessageId, form.ChatId, form.LabworkNumber))
+	err = handler.labworkRequests.SetAccepted(ctx, request.Id)
 	if err != nil {
 		return fmt.Errorf("failed to add labwork request during labwork accept callback handling: %w", err)
 	}
@@ -348,8 +348,8 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(ctx context.Context
 		return fmt.Errorf("failed to remove markup during labworks accept callback handling: %w", err)
 	}
 
-	resp := tgbotapi.NewMessage(form.TgId, "Ваша заявка была принята")
-	resp.ReplyToMessageID = int(form.MessageId)
+	resp := tgbotapi.NewMessage(request.ChatId, "Ваша заявка была принята")
+	resp.ReplyToMessageID = int(request.MsgId)
 	_, err = bot.SendCtx(ctx, resp)
 	if err != nil {
 		return fmt.Errorf("failed to send message to user during labwork decline callback handling: %w", err)
@@ -358,14 +358,14 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(ctx context.Context
 	return err
 }
 
-func (handler *LabworksCallbackHandler) AppendedLabwork(req *LabworkRequest) *AppendedLabwork {
+func (handler *LabworksCallbackHandler) AppendedLabwork(req *entities.LessonRequest, lesson *persistance.Lesson, user *entities.User) *AppendedLabwork {
 	return &AppendedLabwork{
-		RequestedDate:  datetime.DateOnly(req.RequestedDate),
-		SentProofTime:  datetime.DateTime(req.SentProofTime),
-		DisciplineName: req.DisciplineName,
-		GroupName:      req.GroupName,
-		FullName:       req.FullName,
-		SubgroupNumber: req.SubgroupNumber,
+		RequestedDate:  datetime.DateOnly(lesson.DateTime.Truncate(24 * time.Hour).Local()),
+		SentProofTime:  datetime.DateTime(req.SubmitTime),
+		DisciplineName: lesson.Subject,
+		GroupName:      user.GroupName,
+		FullName:       user.FullName,
+		SubgroupNumber: lesson.SubgroupNumber,
 		LabworkNumber:  req.LabworkNumber,
 	}
 }
@@ -393,19 +393,11 @@ func (handler *LabworksCallbackHandler) RemoveMarkup(ctx context.Context, msg *t
 }
 
 func (handler *LabworksCallbackHandler) handleDeclineCallback(ctx context.Context, msg *tgbotapi.Message, command string, bot *tgutils.Bot) error {
-	var chatId int64
-	err := json.Unmarshal([]byte(strings.TrimPrefix(command, "decline")), &chatId)
+	chatId, msgId := parseDeclineCallback(command)
+
+	request, err := handler.labworkRequests.GetByTgIds(ctx, msgId, chatId)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal chat id from command (%s) during labwork decline callback handling: %w", command, err)
-	}
-	info, err := handler.cache.GetInfo(ctx, chatId)
-	if err != nil {
-		return fmt.Errorf("failed to get info from cache during labwork decline callback handling: %w", err)
-	}
-	form := &LabworkRequest{}
-	err = json.Unmarshal([]byte(info), &form)
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal info (%s) during labwork decline callback handling: %w", info, err)
+		return fmt.Errorf("failed to get labwork request by tg ids during labwork decline callback handling: %w", err)
 	}
 	err = handler.cache.SaveState(ctx, *interfaces.NewCachedInfo(chatId, constants.IDLE_STATE))
 	if err != nil {
@@ -415,8 +407,13 @@ func (handler *LabworksCallbackHandler) handleDeclineCallback(ctx context.Contex
 	if err != nil {
 		return err
 	}
-	resp := tgbotapi.NewMessage(form.TgId, "Ваша заявка была отклонена")
-	resp.ReplyToMessageID = int(form.MessageId)
+	err = handler.labworkRequests.Delete(ctx, request.Id)
+	if err != nil {
+		return fmt.Errorf("failed to delete labwork request during decline callback handling: %w", err)
+	}
+
+	resp := tgbotapi.NewMessage(chatId, "Ваша заявка была отклонена")
+	resp.ReplyToMessageID = int(msgId)
 	_, err = bot.SendCtx(ctx, resp)
 	if err != nil {
 		return fmt.Errorf("failed to send message to user during labwork decline callback handling: %w", err)

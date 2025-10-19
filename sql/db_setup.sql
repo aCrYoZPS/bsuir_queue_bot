@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS lessons_requests (
     chat_id INTEGER NOT NULL,
     submit_time INTEGER NOT NULL,
     subgroup_num INTEGER NOT NULL,
+    is_pending BOOLEAN NOT NULL DEFAULT FALSE,
     FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE, 
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

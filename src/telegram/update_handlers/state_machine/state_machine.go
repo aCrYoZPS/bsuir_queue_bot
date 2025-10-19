@@ -23,27 +23,29 @@ type StateMachine struct {
 }
 
 type statesConfig struct {
-	machine       *StateMachine
-	cache         interfaces.HandlersCache
-	bot           *tgutils.Bot
-	groupsRepo    interfaces.GroupsRepository
-	usersRepo     interfaces.UsersRepository
-	requests      interfaces.RequestsRepository
-	adminRequests interfaces.AdminRequestsRepository
-	labworks      labworks.LabworksService
+	machine          *StateMachine
+	cache            interfaces.HandlersCache
+	bot              *tgutils.Bot
+	groupsRepo       interfaces.GroupsRepository
+	usersRepo        interfaces.UsersRepository
+	requests         interfaces.RequestsRepository
+	adminRequests    interfaces.AdminRequestsRepository
+	labworks         labworks.LabworksService
+	labworksRequests interfaces.LessonsRequestsRepository
 }
 
 func NewStatesConfig(state *StateMachine, cache interfaces.HandlersCache, bot *tgutils.Bot, groupsRepo interfaces.GroupsRepository, usersRepo interfaces.UsersRepository,
-	requests interfaces.RequestsRepository, adminRequests interfaces.AdminRequestsRepository, labworks labworks.LabworksService) *statesConfig {
+	requests interfaces.RequestsRepository, adminRequests interfaces.AdminRequestsRepository, labworks labworks.LabworksService, labworksRequests interfaces.LessonsRequestsRepository) *statesConfig {
 	return &statesConfig{
-		machine:       state,
-		cache:         cache,
-		bot:           bot,
-		groupsRepo:    groupsRepo,
-		usersRepo:     usersRepo,
-		requests:      requests,
-		labworks:      labworks,
-		adminRequests: adminRequests,
+		machine:          state,
+		cache:            cache,
+		bot:              bot,
+		groupsRepo:       groupsRepo,
+		usersRepo:        usersRepo,
+		requests:         requests,
+		labworks:         labworks,
+		adminRequests:    adminRequests,
+		labworksRequests: labworksRequests,
 	}
 }
 

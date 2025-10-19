@@ -33,6 +33,7 @@ var (
 type LabworksService interface {
 	GetSubjects(ctx context.Context, groupId int64) ([]string, error)
 	GetNext(ctx context.Context, subject string, groupId int64) ([]persistance.Lesson, error)
+	GetLessonByRequest(ctx context.Context, requestId int64) (*persistance.Lesson, error)
 }
 
 type UsersService interface {
@@ -276,15 +277,19 @@ func (state *labworkSubmitNumberState) Revert(ctx context.Context, msg *tgbotapi
 	return err
 }
 
+type LabworkRequests interface {
+	Add(ctx context.Context, req *entities.LessonRequest) error
+}
 type labworkSubmitProofState struct {
-	bot      *tgutils.Bot
-	cache    interfaces.HandlersCache
-	groups   GroupsService
-	requests interfaces.RequestsRepository
+	bot             *tgutils.Bot
+	cache           interfaces.HandlersCache
+	groups          GroupsService
+	lessonsRequests LabworkRequests
+	groupedRequests interfaces.RequestsRepository
 }
 
-func NewLabworkSubmitProofState(bot *tgutils.Bot, cache interfaces.HandlersCache, groups GroupsService, requests interfaces.RequestsRepository) *labworkSubmitProofState {
-	return &labworkSubmitProofState{bot: bot, cache: cache, groups: groups, requests: requests}
+func NewLabworkSubmitProofState(bot *tgutils.Bot, cache interfaces.HandlersCache, groups GroupsService, requests interfaces.RequestsRepository, lessonsRequests LabworkRequests) *labworkSubmitProofState {
+	return &labworkSubmitProofState{bot: bot, cache: cache, groups: groups, groupedRequests: requests, lessonsRequests: lessonsRequests}
 }
 
 func (*labworkSubmitProofState) StateName() string {
@@ -304,13 +309,9 @@ func (state *labworkSubmitProofState) Handle(ctx context.Context, message *tgbot
 	req.SentProofTime = datetime.DateTime(time.Now())
 	req.MessageId = int64(message.MessageID)
 
-	jsonedReq, err := json.Marshal(req)
+	err = state.lessonsRequests.Add(ctx, entities.NewLessonRequest(req.LabworkId, req.TgId, req.MessageId, req.ChatId, req.LabworkNumber))
 	if err != nil {
-		return err
-	}
-	err = state.cache.SaveInfo(ctx, message.Chat.ID, string(jsonedReq))
-	if err != nil {
-		return err
+		return fmt.Errorf("failed to add labwork request during labwork submit proof state: %w", err)
 	}
 
 	admins, err := state.groups.GetAdmins(ctx, req.GroupName)
@@ -463,7 +464,7 @@ func (state *labworkSubmitProofState) SendPhotosToAdmins(ctx context.Context, ad
 		if err != nil {
 			return err
 		}
-		err = state.requests.SaveRequest(ctx, interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
+		err = state.groupedRequests.SaveRequest(ctx, interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
 		if err != nil {
 			return err
 		}
@@ -486,7 +487,7 @@ func (state *labworkSubmitProofState) SendMessagesToAdmins(ctx context.Context, 
 		if err != nil {
 			return err
 		}
-		err = state.requests.SaveRequest(ctx, interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
+		err = state.groupedRequests.SaveRequest(ctx, interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
 		if err != nil {
 			return err
 		}
@@ -509,7 +510,7 @@ func (state *labworkSubmitProofState) SendDocumentsToAdmins(ctx context.Context,
 		if err != nil {
 			return fmt.Errorf("couldn't send documents to admins as proof: %v", err)
 		}
-		err = state.requests.SaveRequest(ctx, interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
+		err = state.groupedRequests.SaveRequest(ctx, interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
 		if err != nil {
 			return fmt.Errorf("couldn't send documents to admins as proof: %v", err)
 		}
@@ -532,7 +533,7 @@ func (state *labworkSubmitProofState) SendVideoToAdmins(ctx context.Context, adm
 		if err != nil {
 			return fmt.Errorf("couldn't send documents to admins as proof: %v", err)
 		}
-		err = state.requests.SaveRequest(ctx, interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
+		err = state.groupedRequests.SaveRequest(ctx, interfaces.NewGroupRequest(int64(sentMsg.MessageID), sentMsg.Chat.ID, interfaces.WithUUID(reqUUID)))
 		if err != nil {
 			return fmt.Errorf("couldn't send documents to admins as proof: %v", err)
 		}
@@ -542,9 +543,51 @@ func (state *labworkSubmitProofState) SendVideoToAdmins(ctx context.Context, adm
 
 func createMarkupKeyboard(form *LabworkRequest) *tgbotapi.InlineKeyboardMarkup {
 	row := []tgbotapi.InlineKeyboardButton{}
-	acceptData := constants.LABWORK_CONSIDERATION_CALLBACKS + "accept" + fmt.Sprint(form.TgId)
-	declineData := constants.LABWORK_CONSIDERATION_CALLBACKS + "decline" + fmt.Sprint(form.TgId)
+	acceptData := createAcceptCallback(form)
+	declineData := createDeclineCallback(form)
 	row = append(row, tgbotapi.NewInlineKeyboardButtonData("Принять", acceptData), tgbotapi.NewInlineKeyboardButtonData("Отклонить", declineData))
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(row)
 	return &keyboard
+}
+
+func createAcceptCallback(form *LabworkRequest) string {
+	return constants.LABWORK_ACCEPT_CALLBACKS + fmt.Sprint(form.TgId) + "|" + fmt.Sprint(form.MessageId)
+}
+
+func createDeclineCallback(form *LabworkRequest) string {
+	return constants.LABWORK_DECLINE_CALLBACK + fmt.Sprint(form.TgId) + "|" + fmt.Sprint(form.MessageId)
+}
+
+func parseAcceptCallback(callback string) (tgId, msgId int64) {
+	ids := strings.TrimPrefix(callback, constants.LABWORK_ACCEPT_CALLBACKS)
+	splittedIds := strings.Split(ids, "|")
+	if len(splittedIds) != 2 {
+		return 0, 0
+	}
+	tgId, err := strconv.ParseInt(splittedIds[0], 10, 64)
+	if err != nil {
+		return 0, 0
+	}
+	msgId, err = strconv.ParseInt(splittedIds[1], 10, 64)
+	if err != nil {
+		return 0, 0
+	}
+	return tgId, msgId
+}
+
+func parseDeclineCallback(callback string) (tgId, msgId int64) {
+	ids := strings.TrimPrefix(callback, constants.LABWORK_DECLINE_CALLBACK)
+	splittedIds := strings.Split(ids, "|")
+	if len(splittedIds) != 2 {
+		return 0, 0
+	}
+	tgId, err := strconv.ParseInt(splittedIds[0], 10, 64)
+	if err != nil {
+		return 0, 0
+	}
+	msgId, err = strconv.ParseInt(splittedIds[1], 10, 64)
+	if err != nil {
+		return 0, 0
+	}
+	return tgId, msgId
 }

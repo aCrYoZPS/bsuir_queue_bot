@@ -41,7 +41,7 @@ func createGroupStates(conf *statesConfig) []State {
 }
 
 func createLabworksStates(conf *statesConfig) []State {
-	return []State{labworks.NewLabworkSubmitProofState(conf.bot, conf.cache, conf.groupsRepo, conf.requests), labworks.NewLabworkSubmitNumberState(conf.bot, conf.cache, conf.labworks, conf.usersRepo, conf.machine),
+	return []State{labworks.NewLabworkSubmitProofState(conf.bot, conf.cache, conf.groupsRepo, conf.requests, conf.labworksRequests), labworks.NewLabworkSubmitNumberState(conf.bot, conf.cache, conf.labworks, conf.usersRepo, conf.machine),
 		labworks.NewLabworkSubmitStartState(conf.bot, conf.cache, conf.labworks, conf.usersRepo), labworks.NewLabworkSubmitWaitingState(conf.bot, conf.cache, conf.machine)}
 }
 

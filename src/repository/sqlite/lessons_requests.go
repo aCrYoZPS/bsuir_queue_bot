@@ -25,8 +25,8 @@ func NewLessonsRequestsRepository(db *sql.DB) *LessonsRequestsRepository {
 }
 
 func (repo *LessonsRequestsRepository) Add(ctx context.Context, req *entities.LessonRequest) error {
-	query := fmt.Sprintf("INSERT INTO %s (user_id, lesson_id, msg_id, chat_id, submit_time, subgroup_num) values ($1, $2, $3, $4, $5, $6)", LESSONS_REQUESTS_TABLE)
-	_, err := repo.db.ExecContext(ctx, query, req.UserId, req.LessonId, req.MsgId, req.ChatId, req.SubmitTime.Format(savedFormat), req.LabworkNumber)
+	query := fmt.Sprintf("INSERT INTO %s (user_id, lesson_id, msg_id, chat_id, submit_time, subgroup_num, is_pending) values ($1, $2, $3, $4, $5, $6, $7)", LESSONS_REQUESTS_TABLE)
+	_, err := repo.db.ExecContext(ctx, query, req.UserId, req.LessonId, req.MsgId, req.ChatId, req.SubmitTime.Format(savedFormat), req.LabworkNumber, true)
 	return err
 }
 
@@ -46,14 +46,16 @@ func (repo *LessonsRequestsRepository) Get(ctx context.Context, id int64) (*enti
 	return req, nil
 }
 
-func (repo *LessonsRequestsRepository) GetByUserId(ctx context.Context, userId int64) (*entities.LessonRequest, error) {
-	query := fmt.Sprintf("SELECT id, user_id, chat_id,lesson_id, msg_id, subgroup_num FROM %s WHERE user_id=$1", LESSONS_REQUESTS_TABLE)
-	row := repo.db.QueryRowContext(ctx, query, userId)
+func (repo *LessonsRequestsRepository) GetByTgIds(ctx context.Context, msgId int64, chatId int64) (*entities.LessonRequest, error) {
+	query := fmt.Sprintf("SELECT id, user_id, chat_id,lesson_id, msg_id, subgroup_num, submit_time FROM %s WHERE msg_id=$1 AND chat_id=$2", LESSONS_REQUESTS_TABLE)
+	row := repo.db.QueryRowContext(ctx, query, msgId, chatId)
 	if row.Err() != nil {
 		return nil, row.Err()
 	}
 	req := &entities.LessonRequest{}
-	err := row.Scan(&req.Id, &req.UserId, &req.ChatId, &req.LessonId, &req.MsgId, &req.LabworkNumber)
+	var storedTime string
+	err := row.Scan(&req.Id, &req.UserId, &req.ChatId, &req.LessonId, &req.MsgId, &req.LabworkNumber, &storedTime)
+	req.SubmitTime, _ = time.Parse(time.RFC3339, storedTime)
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +92,12 @@ func (repo *LessonsRequestsRepository) Delete(ctx context.Context, requestId int
 
 func (repo *LessonsRequestsRepository) SetToNextLesson(ctx context.Context, requestId int64) error {
 	query := fmt.Sprintf("UPDATE %s AS lr SET lesson_id = (SELECT id FROM lessons WHERE id>lr.lesson_id AND subject=(SELECT subject FROM %s WHERE id=(SELECT lesson_id FROM %[1]s WHERE id=$1))) WHERE id=$1", LESSONS_REQUESTS_TABLE, LESSONS_TABLE)
+	_, err := repo.db.ExecContext(ctx, query, requestId)
+	return err
+}
+
+func (repo *LessonsRequestsRepository) SetAccepted(ctx context.Context, requestId int64) error {
+	query := fmt.Sprintf("UPDATE %s SET is_pending=FALSE WHERE id=$1", LESSONS_REQUESTS_TABLE)
 	_, err := repo.db.ExecContext(ctx, query, requestId)
 	return err
 }
