@@ -32,7 +32,7 @@ func createTimePicker(currentTime string) *tgbotapi.InlineKeyboardMarkup {
 	markup[2] = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("+", createMinutesIncreaseCallback(currentTime)),
 		tgbotapi.NewInlineKeyboardButtonData("-", createMinutesDecreaseCallback(currentTime))}
 	markup[3] = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Назад", constants.TIME_CANCEL)}
-	markup[4] = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Принять", constants.TIME_SUBMIT)}
+	markup[4] = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Принять", createTimeAcceptCallback(currentTime))}
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: markup}
 }
 
@@ -70,6 +70,16 @@ func createMinutesDecreaseCallback(currentTime string) string {
 func parseMinutesDecreaseCallback(callbackData string) string {
 	after, _ := strings.CutPrefix(callbackData, constants.TIME_MINUTES_DESCREASE_CALLBACKS)
 	return after
+}
+
+func createTimeAcceptCallback(currentTime string) string {
+	return constants.TIME_SUBMIT + currentTime
+}
+
+func parseTimeAcceptCallback(callback string) time.Time {
+	callback, _ = strings.CutPrefix(callback, constants.TIME_SUBMIT)
+	acceptedTime, _ := time.Parse("15:04", callback)
+	return acceptedTime
 }
 
 type LessonsRepository interface {
@@ -220,6 +230,7 @@ func (callbackHandler *TimePickerCallbackHandler) handleMinutesDecreaseCallback(
 }
 
 func (callbackHandler *TimePickerCallbackHandler) handleTimeSubmitCallback(ctx context.Context, update *tgbotapi.Update) error {
+	selectedTime := parseTimeAcceptCallback(update.CallbackData())
 	jsonedInfo, err := callbackHandler.cache.GetInfo(ctx, update.CallbackQuery.Message.Chat.ID)
 	if err != nil {
 		return fmt.Errorf("failed to get jsoned info during handling time submit callback: %w", err)
@@ -229,7 +240,8 @@ func (callbackHandler *TimePickerCallbackHandler) handleTimeSubmitCallback(ctx c
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal jsoned info into lesson request during handling time submit callback: %w", err)
 	}
-
+	request.DateTime = request.DateTime.Add(selectedTime.Sub(selectedTime.Truncate(24 * time.Hour)))
+	
 	err = callbackHandler.lessons.Add(ctx, persistance.NewPersistedLesson(request.GroupId, iis_api_entities.AllSubgroups, iis_api_entities.Labwork, request.Name, request.DateTime))
 	if err != nil {
 		return callbackHandler.wrapLessonsServiceError(ctx, err, update)

@@ -28,7 +28,7 @@ func NewCachedInfo(ChatId int64, State string) *CachedInfo {
 	return &CachedInfo{
 		chatId:   ChatId,
 		state:    State,
-		sendTime: time.Now().UTC(),
+		sendTime: time.Now(),
 	}
 }
 

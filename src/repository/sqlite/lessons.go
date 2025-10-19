@@ -42,11 +42,11 @@ func (repo *LessonsRepository) AddRange(ctx context.Context, lessons []*entities
 	if err != nil {
 		return err
 	}
-	
+
 	storedLessons := repo.getSortedLessons(ctx, lessons)
 	for _, lesson := range storedLessons {
 		query := fmt.Sprintf("INSERT INTO %s (group_id, subject, lesson_type, subgroup_number, date_time) values ($1,$2,$3,$4,$5)", LESSONS_TABLE)
-		_, err := tx.ExecContext(ctx, query, lesson.GroupId, lesson.Subject, lesson.LessonType, lesson.SubgroupNumber, lesson.DateTime.UTC().Unix())
+		_, err := tx.ExecContext(ctx, query, lesson.GroupId, lesson.Subject, lesson.LessonType, lesson.SubgroupNumber, lesson.DateTime.Unix())
 		if err != nil {
 			return err
 		}
@@ -57,7 +57,7 @@ func (repo *LessonsRepository) AddRange(ctx context.Context, lessons []*entities
 
 func (repo *LessonsRepository) Add(ctx context.Context, lesson *persistance.Lesson) error {
 	query := fmt.Sprintf("INSERT INTO %s (group_id, subject, lesson_type, subgroup_number, date_time) values ($1,$2,$3,$4,$5)", LESSONS_TABLE)
-	_, err := repo.db.ExecContext(ctx, query, lesson.GroupId, lesson.Subject, lesson.LessonType, lesson.SubgroupNumber, lesson.DateTime.UTC().Unix())
+	_, err := repo.db.ExecContext(ctx, query, lesson.GroupId, lesson.Subject, lesson.LessonType, lesson.SubgroupNumber, lesson.DateTime.Unix())
 	return err
 }
 
@@ -196,7 +196,7 @@ func areLessonsEqual(self *entities.Lesson) func(other *entities.Lesson) bool {
 func (repo *LessonsRepository) GetEndedLessons(ctx context.Context, before time.Time) ([]persistance.Lesson, error) {
 	lessons := []persistance.Lesson{}
 	query := fmt.Sprintf("SELECT id, group_id, subject, lesson_type, subgroup_number, date_time FROM %s WHERE date_time <= $1 ORDER BY date_time", LESSONS_TABLE)
-	rows, err := repo.db.QueryContext(ctx, query, time.Now().UTC().Unix())
+	rows, err := repo.db.QueryContext(ctx, query, time.Now().Unix())
 	if err != nil {
 		return nil, err
 	}
