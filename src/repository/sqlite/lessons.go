@@ -42,6 +42,7 @@ func (repo *LessonsRepository) AddRange(ctx context.Context, lessons []*entities
 	if err != nil {
 		return err
 	}
+	
 	storedLessons := repo.getSortedLessons(ctx, lessons)
 	for _, lesson := range storedLessons {
 		query := fmt.Sprintf("INSERT INTO %s (group_id, subject, lesson_type, subgroup_number, date_time) values ($1,$2,$3,$4,$5)", LESSONS_TABLE)
@@ -66,6 +67,7 @@ func (repo *LessonsRepository) GetAll(ctx context.Context, groupName string) ([]
 	if err != nil {
 		return nil, err
 	}
+	rows.Close()
 	lessons := make([]persistance.Lesson, 0, 100)
 	i := 0
 	var storedDateTime int64
@@ -93,6 +95,7 @@ func (repo *LessonsRepository) GetNext(ctx context.Context, subject string, grou
 	if err != nil {
 		return nil, err
 	}
+	rows.Close()
 	lessons := make([]persistance.Lesson, 4)
 	i := 0
 	for rows.Next() {
@@ -197,6 +200,7 @@ func (repo *LessonsRepository) GetEndedLessons(ctx context.Context, before time.
 	if err != nil {
 		return nil, err
 	}
+	rows.Close()
 	var (
 		appendedLesson persistance.Lesson
 		storedDateTime int64

@@ -38,6 +38,7 @@ func (repo *AdminRequestsRepository) GetByUUID(ctx context.Context,uuid string) 
 	if err != nil {
 		return nil, err
 	}
+	rows.Close()
 	requests := []interfaces.AdminRequest{}
 	for rows.Next() {
 		if rows.Err() != nil {

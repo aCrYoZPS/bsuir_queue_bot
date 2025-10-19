@@ -141,6 +141,7 @@ func (repos *GroupsRepository) GetAdmins(ctx context.Context, groupName string) 
 	if err != nil {
 		return nil, err
 	}
+	rows.Close()
 	users := make([]entities.User, 0, 4)
 	for rows.Next() {
 		user := &entities.User{}

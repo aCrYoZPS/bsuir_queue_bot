@@ -88,11 +88,11 @@ func (handler *AdminCallbackHandler) handleAcceptCallback(ctx context.Context, m
 
 	user, err := handler.usersRepo.GetByTgId(ctx, form.UserId)
 	if err != nil {
-		return fmt.Errorf("failed to get user by tg id (%d) during group accept callback handling: %w", msg.From.ID, err)
+		return fmt.Errorf("failed to get user by tg id (%d) during admin accept callback handling: %w", msg.From.ID, err)
 	}
 	err = tgutils.CreateStartReplyMarkup(ctx, &resp, user, bot)
 	if err != nil {
-		return fmt.Errorf("failed to create start reply markup during group accept callback handling: %w", err)
+		return fmt.Errorf("failed to create start reply markup during admin accept callback handling: %w", err)
 	}
 
 	err = handler.RemoveMarkupFromOwners(ctx, msg, bot)

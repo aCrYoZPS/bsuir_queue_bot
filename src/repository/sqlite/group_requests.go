@@ -38,6 +38,7 @@ func (repo *RequestsRepository) GetByUUID(ctx context.Context, uuid string) ([]i
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	requests := []interfaces.GroupRequest{}
 	for rows.Next() {
 		if rows.Err() != nil {
