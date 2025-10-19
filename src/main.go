@@ -24,7 +24,6 @@ func main() {
 	}
 	time.Local = loc
 
-	print(time.Now().Unix())
 	_, exists := os.LookupEnv("ENVIRONMENT")
 	if !exists {
 		err := godotenv.Load("../.env.local")
