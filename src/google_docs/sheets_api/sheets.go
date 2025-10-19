@@ -377,13 +377,13 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistance.Lesso
 	sheetTitle := serv.createLessonName(*lesson)
 	for i, sheet := range sheet.Sheets {
 		if _, date, _ := parseLessonName(sheet.Properties.Title); date.After(lesson.DateTime.Round(24 * time.Hour)) {
-			sheetIndex = i + 1
+			sheetIndex = i - 1
 			break
 		}
 	}
 
-	if sheetIndex == 0 {
-		sheetIndex = len(sheet.Sheets)
+	if sheetIndex < 0 {
+		sheetIndex = 0
 	}
 
 	for _, sheet := range sheet.Sheets {
