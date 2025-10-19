@@ -48,7 +48,7 @@ func (*adminSubmitStartState) StateName() string {
 }
 
 func (state *adminSubmitStartState) Handle(ctx context.Context, message *tgbotapi.Message) error {
-	user, err := state.usersRepository.GetByTgId(ctx, message.Chat.ID)
+	user, err := state.usersRepository.GetByTgId(ctx, message.From.ID)
 	if err != nil {
 		return fmt.Errorf("couldn't get user by id when checking admin: %w", err)
 	}
