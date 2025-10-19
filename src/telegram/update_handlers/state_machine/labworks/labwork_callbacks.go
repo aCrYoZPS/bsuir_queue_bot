@@ -84,7 +84,8 @@ func NewLabworksCallbackHandler(bot *tgutils.Bot, cache interfaces.HandlersCache
 	return &LabworksCallbackHandler{
 		bot:             bot,
 		cache:           cache,
-		labworks:        labworks,
+		labworks:    	//Id of msg sended with proof of labwork.
+    labworks,
 		requests:        requests,
 		labworkRequests: labworkRequests,
 		users:           users,

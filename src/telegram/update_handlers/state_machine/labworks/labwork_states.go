@@ -192,11 +192,6 @@ func (state *labworkSubmitWaitingState) Revert(ctx context.Context, msg *tgbotap
 		return fmt.Errorf("failed to unmarshal info into labwork request in %s: %w", state.StateName(), err)
 	}
 
-	_, err = state.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, request.MarkupMessageId,
-		tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
-	if err != nil {
-		return fmt.Errorf("failed to remove markup during %s from message in chat with %d: %w", state.StateName(), msg.Chat.ID, err)
-	}
 	err = state.cache.RemoveInfo(ctx, msg.Chat.ID)
 	if err != nil {
 		return fmt.Errorf("failed to remove cache in %s: %w", state.StateName(), err)
@@ -205,6 +200,12 @@ func (state *labworkSubmitWaitingState) Revert(ctx context.Context, msg *tgbotap
 	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.IDLE_STATE))
 	if err != nil {
 		return fmt.Errorf("failed to save idle state during reverting labwork submit waiting state: %w", err)
+	}
+
+	_, err = state.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, request.MarkupMessageId,
+		tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
+	if err != nil {
+		return fmt.Errorf("failed to remove markup during %s from message in chat with %d: %w", state.StateName(), msg.Chat.ID, err)
 	}
 	return nil
 }
@@ -311,6 +312,7 @@ func (state *labworkSubmitProofState) Handle(ctx context.Context, message *tgbot
 	if err != nil {
 		return err
 	}
+
 	admins, err := state.groups.GetAdmins(ctx, req.GroupName)
 	if err != nil {
 		return err
@@ -327,6 +329,14 @@ func (state *labworkSubmitProofState) Handle(ctx context.Context, message *tgbot
 			return fmt.Errorf("failed to send messages to admins during labwork proof submit state: %w", err)
 		}
 	}
+
+	msg := tgbotapi.NewMessage(message.Chat.ID, "Ваша заявка была отправлена администраторам")
+	msg.ReplyToMessageID = message.MessageID
+	_, err = state.bot.SendCtx(ctx, msg)
+	if err != nil {
+		return fmt.Errorf("failed to send reply message to user: %w", err)
+	}
+
 	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE))
 	if err != nil {
 		return err
@@ -339,6 +349,12 @@ func (state *labworkSubmitProofState) Revert(ctx context.Context, msg *tgbotapi.
 	if err != nil {
 		return fmt.Errorf("failed to change state while reverting labwork submit proof state: %w", err)
 	}
+
+	_, err = state.bot.SendCtx(ctx, tgbotapi.NewMessage(msg.Chat.ID, "Введите номер сдаваемой лабораторной работы"))
+	if err != nil {
+		return fmt.Errorf("failed to send response to user during time callback handling: %w", err)
+	}
+
 	return nil
 }
 

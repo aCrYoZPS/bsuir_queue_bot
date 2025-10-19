@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS lessons_requests (
     msg_id INTEGER,
     chat_id INTEGER NOT NULL,
     submit_time INTEGER NOT NULL,
+    subgroup_num INTEGER NOT NULL,
     FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE, 
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
