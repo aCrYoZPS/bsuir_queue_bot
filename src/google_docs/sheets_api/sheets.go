@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"math/rand"
 	"net/http"
@@ -263,7 +264,7 @@ func (serv *SheetsApiService) AddLabworkRequest(ctx context.Context, req *labwor
 			return err
 		}
 	}
-	return errors.New("no such labwork found")
+	return fmt.Errorf("no such labwork found for name: %s, date: %s, subgroup: %d", req.DisciplineName, time.Time(req.RequestedDate).Truncate(24*time.Hour).Format(time.Layout), req.SubgroupNumber)
 }
 
 var unallowedSymbols = "-!@#$%^&*()+={}[]|\\;:'\"<>/?~"
