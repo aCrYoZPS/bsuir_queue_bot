@@ -360,7 +360,7 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(ctx context.Context
 
 func (handler *LabworksCallbackHandler) AppendedLabwork(req *entities.LessonRequest, lesson *persistance.Lesson, user *entities.User) *AppendedLabwork {
 	return &AppendedLabwork{
-		RequestedDate:  datetime.DateOnly(lesson.DateTime.Truncate(24 * time.Hour).Local()),
+		RequestedDate:  datetime.DateOnly(lesson.DateTime),
 		SentProofTime:  datetime.DateTime(req.SubmitTime),
 		DisciplineName: lesson.Subject,
 		GroupName:      user.GroupName,
