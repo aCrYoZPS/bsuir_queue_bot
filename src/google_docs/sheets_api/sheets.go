@@ -248,7 +248,7 @@ func (serv *SheetsApiService) AddLabworkRequest(ctx context.Context, req *labwor
 	}
 	for _, sheet := range spreadsheet.Sheets {
 		titleSubject, titleDate, subgroupNum := parseLessonName(sheet.Properties.Title)
-		if titleSubject == req.DisciplineName && time.Time(req.RequestedDate).Truncate(24*time.Hour).Equal(titleDate.Truncate(24*time.Hour)) && req.SubgroupNumber == subgroupNum {
+		if titleSubject == req.DisciplineName && serv.areDatesEqual(time.Time(req.RequestedDate), titleDate) && req.SubgroupNumber == subgroupNum {
 			if len(sheet.Tables) == 0 {
 				requests := serv.getTableRequests(sheet)
 				err = serv.WithRetries(ctx, func(ctx context.Context) error {
@@ -264,6 +264,10 @@ func (serv *SheetsApiService) AddLabworkRequest(ctx context.Context, req *labwor
 		}
 	}
 	return fmt.Errorf("no such labwork found for name: %s, date: %s, subgroup: %d", req.DisciplineName, time.Time(req.RequestedDate).Truncate(24*time.Hour).Format(time.Layout), req.SubgroupNumber)
+}
+
+func (serv *SheetsApiService) areDatesEqual(this time.Time, other time.Time) bool {
+	return time.Date(this.Year(), this.Month(), this.Day(), 0, 0, 0, 0, time.Local).Equal(time.Date(other.Year(), other.Month(), other.Day(), 0, 0, 0, 0, time.Local))
 }
 
 var unallowedSymbols = "-!@#$%^&*()+={}[]|\\;:'\"<>/?~"
