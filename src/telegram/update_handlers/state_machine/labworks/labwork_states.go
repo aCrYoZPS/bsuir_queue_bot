@@ -410,7 +410,7 @@ func (state *labworkSubmitProofState) handleVideoProof(ctx context.Context, admi
 	if err != nil {
 		return err
 	}
-	msg := tgbotapi.NewVideo(message.Chat.ID, tgbotapi.FileBytes{Name: message.Document.FileName, Bytes: fileBytes})
+	msg := tgbotapi.NewVideo(message.Chat.ID, tgbotapi.FileBytes{Name: message.Video.FileName, Bytes: fileBytes})
 	err = state.SendVideoToAdmins(ctx, admins, &msg, form)
 	return err
 }
