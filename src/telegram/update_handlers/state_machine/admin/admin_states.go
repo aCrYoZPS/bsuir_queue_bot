@@ -150,7 +150,6 @@ func (state *adminSubmittingNameState) Revert(ctx context.Context, msg *tgbotapi
 		return fmt.Errorf("failed to transition to admin submit start state during admin submitting name state reversal: %w", err)
 	}
 	msg.Text = "/assign"
-	err = state.machine.HandleState(ctx, msg)
 	return err
 }
 
@@ -223,12 +222,14 @@ func (state *adminSubmitingGroupState) Handle(ctx context.Context, message *tgbo
 }
 
 func (state *adminSubmitingGroupState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
-	err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.ADMIN_SUBMIT_START_STATE))
+	err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.ADMIN_SUBMITTING_NAME_STATE))
 	if err != nil {
 		return fmt.Errorf("failed to save admin submitting name state during admin submitting group state reversal: %w", err)
 	}
-	msg.Text = "placeholder"
-	err = state.machine.HandleState(ctx, msg)
+	_, err = state.bot.SendCtx(ctx, tgbotapi.NewMessage(msg.Chat.ID, "Введите ваши фамилию и имя (Пример формата: Иванов Иван)"))
+	if err != nil {
+		return fmt.Errorf("failed to send reversal message during admin submitting group state: %w", err)
+	}
 	return err
 }
 
