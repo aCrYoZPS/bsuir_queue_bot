@@ -77,3 +77,9 @@ CREATE TABLE IF NOT EXISTS info(
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS info_chat_id_idx ON info(chat_id);
+
+CREATE TABLE IF NOT EXISTS tasks (
+    task_timestamp INTEGER NOT NULL,
+    task_name TEXT NOT NULL,
+    CHECK (LENGTH(task_name) < 50)
+);
