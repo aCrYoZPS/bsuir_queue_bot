@@ -114,7 +114,15 @@ func (controller *TasksController) TasksExec(ctx context.Context) {
 	if err != nil {
 		slog.Error(fmt.Sprintf("failed to get tasks in tasks exec: %v", err))
 	}
-	if len(tasks) == 0 {
+	taskRunToday := false
+	for _, task := range tasks {
+		//I am sure there is better way to compare...
+		if time.Date(task.ExecutedAt.Year(), task.ExecutedAt.Month(), task.ExecutedAt.Day(), 0, 0, 0, 0, time.Local).
+			Equal(time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Local)) && time.Now().Hour() >= 22 {
+			taskRunToday = true
+		}
+	}
+	if !taskRunToday {
 		for _, job := range controller.jobs {
 			err := job.RunNow()
 			if err != nil {
