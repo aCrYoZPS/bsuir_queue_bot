@@ -8,7 +8,6 @@ import (
 	"time"
 	_ "time/tzdata"
 
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/cron"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/ioc"
 	logging "github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
 
@@ -40,8 +39,6 @@ func main() {
 	tasks := ioc.UseTasksController()
 	go tasks.InitTasks(ctx)
 
-	a := cron.NewClearLessonsTask(ioc.UseSheetsApiService(), ioc.UseLessonsService(),  ioc.UseDriveApiService())
-	a.Run(ctx)
 	ioc.Reset()
 	<-ctx.Done()
 }

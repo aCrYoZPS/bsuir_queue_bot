@@ -76,29 +76,29 @@ func (controller *TasksController) InitTasks(ctx context.Context) {
 	daily := gocron.CronJob("00 22 * * *", false)
 
 	sheetsRefresh := NewReminderTask(controller.sheets, controller.lessons, controller.lessonsRequest, controller.users, controller.bot)
-	sheetsRefreshJob, err := scheduler.NewJob(daily, gocron.NewTask(func() { sheetsRefresh.Run(ctx) }), gocron.WithName("sheets refresh"), gocron.WithContext(ctx))
+	sheetsRefreshJob, err := scheduler.NewJob(daily, gocron.NewTask(func() { sheetsRefresh.Run(ctx) }), gocron.WithName("sheets refresh"), gocron.WithContext(ctx),
+		gocron.WithEventListeners(gocron.AfterJobRuns(func(jobID uuid.UUID, jobName string) {
+			err = controller.tasksRepo.Add(ctx, PersistedTask{ExecutedAt: time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 22, 0, 0, 0, time.Local), Name: jobName})
+			if err != nil {
+				slog.Error("failed to add task: %s to db, error: %v", jobName, err)
+			}
+		})))
 	if err != nil {
 		slog.Error(fmt.Errorf("failed to init sheets refresh cron: %w", err).Error())
 	}
-	gocron.AfterJobRuns(func(jobID uuid.UUID, jobName string) {
-		err = controller.tasksRepo.Add(ctx, PersistedTask{ExecutedAt: time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 22, 0, 0, 0, time.Local), Name: jobName})
-		if err != nil {
-			slog.Error("failed to add task: %s to db, error: %v", jobName, err)
-		}
-	})
 	controller.jobs = append(controller.jobs, sheetsRefreshJob)
 
 	clearLessons := NewClearLessonsTask(controller.sheets, controller.lessons, controller.drive)
-	clearLessonsJob, err := scheduler.NewJob(daily, gocron.NewTask(func() { clearLessons.Run(ctx) }), gocron.WithName("clear lessons"), gocron.WithContext(ctx))
+	clearLessonsJob, err := scheduler.NewJob(daily, gocron.NewTask(func() { clearLessons.Run(ctx) }), gocron.WithName("clear lessons"), gocron.WithContext(ctx),
+		gocron.WithEventListeners(gocron.AfterJobRuns(func(jobID uuid.UUID, jobName string) {
+			err = controller.tasksRepo.Add(ctx, PersistedTask{ExecutedAt: time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 22, 0, 0, 0, time.Local), Name: jobName})
+			if err != nil {
+				slog.Error("failed to add task: %s to db, error: %v", jobName, err)
+			}
+		})))
 	if err != nil {
 		slog.Error(fmt.Errorf("failed to init sheets refresh cron: %w", err).Error())
 	}
-	gocron.AfterJobRuns(func(jobID uuid.UUID, jobName string) {
-		err = controller.tasksRepo.Add(ctx, PersistedTask{ExecutedAt: time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 22, 0, 0, 0, time.Local), Name: jobName})
-		if err != nil {
-			slog.Error("failed to add task: %s to db, error: %v", jobName, err)
-		}
-	})
 	controller.jobs = append(controller.jobs, clearLessonsJob)
 
 	scheduler.Start()

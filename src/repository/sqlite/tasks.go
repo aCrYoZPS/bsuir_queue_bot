@@ -22,7 +22,7 @@ func NewTasksRepository(db *sql.DB) *TasksRepository {
 }
 
 func (repo *TasksRepository) Add(ctx context.Context, task cron.PersistedTask) error {
-	query := fmt.Sprintf("INSERT INTO %s VALUES (task_timestamp, task_name) VALUES ($1, $2)", TASKS_TABLE)
+	query := fmt.Sprintf("INSERT INTO %s (task_timestamp, task_name) VALUES ($1, $2)", TASKS_TABLE)
 	_, err := repo.db.ExecContext(ctx, query, task.ExecutedAt.Unix(), task.Name)
 	return err
 }
