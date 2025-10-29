@@ -31,7 +31,7 @@ type TasksController struct {
 	tasksRepo      TasksRepository
 }
 
-func NewTasksController(sheets SheetsApi, lessons LessonRepo, lessonsRequest LessonsRequestRepo, users UsersRepo, drive DriveApi, bot *tgutils.Bot) *TasksController {
+func NewTasksController(sheets SheetsApi, lessons LessonRepo, lessonsRequest LessonsRequestRepo, users UsersRepo, drive DriveApi, tasks TasksRepository, bot *tgutils.Bot) *TasksController {
 	tasksController := &TasksController{
 		sheets:         sheets,
 		lessons:        lessons,
@@ -39,6 +39,7 @@ func NewTasksController(sheets SheetsApi, lessons LessonRepo, lessonsRequest Les
 		users:          users,
 		drive:          drive,
 		bot:            bot,
+		tasksRepo:      tasks,
 	}
 	return tasksController
 }
@@ -75,7 +76,7 @@ func (controller *TasksController) InitTasks(ctx context.Context) {
 	daily := gocron.CronJob("00 22 * * *", false)
 
 	sheetsRefresh := NewReminderTask(controller.sheets, controller.lessons, controller.lessonsRequest, controller.users, controller.bot)
-	sheetsRefreshJob, err := scheduler.NewJob(daily, gocron.NewTask(func() { sheetsRefresh.Run(ctx) }, gocron.WithName("sheets refresh")), gocron.WithContext(ctx))
+	sheetsRefreshJob, err := scheduler.NewJob(daily, gocron.NewTask(func() { sheetsRefresh.Run(ctx) }), gocron.WithName("sheets refresh"), gocron.WithContext(ctx))
 	if err != nil {
 		slog.Error(fmt.Errorf("failed to init sheets refresh cron: %w", err).Error())
 	}
@@ -88,7 +89,7 @@ func (controller *TasksController) InitTasks(ctx context.Context) {
 	controller.jobs = append(controller.jobs, sheetsRefreshJob)
 
 	clearLessons := NewClearLessonsTask(controller.sheets, controller.lessons, controller.drive)
-	clearLessonsJob, err := scheduler.NewJob(daily, gocron.NewTask(func() { clearLessons.Run(ctx) }))
+	clearLessonsJob, err := scheduler.NewJob(daily, gocron.NewTask(func() { clearLessons.Run(ctx) }), gocron.WithName("clear lessons"), gocron.WithContext(ctx))
 	if err != nil {
 		slog.Error(fmt.Errorf("failed to init sheets refresh cron: %w", err).Error())
 	}
@@ -100,8 +101,8 @@ func (controller *TasksController) InitTasks(ctx context.Context) {
 	})
 	controller.jobs = append(controller.jobs, clearLessonsJob)
 
-	controller.TasksExec(ctx)
 	scheduler.Start()
+	controller.TasksExec(ctx)
 	<-ctx.Done()
 	err = scheduler.Shutdown()
 	if err != nil {

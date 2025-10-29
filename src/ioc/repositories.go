@@ -92,3 +92,9 @@ var useLessonsRequestsRepository = provider(
 		return repos
 	},
 )
+
+var useTasksRepository = provider(
+	func() *sqlite.TasksRepository {
+		return sqlite.NewTasksRepository(useSqliteConnection())
+	},
+)
