@@ -3,7 +3,6 @@ package cron
 import (
 	"context"
 	"fmt"
-	"iter"
 	"log/slog"
 	"time"
 
@@ -117,9 +116,9 @@ func (controller *TasksController) TasksExec(ctx context.Context) {
 	}
 	taskRunToday := false
 	for _, task := range tasks {
-		//I am sure there is better way to compare...
+		// I am sure there is better way to compare...
 		if time.Date(task.ExecutedAt.Year(), task.ExecutedAt.Month(), task.ExecutedAt.Day(), 0, 0, 0, 0, time.Local).
-			Sub(time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Local)) < time.Hour * 24 {
+			Sub(time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Local)) < time.Hour*24 {
 			taskRunToday = true
 		}
 	}
