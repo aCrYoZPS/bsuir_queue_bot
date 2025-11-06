@@ -73,7 +73,7 @@ func (controller *TasksController) InitTasks(ctx context.Context) {
 		slog.Error(fmt.Errorf("failed to init cron scheduler: %w", err).Error())
 	}
 
-	daily := gocron.CronJob("00 22 * * *", false)
+	daily := gocron.CronJob("17 16 * * *", false)
 
 	sheetsRefresh := NewReminderTask(controller.sheets, controller.lessons, controller.lessonsRequest, controller.users, controller.bot)
 	sheetsRefreshJob, err := scheduler.NewJob(daily, gocron.NewTask(func() { sheetsRefresh.Run(ctx) }), gocron.WithName("sheets refresh"), gocron.WithContext(ctx),

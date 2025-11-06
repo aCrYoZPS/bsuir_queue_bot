@@ -75,7 +75,11 @@ func (task *ReminderTask) Run(ctx context.Context) {
 		}
 
 		for _, request := range requests {
-			err := task.sendMessageForRequested(ctx, &request)
+			lesson, err := task.lessons.GetLessonByRequest(ctx, request.Id)
+			if err != nil {
+				slog.Error(fmt.Errorf("failed to get lesson by request id %d during reminder task: %w", request.Id, err).Error())
+			}
+			err = task.sendMessageForRequested(ctx, &request, lesson)
 			if err != nil {
 				slog.Error(fmt.Errorf("failed to send msg to user id %d during reminder task: %w", request.UserId, err).Error())
 			}
@@ -88,8 +92,8 @@ func (task *ReminderTask) Run(ctx context.Context) {
 	}
 }
 
-func (task *ReminderTask) sendMessageForRequested(ctx context.Context, request *entities.LessonRequest) error {
-	msg := tgbotapi.NewMessage(request.ChatId, "Вы сдавали данную лабораторную?")
+func (task *ReminderTask) sendMessageForRequested(ctx context.Context, request *entities.LessonRequest, lesson *persistance.Lesson) error {
+	msg := tgbotapi.NewMessage(request.ChatId, fmt.Sprintf("Вы сдавали данную лабораторную? (%s %s, номер лабораторной %d)", lesson.Subject, lesson.DateTime.Format("02.01.2006"), request.LabworkNumber))
 	msg.ReplyToMessageID = int(request.MsgId)
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Да", createSheetsRefreshCallbackData(request.Id, true)),
 		tgbotapi.NewInlineKeyboardButtonData("Нет", createSheetsRefreshCallbackData(request.Id, false))})
