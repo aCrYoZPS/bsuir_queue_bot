@@ -21,6 +21,7 @@ const (
 	START_COMMAND       = "/start"
 	QUEUE_COMMAND       = "/queue"
 	REVERT_COMMAND      = "/revert"
+	TABLE_COMMAND       = "/table"
 )
 
 var userCommands = []tgbotapi.BotCommand{
@@ -28,8 +29,9 @@ var userCommands = []tgbotapi.BotCommand{
 	{Command: SUBMIT_COMMAND, Description: "Запись на сдачу лабораторной"},
 	{Command: ASSIGN_COMMAND, Description: "Отправка заявки на роль администратора группы"},
 	{Command: JOIN_GROUP_COMMAND, Description: "Отправка заявки на участие в группе"},
-	{Command: QUEUE_COMMAND, Description: "Получение таблицы с очередями своей группы"},
+	{Command: QUEUE_COMMAND, Description: "Получение очереди своей группы"},
 	{Command: REVERT_COMMAND, Description: "Откат к предыдущему состоянию"},
+	{Command: TABLE_COMMAND, Description: "Получение ссылки на гугл-таблицу своей группы"},
 }
 
 var adminCommands = []tgbotapi.BotCommand{

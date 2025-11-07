@@ -8,7 +8,6 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/labworks"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -30,12 +29,12 @@ type statesConfig struct {
 	usersRepo        interfaces.UsersRepository
 	requests         interfaces.RequestsRepository
 	adminRequests    interfaces.AdminRequestsRepository
-	labworks         labworks.LabworksService
+	labworks         interfaces.LessonsRepository
 	labworksRequests interfaces.LessonsRequestsRepository
 }
 
 func NewStatesConfig(state *StateMachine, cache interfaces.HandlersCache, bot *tgutils.Bot, groupsRepo interfaces.GroupsRepository, usersRepo interfaces.UsersRepository,
-	requests interfaces.RequestsRepository, adminRequests interfaces.AdminRequestsRepository, labworks labworks.LabworksService, labworksRequests interfaces.LessonsRequestsRepository) *statesConfig {
+	requests interfaces.RequestsRepository, adminRequests interfaces.AdminRequestsRepository, labworks interfaces.LessonsRepository, labworksRequests interfaces.LessonsRequestsRepository) *statesConfig {
 	return &statesConfig{
 		machine:          state,
 		cache:            cache,

@@ -22,11 +22,12 @@ type idleState struct {
 	bot        *tgutils.Bot
 	usersRepo  interfaces.UsersRepository
 	groupsRepo interfaces.GroupsRepository
+	lessons    interfaces.LessonsRepository
 	State
 }
 
-func newIdleState(cache interfaces.HandlersCache, bot *tgutils.Bot, usersRepo interfaces.UsersRepository, groupsRepo interfaces.GroupsRepository) *idleState {
-	return &idleState{cache: cache, bot: bot, usersRepo: usersRepo, groupsRepo: groupsRepo}
+func newIdleState(cache interfaces.HandlersCache, bot *tgutils.Bot, usersRepo interfaces.UsersRepository, groupsRepo interfaces.GroupsRepository, lessons interfaces.LessonsRepository) *idleState {
+	return &idleState{cache: cache, bot: bot, usersRepo: usersRepo, groupsRepo: groupsRepo, lessons: lessons}
 }
 
 func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) error {
@@ -65,7 +66,16 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 		}
 		return nil
 	case update_handlers.QUEUE_COMMAND:
-		err := state.HandleQueueCommand(ctx, message)
+		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.QUEUE_START_STATE))
+		if err != nil {
+			return err
+		}
+		currentState = getStateByName(constants.QUEUE_START_STATE)
+		if currentState == nil {
+			return fmt.Errorf("couldn't find state for %s command", update_handlers.QUEUE_COMMAND)
+		}
+	case update_handlers.TABLE_COMMAND:
+		err := state.HandleTableCommand(ctx, message)
 		if err != nil {
 			return err
 		}
@@ -108,7 +118,7 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 		if err != nil {
 			return fmt.Errorf("failed to create start reply markup during start command: %w", err)
 		}
-		return nil	
+		return nil
 	default:
 		return errors.Join(errors.ErrUnsupported, errors.New("answers are only to commands"))
 	}
@@ -123,7 +133,7 @@ func (*idleState) StateName() string {
 	return constants.IDLE_STATE
 }
 
-func (state *idleState) HandleQueueCommand(ctx context.Context, msg *tgbotapi.Message) error {
+func (state *idleState) HandleTableCommand(ctx context.Context, msg *tgbotapi.Message) error {
 	usr, err := state.usersRepo.GetByTgId(ctx, msg.From.ID)
 	if err != nil {
 		return fmt.Errorf("failed to get user by tg id during queue command handling: %w", err)

@@ -37,3 +37,10 @@ const (
 	TIME_SUBMIT                      = TIME_PICKER_CALLBACKS + "_submit"
 	TIME_CANCEL                      = TIME_PICKER_CALLBACKS + "_cancel"
 )
+
+const (
+	QUEUE_CALLBACKS            = "que"
+	QUEUE_DISCIPLINE_CALLBACKS = QUEUE_CALLBACKS + "_discipline"
+	QUEUE_TIME_CALLBACKS       = QUEUE_CALLBACKS + "_time"
+	QUEUE_CANCEL_CALLBACKS     = QUEUE_CALLBACKS + "_cancel"
+)

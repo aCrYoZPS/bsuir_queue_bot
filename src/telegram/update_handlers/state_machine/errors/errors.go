@@ -1,6 +1,9 @@
-package stateErrors
+package customErrors
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
 
 type ErrInvalidInput struct {
 	message string
@@ -27,3 +30,5 @@ func NewInvalidInputWrapped(err error) error {
 	}
 	return nil
 }
+
+var ErrNoLabworks = errors.New("no labworks found")

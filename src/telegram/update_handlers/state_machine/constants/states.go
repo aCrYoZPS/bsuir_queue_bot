@@ -31,3 +31,8 @@ const (
 	LABWORK_ADD_SUBMIT_NAME_STATE = "custom_lab_name"
 	LABWORK_ADD_WAITING_STATE     = "custom_lab_wait"
 )
+
+const (
+	QUEUE_START_STATE = "queue_start"
+	QUEUE_WAITING_STATE = "queue_wait"
+)

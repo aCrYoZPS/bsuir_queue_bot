@@ -12,4 +12,5 @@ type LessonsRequestsRepository interface {
 	GetLessonRequests(ctx context.Context, lessonId int64) ([]entities.LessonRequest, error)
 	SetAccepted(ctx context.Context, requestId int64) error
 	Delete(ctx context.Context, requestId int64) error
+	GetLabworkQueue(ctx context.Context, labworkId int64) ([]entities.User, error)
 }

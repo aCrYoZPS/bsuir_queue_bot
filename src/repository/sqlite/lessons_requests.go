@@ -101,3 +101,22 @@ func (repo *LessonsRequestsRepository) SetAccepted(ctx context.Context, requestI
 	_, err := repo.db.ExecContext(ctx, query, requestId)
 	return err
 }
+
+func (repo *LessonsRequestsRepository) GetLabworkQueue(ctx context.Context, labworkId int64) ([]entities.User, error) {
+	query := fmt.Sprintf("SELECT u.id, u.full_name, u.tg_id, u.group_id FROM %s AS l INNER JOIN %s as u ON u.tg_id=l.user_id WHERE l.lesson_id=$1", LESSONS_REQUESTS_TABLE, USERS_TABLE)
+	rows, err := repo.db.Query(query, labworkId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	users := make([]entities.User, 0, 10)
+	var curUser entities.User
+	for rows.Next() {
+		err = rows.Scan(&curUser.Id, &curUser.FullName, &curUser.TgId, &curUser.GroupId)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, curUser)
+	}
+	return users, nil
+}

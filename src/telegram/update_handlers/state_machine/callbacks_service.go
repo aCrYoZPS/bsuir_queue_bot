@@ -15,6 +15,7 @@ import (
 	customlabworks "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/custom_labworks"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/group"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/labworks"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/queue"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -107,6 +108,8 @@ func (serv *CallbacksService) HandleCallbacks(update *tgbotapi.Update, bot *tgut
 		callback_handler = customlabworks.NewCalendarCallbackHandler(bot, serv.cache)
 	case strings.HasPrefix(update.CallbackData(), constants.TIME_PICKER_CALLBACKS):
 		callback_handler = customlabworks.NewTimePickerCallbackHandler(bot, serv.lessons, serv.cache)
+	case strings.HasPrefix(update.CallbackData(), constants.QUEUE_CALLBACKS):
+		callback_handler = queue.NewQueueCallbackHandler(serv.usersRepo, serv.lessons, serv.cache, bot, serv.lessonsRequests)
 	case strings.HasPrefix(update.CallbackData(), constants.IGNORE_CALLBACKS):
 		callbackConfig := tgbotapi.NewCallback(update.CallbackQuery.ID, "")
 		_, err := bot.Request(callbackConfig)
