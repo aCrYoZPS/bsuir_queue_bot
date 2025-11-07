@@ -37,7 +37,7 @@ type HandlersCache interface {
 	GetState(ctx context.Context, chatId int64) (*CachedInfo, error)
 	SaveInfo(ctx context.Context, chatId int64, json string) error
 	GetInfo(ctx context.Context, chatId int64) (string, error)
-	AcquireLock(ctx context.Context, chatId int64) *sync.Mutex
-	ReleaseLock(ctx context.Context, chatId int64)
+	AcquireLock(ctx context.Context, chatId int64, key string) *sync.Mutex
+	ReleaseLock(ctx context.Context, chatId int64, key string)
 	RemoveInfo(ctx context.Context, chatId int64) error
 }

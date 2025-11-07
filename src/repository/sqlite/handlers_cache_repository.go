@@ -52,17 +52,17 @@ func (cache *HandlersCache) GetState(ctx context.Context, chatId int64) (*interf
 	return interfaces.NewCachedInfo(chatId, state), nil
 }
 
-func (cache *HandlersCache) AcquireLock(ctx context.Context, chatId int64) *sync.Mutex {
+func (cache *HandlersCache) AcquireLock(ctx context.Context, chatId int64, key string) *sync.Mutex {
 	mu := &sync.Mutex{}
-	val, loaded := cache.locks.LoadOrStore(chatId, mu)
+	val, loaded := cache.locks.LoadOrStore(fmt.Sprint(chatId)+key, mu)
 	if loaded {
 		mu, _ = val.(*sync.Mutex)
 	}
 	return mu
 }
 
-func (cache *HandlersCache) ReleaseLock(ctx context.Context, chatId int64) {
-	cache.locks.Delete(chatId)
+func (cache *HandlersCache) ReleaseLock(ctx context.Context, chatId int64, key string) {
+	cache.locks.Delete(fmt.Sprint(chatId) + key)
 }
 
 func (cache *HandlersCache) SaveInfo(ctx context.Context, chatId int64, json string) error {
