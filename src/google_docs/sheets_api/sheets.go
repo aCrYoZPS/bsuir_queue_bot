@@ -155,7 +155,7 @@ func (serv *SheetsApiService) createLists(ctx context.Context, groupName string,
 }
 
 func (serv *SheetsApiService) createLessonName(lesson persistance.Lesson) string {
-	updateTitle := lesson.Subject + " " + serv.formatDateToEuropean(lesson.DateTime)
+	updateTitle := strings.ReplaceAll(lesson.Subject, "", "-") + " " + serv.formatDateToEuropean(lesson.DateTime)
 	if iis_api_entities.Subgroup(lesson.SubgroupNumber) != iis_api_entities.AllSubgroups {
 		updateTitle += fmt.Sprintf(" (%s)", fmt.Sprint(int(lesson.SubgroupNumber)))
 	}
@@ -263,7 +263,7 @@ func (serv *SheetsApiService) AddLabworkRequest(ctx context.Context, req *labwor
 			return err
 		}
 	}
-	return fmt.Errorf("no such labwork found for name: %s, date: %s, subgroup: %d", req.DisciplineName, time.Time(req.RequestedDate).Truncate(24*time.Hour).Format(time.Layout), req.SubgroupNumber)
+	return fmt.Errorf("no such labwork found for name: %s, date: %s, subgroup: %d", req.DisciplineName, time.Time(req.RequestedDate).Format(time.Layout), req.SubgroupNumber)
 }
 
 func (serv *SheetsApiService) areDatesEqual(this time.Time, other time.Time) bool {
