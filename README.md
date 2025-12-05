@@ -2,7 +2,7 @@
 
 Telegram bot, for managing queues in BSUIR. Uses IIS and Google Sheets API to manage the queues in tables according to the schedule in university
 
-##Features
+## Features
 - Create and submit requests for labworks, managing them in a queue sorted by submittion time
 - View the detailed queue in google sheets
 - Cron-based clearing of google sheets and database from deleted labworks, resubmission of requests for unsuccessful labwork takes
@@ -19,7 +19,7 @@ Telegram bot, for managing queues in BSUIR. Uses IIS and Google Sheets API to ma
 | /queue        | Send a queue for selected labwork as message                                                                   |                                             
 | /table        | Sends a link to google sheet for your group                                                                    |
 
-##Deploy
+## Deploy
 
 Run via docker
 ```sh
