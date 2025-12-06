@@ -273,7 +273,7 @@ func (serv *SheetsApiService) areDatesEqual(this time.Time, other time.Time) boo
 	return time.Date(this.Year(), this.Month(), this.Day(), 0, 0, 0, 0, time.Local).Equal(time.Date(other.Year(), other.Month(), other.Day(), 0, 0, 0, 0, time.Local))
 }
 
-var unallowedSymbols = "!@#$%^&*()+={}[]|\\;:'\"<>/?~"
+var unallowedSymbols = "!@#$%^&*()+={}[]|\\;:'\"<>/?~\u00A0"
 
 func (serv *SheetsApiService) getTableRequests(sheet *sheets.Sheet) []*sheets.Request {
 	requests := []*sheets.Request{}
