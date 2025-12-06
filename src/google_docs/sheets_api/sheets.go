@@ -155,11 +155,14 @@ func (serv *SheetsApiService) createLists(ctx context.Context, groupName string,
 }
 
 func (serv *SheetsApiService) createLessonName(lesson persistance.Lesson) string {
-	updateTitle := strings.ReplaceAll(lesson.Subject, "", "-") + " " + serv.formatDateToEuropean(lesson.DateTime)
-	if iis_api_entities.Subgroup(lesson.SubgroupNumber) != iis_api_entities.AllSubgroups {
-		updateTitle += fmt.Sprintf(" (%s)", fmt.Sprint(int(lesson.SubgroupNumber)))
+	name := "Очередь " + lesson.Subject + " " + serv.formatDateToEuropean(lesson.DateTime)
+	for _, char := range unallowedSymbols {
+		name = strings.ReplaceAll(name, string(char), "_")
 	}
-	return updateTitle
+	if iis_api_entities.Subgroup(lesson.SubgroupNumber) != iis_api_entities.AllSubgroups {
+		name += fmt.Sprintf(" (%s)", fmt.Sprint(int(lesson.SubgroupNumber)))
+	}
+	return name
 }
 
 func (serv *SheetsApiService) formatDateToEuropean(date time.Time) string {
