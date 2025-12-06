@@ -155,12 +155,12 @@ func (serv *SheetsApiService) createLists(ctx context.Context, groupName string,
 }
 
 func (serv *SheetsApiService) createLessonName(lesson persistance.Lesson) string {
-	name := "Очередь " + lesson.Subject + " " + serv.formatDateToEuropean(lesson.DateTime)
+	name := lesson.Subject + "\u00A0" + serv.formatDateToEuropean(lesson.DateTime)
 	for _, char := range unallowedSymbols {
 		name = strings.ReplaceAll(name, string(char), "_")
 	}
 	if iis_api_entities.Subgroup(lesson.SubgroupNumber) != iis_api_entities.AllSubgroups {
-		name += fmt.Sprintf(" (%s)", fmt.Sprint(int(lesson.SubgroupNumber)))
+		name += fmt.Sprintf("\u00A0(%s)", fmt.Sprint(int(lesson.SubgroupNumber)))
 	}
 	return name
 }
@@ -172,7 +172,7 @@ func (serv *SheetsApiService) formatDateToEuropean(date time.Time) string {
 }
 
 func parseLessonName(name string) (subject string, date time.Time, subgroup iis_api_entities.Subgroup) {
-	data := strings.Split(name, " ")
+	data := strings.Split(name, "\u00A0")
 	subgroup = iis_api_entities.AllSubgroups
 	if len(data) != 2 {
 		if len(data) == 3 {
@@ -273,7 +273,7 @@ func (serv *SheetsApiService) areDatesEqual(this time.Time, other time.Time) boo
 	return time.Date(this.Year(), this.Month(), this.Day(), 0, 0, 0, 0, time.Local).Equal(time.Date(other.Year(), other.Month(), other.Day(), 0, 0, 0, 0, time.Local))
 }
 
-var unallowedSymbols = "-!@#$%^&*()+={}[]|\\;:'\"<>/?~"
+var unallowedSymbols = "!@#$%^&*()+={}[]|\\;:'\"<>/?~"
 
 func (serv *SheetsApiService) getTableRequests(sheet *sheets.Sheet) []*sheets.Request {
 	requests := []*sheets.Request{}
