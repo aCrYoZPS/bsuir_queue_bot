@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/labworks"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/labworks"
 )
 
 type SheetUrl = string

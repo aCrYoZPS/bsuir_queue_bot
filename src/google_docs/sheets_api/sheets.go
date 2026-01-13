@@ -15,7 +15,7 @@ import (
 	iis_api_entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/labworks"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/labworks"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/sheets/v4"
 )
@@ -202,7 +202,7 @@ func parseLessonName(name string) (subject string, date time.Time, subgroup iis_
 	if err != nil {
 		return "", time.Time{}, iis_api_entities.AllSubgroups
 	}
-	date = time.Date(year, time.Month(month), day, 3, 0, 0, 0, time.Local)
+	date = time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.Local)
 	return subject, date, subgroup
 }
 
@@ -273,7 +273,7 @@ func (serv *SheetsApiService) areDatesEqual(this time.Time, other time.Time) boo
 	return time.Date(this.Year(), this.Month(), this.Day(), 0, 0, 0, 0, time.Local).Equal(time.Date(other.Year(), other.Month(), other.Day(), 0, 0, 0, 0, time.Local))
 }
 
-var unallowedSymbols = "!@#$%^&*()+={}[]|\\;:'\"<>/?~\u00A0"
+var unallowedSymbols = "!@#$%^&*()+={}[]|\\;:'\"<>/?~"
 
 func (serv *SheetsApiService) getTableRequests(sheet *sheets.Sheet) []*sheets.Request {
 	requests := []*sheets.Request{}
@@ -321,13 +321,16 @@ func (serv *SheetsApiService) getTableRequests(sheet *sheets.Sheet) []*sheets.Re
 	return requests
 }
 
+const unallowedTableSymbols = "!@#$%^&*()+={}[]|\\;:'\"<>/?~\u00A0"
+
 func (serv *SheetsApiService) createTableName(sheet *sheets.Sheet) string {
 	name := "Очередь " + sheet.Properties.Title
-	for _, char := range unallowedSymbols {
+	for _, char := range unallowedTableSymbols {
 		name = strings.ReplaceAll(name, string(char), "_")
 	}
 	return name
 }
+
 func (serv *SheetsApiService) appendToSheet(ctx context.Context, spreadsheetId string, sheet *sheets.Sheet, req *labworks.AppendedLabwork) error {
 	tableSearchRange := fmt.Sprintf("'%s'!A1:B5", sheet.Properties.Title)
 	err := serv.WithRetries(ctx, func(ctx context.Context) error {

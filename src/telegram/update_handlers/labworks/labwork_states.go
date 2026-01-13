@@ -18,7 +18,7 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/constants"
 	datetime "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/date_time"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -158,7 +158,7 @@ func parseLabworkDisciplineCallback(callback string) (discipline string, userTgI
 }
 
 type StateMachine interface {
-	HandleState(ctx context.Context, msg *tgbotapi.Message) error
+	Handle(ctx context.Context, msg *tgbotapi.Message) error
 }
 type labworkSubmitWaitingState struct {
 	cache   interfaces.HandlersCache
@@ -273,7 +273,7 @@ func (state *labworkSubmitNumberState) Revert(ctx context.Context, msg *tgbotapi
 		return fmt.Errorf("failed to save %s state during labwork submit number state reversion: %w, err", constants.LABWORK_SUBMIT_NUMBER_STATE, err)
 	}
 	msg.Text = "/submit"
-	err = state.stateMachine.HandleState(ctx, msg)
+	err = state.stateMachine.Handle(ctx, msg)
 	return err
 }
 

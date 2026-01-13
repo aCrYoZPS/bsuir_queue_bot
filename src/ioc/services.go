@@ -13,7 +13,7 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/bot"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers"
-	stateMachine "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine"
+	stateMachine "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers"
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/option"
 	"google.golang.org/api/sheets/v4"
@@ -85,7 +85,7 @@ var UseSheetsApiService = provider(
 var UseMessageService = provider(
 	func() bot.MessagesService {
 		return update_handlers.NewMessagesHandler(
-			useStateMachine(), useHandlersCache(),
+			useMux(), useHandlersCache(),
 		)
 	},
 )
@@ -99,7 +99,6 @@ var UseLessonsService = provider(
 var UseCallbacksService = provider(
 	func() bot.CallbacksService {
 		return stateMachine.NewCallbackService(
-			useUsersRepository(), useHandlersCache(), useLessonsRequestsRepository(),
-			useRequestsRepository(), useAdminRequestsRepository(), UseLessonsService(), UseSheetsApiService(), useLessonsRepository())
+			useHandlersCache(), useMux())
 	},
 )

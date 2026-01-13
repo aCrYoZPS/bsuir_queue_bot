@@ -16,8 +16,8 @@ import (
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
-	stateErrors "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/errors"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/constants"
+	stateErrors "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/errors"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/uuid"
@@ -101,7 +101,7 @@ func (state *adminSubmitStartState) Revert(ctx context.Context, msg *tgbotapi.Me
 }
 
 type StateMachine interface {
-	HandleState(ctx context.Context, msg *tgbotapi.Message) error
+	Handle(ctx context.Context, msg *tgbotapi.Message) error
 }
 
 type adminSubmittingNameState struct {
@@ -289,7 +289,7 @@ func (state *adminSubmittingProofState) Revert(ctx context.Context, msg *tgbotap
 		return fmt.Errorf("failed to transition to admin submitting group state during reversal of admin submitting proof state: %w", err)
 	}
 	msg.Text = "placeholder"
-	err = state.machine.HandleState(ctx, msg)
+	err = state.machine.Handle(ctx, msg)
 	return err
 }
 

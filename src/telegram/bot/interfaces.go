@@ -6,7 +6,6 @@ import (
 )
 
 type MessagesService interface {
-	HandleCommands(update *tgbotapi.Update, bot *tgutils.Bot)
 	HandleMessages(update *tgbotapi.Update, bot *tgutils.Bot)
 }
 

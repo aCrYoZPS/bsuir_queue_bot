@@ -47,17 +47,10 @@ func (controller *BotController) Start(ctx context.Context) {
 		for update := range updates {
 			if update.Message != nil {
 				wg.Add(1)
-				if update.Message.Command() != "" {
-					go func(*sync.WaitGroup) {
-						controller.msgSrv.HandleCommands(&update, controller.bot)
-						wg.Done()
-					}(&wg)
-				} else {
-					go func(*sync.WaitGroup) {
-						controller.msgSrv.HandleMessages(&update, controller.bot)
-						wg.Done()
-					}(&wg)
-				}
+				go func(*sync.WaitGroup) {
+					controller.msgSrv.HandleMessages(&update, controller.bot)
+					wg.Done()
+				}(&wg)
 			} else if update.CallbackQuery != nil {
 				wg.Add(1)
 				go func(*sync.WaitGroup) {

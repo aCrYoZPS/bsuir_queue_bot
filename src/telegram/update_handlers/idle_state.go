@@ -1,4 +1,4 @@
-package stateMachine
+package update_handlers
 
 import (
 	"context"
@@ -9,8 +9,7 @@ import (
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/constants"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -23,35 +22,29 @@ type idleState struct {
 	usersRepo  interfaces.UsersRepository
 	groupsRepo interfaces.GroupsRepository
 	lessons    interfaces.LessonsRepository
-	State
+	mux        tgutils.MuxHandler
 }
 
-func newIdleState(cache interfaces.HandlersCache, bot *tgutils.Bot, usersRepo interfaces.UsersRepository, groupsRepo interfaces.GroupsRepository, lessons interfaces.LessonsRepository) *idleState {
-	return &idleState{cache: cache, bot: bot, usersRepo: usersRepo, groupsRepo: groupsRepo, lessons: lessons}
+func NewIdleState(cache interfaces.HandlersCache, bot *tgutils.Bot, usersRepo interfaces.UsersRepository, groupsRepo interfaces.GroupsRepository, lessons interfaces.LessonsRepository, mux tgutils.MuxHandler) *idleState {
+	return &idleState{cache: cache, bot: bot, usersRepo: usersRepo, groupsRepo: groupsRepo, lessons: lessons, mux: mux}
 }
 
 func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) error {
-	var currentState State
 	switch message.Text {
-	case update_handlers.ASSIGN_COMMAND, tgutils.ASSIGN_KEYBOARD:
+	case constants.ASSIGN_COMMAND:
 		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMIT_START_STATE))
 		if err != nil {
 			return fmt.Errorf("failed to transition from idle to admin submit state: %w", err)
 		}
-		currentState = getStateByName(constants.ADMIN_SUBMIT_START_STATE)
-		if currentState == nil {
-			return fmt.Errorf("failed to get state for name %s", currentState)
-		}
-	case update_handlers.HELP_COMMAND:
+	case constants.HELP_COMMAND:
 		var commands []tgbotapi.BotCommand
-		commands = append(commands, update_handlers.GetUserCommands()...)
-
+		commands = append(commands, GetUserCommands()...)
 		user, err := state.usersRepo.GetByTgId(ctx, message.From.ID)
 		if err != nil {
 			return fmt.Errorf("failed to get user by id during handling help command: %w", err)
 		}
 		if slices.Contains(user.Roles, entities.Admin) {
-			commands = append(commands, update_handlers.GetAdminCommands()...)
+			commands = append(commands, GetAdminCommands()...)
 		}
 		builder := strings.Builder{}
 		for _, command := range commands {
@@ -65,49 +58,29 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 			return fmt.Errorf("failed to send message during help command: %w", err)
 		}
 		return nil
-	case update_handlers.QUEUE_COMMAND:
+	case constants.QUEUE_COMMAND:
 		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.QUEUE_START_STATE))
 		if err != nil {
 			return err
 		}
-		currentState = getStateByName(constants.QUEUE_START_STATE)
-		if currentState == nil {
-			return fmt.Errorf("couldn't find state for %s command", update_handlers.QUEUE_COMMAND)
-		}
-	case update_handlers.TABLE_COMMAND:
-		err := state.HandleTableCommand(ctx, message)
-		if err != nil {
-			return err
-		}
-		return nil
-	case update_handlers.JOIN_GROUP_COMMAND, tgutils.JOIN_GROUP_KEYBOARD:
+	case constants.TABLE_COMMAND:
+		return state.HandleTableCommand(ctx, message)
+	case constants.JOIN_GROUP_COMMAND:
 		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.GROUP_SUBMIT_START_STATE))
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to save group submit start state: %w", err)
 		}
-		currentState = getStateByName(constants.GROUP_SUBMIT_START_STATE)
-		if currentState == nil {
-			return fmt.Errorf("couldn't find state for %s command", update_handlers.JOIN_GROUP_COMMAND)
-		}
-	case update_handlers.SUBMIT_COMMAND, tgutils.SUBMIT_KEYBOARD:
+	case constants.SUBMIT_COMMAND:
 		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.LABWORK_SUBMIT_START_STATE))
 		if err != nil {
 			return fmt.Errorf("failed to transition from idle state to labwork submit state: %w", err)
 		}
-		currentState = getStateByName(constants.LABWORK_SUBMIT_START_STATE)
-		if currentState == nil {
-			return fmt.Errorf("couldn't find state for %s command", constants.LABWORK_SUBMIT_START_STATE)
-		}
-	case update_handlers.ADD_LABWORK_COMMAND, tgutils.ADD_LABWORK_KEYBOARD:
+	case constants.ADD_LABWORK_COMMAND:
 		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.LABWORK_ADD_START_STATE))
 		if err != nil {
 			return fmt.Errorf("failed to transition from idle state to labwork add state: %w", err)
 		}
-		currentState = getStateByName(constants.LABWORK_ADD_START_STATE)
-		if currentState == nil {
-			return fmt.Errorf("couldn't find state for %s command", constants.LABWORK_ADD_START_STATE)
-		}
-	case update_handlers.START_COMMAND:
+	case constants.START_COMMAND:
 		user, err := state.usersRepo.GetByTgId(ctx, message.From.ID)
 		if err != nil {
 			return fmt.Errorf("failed to get user by id during handling start command: %w", err)
@@ -122,7 +95,7 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 	default:
 		return errors.Join(errors.ErrUnsupported, errors.New("answers are only to commands"))
 	}
-	err := currentState.Handle(ctx, message)
+	err := state.mux.Handle(ctx, message)
 	if err != nil {
 		return err
 	}

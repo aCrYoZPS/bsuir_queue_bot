@@ -2,6 +2,7 @@ package ioc
 
 import (
 	"os"
+	"strings"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/cron"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
@@ -18,7 +19,7 @@ var useTgBot = provider(
 		if err != nil {
 			logging.FatalLog(err.Error())
 		}
-		if debug != "" {
+		if strings.EqualFold(debug, "true") {
 			bot.Debug = true
 		}
 		return tgutils.NewBot(bot)
@@ -31,7 +32,15 @@ var UseBotController = provider(
 		if err != nil {
 			logging.FatalLog(err.Error())
 		}
+		RegisterRoutes(useMux())
 		return bot
+	},
+)
+
+var useMux = provider(
+	func() *tgutils.Mux {
+		mux := tgutils.NewMux(useHandlersCache(), useTgBot())
+		return mux
 	},
 )
 

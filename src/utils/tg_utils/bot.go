@@ -32,7 +32,6 @@ func (bot *Bot) SendCtx(ctx context.Context, c tgbotapi.Chattable) (tgbotapi.Mes
 		tgbotapi.Message
 		error
 	}) {
-
 		switch msg := c.(type) {
 		case tgbotapi.MessageConfig:
 			if utf8.RuneCountInString(msg.Text) > tgMsgMaxCharacters {

@@ -10,7 +10,7 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/constants"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -167,7 +167,7 @@ func (state *labworkAddSubmitNameState) Revert(ctx context.Context, msg *tgbotap
 }
 
 type StateMachine interface {
-	HandleState(ctx context.Context, msg *tgbotapi.Message) error
+	Handle(ctx context.Context, msg *tgbotapi.Message) error
 }
 type LabworkAddWaitingState struct {
 	bot     *tgutils.Bot
@@ -212,6 +212,6 @@ func (state *LabworkAddWaitingState) Revert(ctx context.Context, msg *tgbotapi.M
 		return fmt.Errorf("failed to save idle state during labwork add waiting state reversal: %w", err)
 	}
 	msg.Text = "placeholder"
-	err = state.machine.HandleState(ctx, msg)
+	err = state.machine.Handle(ctx, msg)
 	return err
 }

@@ -9,7 +9,7 @@ import (
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/state_machine/constants"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/constants"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/uuid"
@@ -154,7 +154,7 @@ func (state *groupSubmitGroupNameState) Revert(ctx context.Context, msg *tgbotap
 }
 
 type StateMachine interface {
-	HandleState(ctx context.Context, msg *tgbotapi.Message) error
+	Handle(ctx context.Context, msg *tgbotapi.Message) error
 }
 
 type groupSubmitNameState struct {
@@ -236,7 +236,7 @@ func (state *groupSubmitNameState) Revert(ctx context.Context, msg *tgbotapi.Mes
 		return fmt.Errorf("failed to transition to group submit groupname state during group submit name state reversal: %w", err)
 	}
 	msg.Text = "placeholder"
-	return state.machine.HandleState(ctx, msg)
+	return state.machine.Handle(ctx, msg)
 }
 
 func (state *groupSubmitNameState) SendMessagesToAdmins(ctx context.Context, senderMessage *tgbotapi.Message, admins []entities.User, form *groupSubmitForm) error {
