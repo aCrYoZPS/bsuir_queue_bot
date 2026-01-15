@@ -213,3 +213,22 @@ func (repo *UsersRepository) Delete(ctx context.Context, id int64) error {
 	_, err := repo.db.ExecContext(ctx, query, id)
 	return err
 }
+
+func (repo *UsersRepository) GetStudents(ctx context.Context, groupname string) ([]entities.User, error) {
+	query := fmt.Sprintf("SELECT u.id, u.tg_id, u.group_id, u.full_name FROM %s as u INNER JOIN %s as g ON g.id=u.group_id WHERE g.name=$1", USERS_TABLE, GROUPS_TABLE)
+	rows, err := repo.db.QueryContext(ctx, query, groupname)
+	if err != nil {
+		return nil, err
+	}
+	users := []entities.User{}
+	defer rows.Close()
+	for rows.Next() {
+		user := entities.User{}
+		err := rows.Scan(&user.Id, &user.TgId, &user.GroupId, &user.FullName)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	return users, nil
+}

@@ -14,8 +14,6 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-var _ (State) = (*idleState)(nil)
-
 type idleState struct {
 	cache      interfaces.HandlersCache
 	bot        *tgutils.Bot
@@ -61,7 +59,7 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 	case constants.QUEUE_COMMAND:
 		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.QUEUE_START_STATE))
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to save queue start state: %w", err)
 		}
 	case constants.TABLE_COMMAND:
 		return state.HandleTableCommand(ctx, message)
@@ -79,6 +77,11 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.LABWORK_ADD_START_STATE))
 		if err != nil {
 			return fmt.Errorf("failed to transition from idle state to labwork add state: %w", err)
+		}
+	case constants.DELETE_COMMAND:
+		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.DELETE_START_STATE))
+		if err != nil {
+			return fmt.Errorf("failed to transition from idle state")
 		}
 	case constants.START_COMMAND:
 		user, err := state.usersRepo.GetByTgId(ctx, message.From.ID)

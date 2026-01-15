@@ -4,7 +4,8 @@ import (
 	"context"
 
 	stateMachine "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/admin"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/admin/delete"
+	admin "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/admin_submit"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/constants"
 	customlabworks "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/custom_labworks"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/group"
@@ -17,9 +18,10 @@ import (
 func RegisterRoutes(mux *tgutils.Mux) {
 
 	adminMux := tgutils.NewMux(useHandlersCache(), useTgBot())
-	mux.RegisterRoute(constants.ADMIN_SUBMIT_STATES, adminMux)
-	mux.RegisterRoute(constants.IDLE_STATE, (useIdleState()))
+	mux.RegisterRoute(constants.ADMIN_STATES, useAdminMiddleware(adminMux)())
+	RegisterDeleteRoutes(adminMux)
 
+	mux.RegisterRoute(constants.IDLE_STATE, (useIdleState()))
 	RegisterAdminSubmitRoutes(mux)
 	RegisterLabworkRoutes(mux)
 	RegisterLabworkAddRoutes(mux)
@@ -58,7 +60,6 @@ func RegisterGroupRoutes(mux *tgutils.Mux) {
 func RegisterQueueRoutes(mux *tgutils.Mux) {
 	mux.RegisterRoute(constants.QUEUE_START_STATE, useQueueStartState())
 	mux.RegisterRoute(constants.QUEUE_WAITING_STATE, useQueueWaitingState())
-
 	mux.RegisterCallback(constants.QUEUE_CALLBACKS, useQueueCallbackHandler())
 }
 
@@ -70,6 +71,11 @@ func RegisterAdminSubmitRoutes(mux *tgutils.Mux) {
 	mux.RegisterRoute(constants.ADMIN_WAITING_STATE, useAdminWaitingState())
 
 	mux.RegisterCallback(constants.ADMIN_CALLBACKS, useAdminCallbackHandler())
+}
+
+func RegisterDeleteRoutes(mux *tgutils.Mux) {
+	mux.RegisterRoute(constants.DELETE_START_STATE, useDeleteStartState())
+	mux.RegisterRoute(constants.DELETE_CHOOSE_STATE, useDeleteChooseState())
 }
 
 var useLabworkSubmitStartState = provider(
@@ -165,7 +171,6 @@ var useQueueCallbackHandler = provider(
 		return queue.NewQueueCallbackHandler(useUsersRepository(), useLessonsRepository(), useHandlersCache(), useTgBot(), useLessonsRequestsRepository())
 	},
 )
-
 var useAdminSubmitStartState = provider(
 	func() tgutils.MuxHandler {
 		return admin.NewAdminSubmitState(useHandlersCache(), useTgBot(), useUsersRepository())
@@ -200,5 +205,16 @@ var useAdminCallbackHandler = provider(
 var useIdleState = provider(
 	func() tgutils.MuxHandler {
 		return stateMachine.NewIdleState(useHandlersCache(), useTgBot(), useUsersRepository(), useGroupsRepository(), useLessonsRepository(), useMux())
+	},
+)
+
+var useDeleteStartState = provider(
+	func() *delete.DeleteStartState {
+		return delete.NewDeleteStartState(useTgBot(), useUsersRepository(), useHandlersCache())
+	},
+)
+var useDeleteChooseState = provider(
+	func() *delete.DeleteChooseState {
+		return delete.NewDeleteChooseState(useTgBot(), useHandlersCache(), useUsersRepository())
 	},
 )

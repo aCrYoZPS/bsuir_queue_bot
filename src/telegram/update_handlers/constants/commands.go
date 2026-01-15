@@ -10,4 +10,5 @@ const (
 	QUEUE_COMMAND       = "/queue"
 	REVERT_COMMAND      = "/revert"
 	TABLE_COMMAND       = "/table"
+	DELETE_COMMAND      = "/delete"
 )

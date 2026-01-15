@@ -47,8 +47,10 @@ const (
 	QUEUE_WAITING_STATE = QUEUE_STATES + "_wait"
 )
 
+const ADMIN_STATES = "admin"
 const (
-	DELETE_STATES = "del"
+	DELETE_STATES = ADMIN_STATES + "_del"
 
-	DELETE_START_STATE = "del_start"
+	DELETE_START_STATE  = DELETE_STATES + "_start"
+	DELETE_CHOOSE_STATE = DELETE_STATES + "_choose"
 )

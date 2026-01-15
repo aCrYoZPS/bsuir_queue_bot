@@ -2,12 +2,17 @@ package update_handlers
 
 import (
 	"context"
+	"sync"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 )
 
-type State interface {
-	StateName() string
-	Handle(ctx context.Context, message *tgbotapi.Message) error
-	Revert(ctx context.Context, message *tgbotapi.Message) error
+type Cache interface {
+	SaveState(context.Context, interfaces.CachedInfo) error
+	GetState(ctx context.Context, chatId int64) (*interfaces.CachedInfo, error)
+	SaveInfo(ctx context.Context, chatId int64, json string) error
+	GetInfo(ctx context.Context, chatId int64) (string, error)
+	AcquireLock(ctx context.Context, chatId int64, key string) *sync.Mutex
+	ReleaseLock(ctx context.Context, chatId int64, key string)
+	RemoveInfo(ctx context.Context, chatId int64) error
 }

@@ -24,6 +24,7 @@ var userCommands = []tgbotapi.BotCommand{
 
 var adminCommands = []tgbotapi.BotCommand{
 	{Command: constants.ADD_LABWORK_COMMAND, Description: "Добавление собственной пары"},
+	{Command: constants.DELETE_COMMAND, Description: "Удаление участника из группы"},
 }
 
 func GetUserCommands() []tgbotapi.BotCommand {
