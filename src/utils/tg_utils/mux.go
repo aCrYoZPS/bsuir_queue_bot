@@ -2,6 +2,7 @@ package tgutils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -50,15 +51,16 @@ type Cache interface {
 }
 
 type Mux struct {
-	routes    datastructures.TrieNode[MuxHandler]
-	callbacks datastructures.TrieNode[CallbackHandler]
-	cache     Cache
-	bot       *Bot
+	routes          datastructures.TrieNode[MuxHandler]
+	callbacks       datastructures.TrieNode[CallbackHandler]
+	cache           Cache
+	bot             *Bot
+	NotFoundHandler MuxHandler
 }
 
 func NewMux(cache Cache, bot *Bot) *Mux {
 	return &Mux{cache: cache, bot: bot, routes: datastructures.NewTrieNode[MuxHandler](),
-		callbacks: datastructures.NewTrieNode[CallbackHandler]()}
+		callbacks: datastructures.NewTrieNode[CallbackHandler](), NotFoundHandler: NewHandlerFunc(func(ctx context.Context, message *tgbotapi.Message) error { return errors.ErrUnsupported }, func(ctx context.Context, message *tgbotapi.Message) error { return errors.ErrUnsupported })}
 }
 
 func (mu *Mux) RegisterRoute(stateName string, handler MuxHandler) {
@@ -83,13 +85,17 @@ func (mux *Mux) Handle(ctx context.Context, message *tgbotapi.Message) error {
 		return nil
 	}
 
-	for route := range mux.routes.Iterate(stateName) {
-		if route.Val() != nil {
-			err := route.Val().Handle(ctx, message)
-			if err != nil {
-				return err
+	if _, ok := mux.routes.SearchExact(stateName); ok {
+		for route := range mux.routes.Iterate(stateName) {
+			if route.Val() != nil {
+				err := route.Val().Handle(ctx, message)
+				if err != nil {
+					return err
+				}
 			}
 		}
+	} else {
+		return mux.NotFoundHandler.Handle(ctx, message)
 	}
 	// if !routeFound {
 	// 	return mux.routes.Search(constants.IDLE_STATE).Handle(ctx, message)
