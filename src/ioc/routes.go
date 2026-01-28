@@ -4,7 +4,7 @@ import (
 	"context"
 
 	stateMachine "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/admin/delete"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/admin/delete_user"
 	admin "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/admin_submit"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/constants"
 	customlabworks "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/custom_labworks"
@@ -16,7 +16,8 @@ import (
 )
 
 func RegisterRoutes(mux *tgutils.Mux) {
-
+	mux.NotFoundHandler = useIdleState()
+	
 	adminMux := tgutils.NewMux(useHandlersCache(), useTgBot())
 	mux.RegisterRoute(constants.ADMIN_STATES, useAdminMiddleware(adminMux)())
 	RegisterDeleteRoutes(adminMux)

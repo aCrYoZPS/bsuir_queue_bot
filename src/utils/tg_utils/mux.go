@@ -97,9 +97,6 @@ func (mux *Mux) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	} else {
 		return mux.NotFoundHandler.Handle(ctx, message)
 	}
-	// if !routeFound {
-	// 	return mux.routes.Search(constants.IDLE_STATE).Handle(ctx, message)
-	// }
 	return nil
 }
 

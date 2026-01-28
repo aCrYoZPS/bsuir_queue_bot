@@ -35,8 +35,23 @@ CREATE TABLE IF NOT EXISTS lessons_requests (
     submit_time INTEGER NOT NULL,
     subgroup_num INTEGER NOT NULL,
     is_pending BOOLEAN NOT NULL DEFAULT FALSE,
+    order_position INTEGER NOT NULL DEFAULT 1,
+    resubmissions_count INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE, 
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS queue(
+    lesson_id INTEGER,
+    order_type INTEGER,
+    ascending BOOLEAN DEFAULT true,
+    FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE, 
+    FOREIGN KEY (order_type) REFERENCES order_types(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS order_types(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name text
 );
 
 CREATE INDEX IF NOT EXISTS lessons_requests_lesson_id_idx ON lessons_requests(lesson_id);
