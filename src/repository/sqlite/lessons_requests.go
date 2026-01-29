@@ -158,7 +158,7 @@ func (repo *LessonsRequestsRepository) SetToNextLesson(ctx context.Context, requ
 }
 
 func (repo *LessonsRequestsRepository) SetAccepted(ctx context.Context, requestId int64) error {
-	query := fmt.Sprintf("SELECT q.lesson_id, q.order_type, q.ascending FROM %s AS q INNER JOIN %s AS r ON r.id=$1 WHERE q.lesson_id=r.lesson_id", QUEUE_TABLE, LESSONS_REQUESTS_TABLE)
+	query := fmt.Sprintf("SELECT q.lesson_id, q.order_type, q.ascending FROM %s AS q INNER JOIN %s AS r ON r.lesson_id=$1 WHERE q.lesson_id=r.lesson_id", QUEUE_TABLE, LESSONS_REQUESTS_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query, requestId)
 	if err != nil {
 		return fmt.Errorf("failed to read lesson requests order: %w", err)
@@ -233,7 +233,7 @@ func (repo *LessonsRequestsRepository) reorderRequestsTx(ctx context.Context, tx
 	}
 
 	orderTypes := make([]persistance.OrderType, 0)
-	query = fmt.Sprintf("SELECT q.order_type, q.ascending FROM %s WHERE q.lesson_id=$1", QUEUE_TABLE)
+	query = fmt.Sprintf("SELECT q.order_type, q.ascending FROM %s as q WHERE q.lesson_id=$1", QUEUE_TABLE)
 	rows, err = tx.QueryContext(ctx, query, lessonId)
 	if err != nil {
 		return fmt.Errorf("failed to read lesson requests order: %w", err)

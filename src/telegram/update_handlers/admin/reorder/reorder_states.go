@@ -29,5 +29,5 @@ func NewReorderStartState(cache interfaces.HandlersCache, bot *tgutils.Bot, user
 }
 
 func (state *ReorderStartState) Handle(ctx context.Context, message *tgbotapi.Message) error {
-
+	return nil
 }
