@@ -85,7 +85,7 @@ func (mux *Mux) Handle(ctx context.Context, message *tgbotapi.Message) error {
 		return nil
 	}
 
-	if _, ok := mux.routes.SearchExact(stateName); ok {
+	if route := mux.routes.Search(stateName); route != nil {
 		for route := range mux.routes.Iterate(stateName) {
 			if route.Val() != nil {
 				err := route.Val().Handle(ctx, message)

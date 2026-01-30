@@ -236,7 +236,7 @@ func (repo *LessonsRequestsRepository) reorderRequestsTx(ctx context.Context, tx
 	query = fmt.Sprintf("SELECT q.order_type, q.ascending FROM %s as q WHERE q.lesson_id=$1", QUEUE_TABLE)
 	rows, err = tx.QueryContext(ctx, query, lessonId)
 	if err != nil {
-		return fmt.Errorf("failed to read lesson requests order: %w", err)
+		return fmt.Errorf("failed to read lesson requests order during reordering: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
