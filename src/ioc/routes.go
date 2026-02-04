@@ -29,6 +29,7 @@ func RegisterRoutes(mux *tgutils.Mux) {
 	RegisterLabworkAddRoutes(mux)
 	RegisterGroupRoutes(mux)
 	RegisterQueueRoutes(mux)
+	RegisterCronCalbacks(mux)
 }
 
 func RegisterLabworkRoutes(mux *tgutils.Mux) {
