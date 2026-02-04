@@ -3,6 +3,7 @@ package ioc
 import (
 	"context"
 
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/cron"
 	stateMachine "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers"
 	delete "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/admin/delete_user"
 	admin "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/admin_submit"
@@ -77,6 +78,10 @@ func RegisterAdminSubmitRoutes(mux *tgutils.Mux) {
 func RegisterDeleteRoutes(mux *tgutils.Mux) {
 	mux.RegisterRoute(constants.DELETE_START_STATE, useDeleteStartState())
 	mux.RegisterRoute(constants.DELETE_CHOOSE_STATE, useDeleteChooseState())
+}
+
+func RegisterCronCalbacks(mux *tgutils.Mux) {
+	mux.RegisterCallback(cron.REMINDER_CALLBACKS, useReminderCallbackHandler())
 }
 
 var useLabworkSubmitStartState = provider(
@@ -219,3 +224,7 @@ var useDeleteChooseState = provider(
 		return delete.NewDeleteChooseState(useTgBot(), useHandlersCache(), useUsersRepository())
 	},
 )
+
+var useReminderCallbackHandler = provider(func() *cron.ReminderCallbackHandler {
+	return cron.NewSheetsRefreshCallbackHandler(useLessonsRequestsRepository(), UseSheetsApiService(), useUsersRepository(), UseLessonsService())
+})

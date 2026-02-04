@@ -304,11 +304,6 @@ func (handler *LabworksCallbackHandler) handleAcceptCallback(ctx context.Context
 		return fmt.Errorf("failed to get labwork request by tg ids during labwork accept callback handling: %w", err)
 	}
 
-	err = handler.labworkRequests.SetAccepted(ctx, request.Id)
-	if err != nil {
-		return fmt.Errorf("failed to set labwork as accepted during labwork accept callback handling: %w", err)
-	}
-
 	err = handler.cache.SaveState(ctx, *interfaces.NewCachedInfo(chatId, constants.IDLE_STATE))
 	if err != nil {
 		return fmt.Errorf("failed to save idle state during labwork accept callback handling: %w", err)

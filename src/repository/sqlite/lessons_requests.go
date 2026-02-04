@@ -182,7 +182,7 @@ func (repo *LessonsRequestsRepository) SetAccepted(ctx context.Context, requestI
 	}
 	defer tx.Rollback()
 
-	query = fmt.Sprintf("UPDATE %s SET is_pending=FALSE WHERE id=$1", LESSONS_REQUESTS_TABLE)
+	query = fmt.Sprintf("UPDATE %s SET is_pending=0 WHERE id=$1", LESSONS_REQUESTS_TABLE)
 	_, err = tx.ExecContext(ctx, query, requestId)
 	if err != nil {
 		return fmt.Errorf("failed to set request as not pending: %w", err)
@@ -288,7 +288,7 @@ func (repo *LessonsRequestsRepository) reorderRequestsTx(ctx context.Context, tx
 }
 
 func (repo *LessonsRequestsRepository) GetLabworkQueue(ctx context.Context, labworkId int64) ([]entities.User, error) {
-	query := fmt.Sprintf("SELECT u.id, u.full_name, u.tg_id, u.group_id FROM %s AS l INNER JOIN %s as u ON u.tg_id=l.user_id WHERE l.lesson_id=$1 AND is_pending=FALSE ORDER BY order_position", LESSONS_REQUESTS_TABLE, USERS_TABLE)
+	query := fmt.Sprintf("SELECT u.id, u.full_name, u.tg_id, u.group_id FROM %s AS l INNER JOIN %s as u ON u.tg_id=l.user_id WHERE l.lesson_id=$1 AND is_pending=TRUE ORDER BY order_position", LESSONS_REQUESTS_TABLE, USERS_TABLE)
 	rows, err := repo.db.Query(query, labworkId)
 	if err != nil {
 		return nil, err

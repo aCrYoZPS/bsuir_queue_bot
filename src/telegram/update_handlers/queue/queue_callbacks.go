@@ -194,7 +194,7 @@ func (handler *QueueCallbacksHandler) handleTimeCallback(ctx context.Context, up
 	}
 	var output strings.Builder
 	for i, user := range users {
-		output.WriteString(fmt.Sprintf("%d %s\n", i+1, user.FullName))
+		fmt.Fprintf(&output, "%d %s\n", i+1, user.FullName)
 	}
 	if output.String() == "" {
 		output.WriteString("На эту лабораторную нет заявок. Как знать,может,вы будете первым")
