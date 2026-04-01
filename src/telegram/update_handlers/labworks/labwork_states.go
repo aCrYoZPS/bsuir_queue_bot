@@ -138,12 +138,7 @@ func (state *labworkSubmitStartState) TransitionAndSend(ctx context.Context, msg
 
 func createLabworkDisciplineCallback(userTgId int64, discipline string) string {
 	builder := strings.Builder{}
-	builder.Grow(64)
-	builder.WriteString(constants.LABWORK_DISCIPLINE_CALLBACKS)
-	builder.WriteString("|")
-	builder.WriteString(discipline)
-	builder.WriteString("|")
-	builder.WriteString(fmt.Sprint(userTgId))
+	fmt.Fprintf(&builder, "%s|%s|%d", constants.LABWORK_DISCIPLINE_CALLBACKS, discipline, userTgId)
 	return builder.String()
 }
 

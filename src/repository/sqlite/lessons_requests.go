@@ -204,6 +204,15 @@ func (repo *LessonsRequestsRepository) ChangeOrderation(ctx context.Context, ord
 		return fmt.Errorf("failed to delete previous queue sorting: %w", err)
 	}
 
+	query = fmt.Sprintf("INSERT INTO %s (order_type, ascending, lesson_id) VALUES ($1, $2, $3)", QUEUE_TABLE)
+
+	for _, orderType := range orderTypes {
+		_, err = tx.ExecContext(ctx, query, orderType.Value, orderType.Ascending, lessonId)
+		if err != nil {
+			return fmt.Errorf("failed to insert order type: %w", err)
+		}
+	}
+
 	err = repo.reorderRequestsTx(ctx, tx, lessonId)
 	if err != nil {
 		return err
@@ -215,6 +224,53 @@ func (repo *LessonsRequestsRepository) ChangeOrderation(ctx context.Context, ord
 	return nil
 }
 
+func (repo *LessonsRequestsRepository) ChangeOrderationSubject(ctx context.Context, orderTypes []entities.OrderType, subject string) error {
+	tx, err := repo.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin tx: %w", err)
+	}
+
+	defer tx.Rollback()
+
+	query := fmt.Sprintf("SELECT id from %[1]s where name =$1", LESSONS_TABLE)
+	rows, err := tx.QueryContext(ctx, query, subject)
+	if err != nil {
+		return fmt.Errorf("failed to get lessons id: %w", err)
+	}
+	for rows.Next() {
+		var lessonId int64
+		err := rows.Scan(&lessonId)
+		if err != nil {
+			return fmt.Errorf("failed to scan lesson id: %w", err)
+		}
+
+		query := fmt.Sprintf("DELETE FROM %s WHERE lesson_id=$1", QUEUE_TABLE)
+		_, err = tx.ExecContext(ctx, query, lessonId)
+		if err != nil {
+			return fmt.Errorf("failed to delete previous queue sorting: %w", err)
+		}
+
+		query = fmt.Sprintf("INSERT INTO %s (order_type, ascending, lesson_id) VALUES ($1, $2, $3)", QUEUE_TABLE)
+		for _, orderType := range orderTypes {
+			_, err = tx.ExecContext(ctx, query, orderType.Value, orderType.Ascending, lessonId)
+			if err != nil {
+				return fmt.Errorf("failed to insert order type: %w", err)
+			}
+		}
+
+		err = repo.reorderRequestsTx(ctx, tx, lessonId)
+		if err != nil {
+			return err
+		}
+	}
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+	return nil
+}
+
+//Separate swap table for all of this shit, which is also queried every time... Like, holy fuck...
 func (repo *LessonsRequestsRepository) reorderRequestsTx(ctx context.Context, tx *sql.Tx, lessonId int64) error {
 	query := fmt.Sprintf("SELECT id, user_id, lesson_id, msg_id, chat_id, subgroup_num, submit_time FROM %s WHERE id=$1 AND is_pending=false", LESSONS_REQUESTS_TABLE)
 	rows, err := tx.QueryContext(ctx, query, lessonId)
@@ -289,7 +345,7 @@ func (repo *LessonsRequestsRepository) reorderRequestsTx(ctx context.Context, tx
 
 func (repo *LessonsRequestsRepository) GetLabworkQueue(ctx context.Context, labworkId int64) ([]entities.User, error) {
 	query := fmt.Sprintf("SELECT u.id, u.full_name, u.tg_id, u.group_id FROM %s AS l INNER JOIN %s as u ON u.tg_id=l.user_id WHERE l.lesson_id=$1 AND is_pending=TRUE ORDER BY order_position", LESSONS_REQUESTS_TABLE, USERS_TABLE)
-	rows, err := repo.db.Query(query, labworkId)
+	rows, err := repo.db.QueryContext(ctx, query, labworkId)
 	if err != nil {
 		return nil, err
 	}

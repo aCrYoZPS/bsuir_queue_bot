@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
 	driveapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/drive_api"
 	iis_api_entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
@@ -438,6 +439,102 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistance.Lesso
 		})()
 	}
 	return err
+}
+
+func (serv *SheetsApiService) ReorderLessons(ctx context.Context, orderTypes []entities.OrderType, groupName, subject string) error {
+	group, err := serv.groupsRepo.GetByName(ctx, groupName)
+	if err != nil {
+		return fmt.Errorf("failed to get group during reordering lessons in sheets: %w", err)
+	}
+	spreadsheet, err := serv.api.Spreadsheets.Get(group.SpreadsheetId).Context(ctx).Do()
+	if err != nil {
+		return fmt.Errorf("failed to get sheet by id during rerordering group lessons: %w", err)
+	}
+
+	requests := []*sheets.Request{}
+	specs := []*sheets.SortSpec{}
+	for _, orderType := range orderTypes {
+		spec := &sheets.SortSpec{}
+		switch orderType.Value {
+		case entities.ByLabworkNumber:
+			spec.DimensionIndex = 1
+		case entities.BySubmission:
+			spec.DimensionIndex = 2
+		}
+		if orderType.Ascending {
+			spec.SortOrder = "ASCENDING"
+		} else {
+			spec.SortOrder = "DESCENDING"
+		}
+		specs = append(specs, spec)
+	}
+	for _, sheet := range spreadsheet.Sheets {
+		sheetSubject, _, _ := parseLessonName(sheet.Properties.Title)
+		if sheetSubject == subject {
+			requests = append(requests, &sheets.Request{SortRange: &sheets.SortRangeRequest{
+				Range:     &sheets.GridRange{SheetId: sheet.Properties.SheetId, StartRowIndex: 1},
+				SortSpecs: specs,
+			}})
+		}
+	}
+	err = serv.WithRetries(ctx, func(ctx context.Context) error {
+		_, err := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{
+			Requests: requests,
+		}).Context(ctx).Do()
+		return err
+	})()
+	if err != nil {
+		return fmt.Errorf("failed to batch update a spreadsheet: %w", err)
+	}
+	return nil
+}
+
+func (serv *SheetsApiService) ReorderLesson(ctx context.Context, orderTypes []entities.OrderType, groupName string, lesson persistance.Lesson) error {
+	group, err := serv.groupsRepo.GetByName(ctx, groupName)
+	if err != nil {
+		return fmt.Errorf("failed to get group during reordering lessons in sheets: %w", err)
+	}
+	spreadsheet, err := serv.api.Spreadsheets.Get(group.SpreadsheetId).Context(ctx).Do()
+	if err != nil {
+		return fmt.Errorf("failed to get sheet by id during rerordering group lessons: %w", err)
+	}
+
+	requests := []*sheets.Request{}
+	specs := []*sheets.SortSpec{}
+	for _, orderType := range orderTypes {
+		spec := &sheets.SortSpec{}
+		switch orderType.Value {
+		case entities.ByLabworkNumber:
+			spec.DimensionIndex = 1
+		case entities.BySubmission:
+			spec.DimensionIndex = 2
+		}
+		if orderType.Ascending {
+			spec.SortOrder = "ASCENDING"
+		} else {
+			spec.SortOrder = "DESCENDING"
+		}
+		specs = append(specs, spec)
+	}
+	for _, sheet := range spreadsheet.Sheets {
+		sheetSubject, date, subgroup := parseLessonName(sheet.Properties.Title)
+		if sheetSubject == lesson.Subject && serv.areDatesEqual(lesson.DateTime, date) && lesson.SubgroupNumber == subgroup {
+			requests = append(requests, &sheets.Request{SortRange: &sheets.SortRangeRequest{
+				Range:     &sheets.GridRange{SheetId: sheet.Properties.SheetId, StartRowIndex: 1},
+				SortSpecs: specs,
+			}})
+		}
+	}
+	err = serv.WithRetries(ctx, func(ctx context.Context) error {
+		_, err := serv.api.Spreadsheets.BatchUpdate(group.SpreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{
+			Requests: requests,
+		}).Context(ctx).Do()
+		return err
+	})()
+	if err != nil {
+		return fmt.Errorf("failed to batch update a spreadsheet: %w", err)
+	}
+	return nil
 }
 
 func (serv *SheetsApiService) WithRetries(ctx context.Context, apiCall func(ctx context.Context) error) func() error {

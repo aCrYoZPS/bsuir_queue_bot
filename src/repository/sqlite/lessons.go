@@ -55,6 +55,19 @@ func (repo *LessonsRepository) AddRange(ctx context.Context, lessons []*entities
 	return err
 }
 
+func (repo *LessonsRepository) Get(ctx context.Context, id int64) (persistance.Lesson, error) {
+	query := fmt.Sprintf("SELECT l.group_id, l.lesson_type, l.subject, l.subgroup_number, l.date_time FROM %s as l WHERE l.id=$1", LESSONS_TABLE)
+	row := repo.db.QueryRowContext(ctx, query, id)
+	var lesson persistance.Lesson
+	var storedDateTime int64
+	err := row.Scan(&lesson.GroupId, &lesson.LessonType, &lesson.SubgroupNumber, &storedDateTime)
+	if err != nil {
+		return persistance.Lesson{}, err
+	}
+	lesson.DateTime = time.Unix(storedDateTime, 0)
+	return lesson, nil
+}
+
 func (repo *LessonsRepository) Add(ctx context.Context, lesson *persistance.Lesson) error {
 	query := fmt.Sprintf("INSERT INTO %s (group_id, subject, lesson_type, subgroup_number, date_time) values ($1,$2,$3,$4,$5)", LESSONS_TABLE)
 	_, err := repo.db.ExecContext(ctx, query, lesson.GroupId, lesson.Subject, lesson.LessonType, lesson.SubgroupNumber, lesson.DateTime.Unix())

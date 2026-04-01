@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS lessons_requests (
 );
 
 CREATE TABLE IF NOT EXISTS queue(
+    id integer primary key,
     lesson_id INTEGER,
     order_type INTEGER,
     ascending BOOLEAN DEFAULT true,
