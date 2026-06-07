@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"net/http"
 
-	google_docs_auth "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/auth"
-	driveapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/drive_api"
-	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/sheets_api"
+	google_docs_auth "github.com/aCrYoZPS/bsuir_queue_bot/src/google/auth"
+	driveapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google/drive_api"
+	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google/sheets_api"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/ioc/constants"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"

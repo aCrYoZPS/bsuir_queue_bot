@@ -9,7 +9,7 @@ import (
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistence"
 )
 
 const (
@@ -35,11 +35,14 @@ func (repo *LessonsRequestsRepository) Add(ctx context.Context, req *entities.Le
 		return fmt.Errorf("failed to start tx during adding labwork request: %w", err)
 	}
 	defer tx.Rollback()
-	query := fmt.Sprintf("INSERT INTO %s (user_id, lesson_id, msg_id, chat_id, submit_time, subgroup_num, is_pending) values ($1, $2, $3, $4, $5, $6, $7)", LESSONS_REQUESTS_TABLE)
-	_, err = tx.ExecContext(ctx, query, req.UserId, req.LessonId, req.MsgId, req.ChatId, req.SubmitTime.Format(savedFormat), req.LabworkNumber, true)
+	query := fmt.Sprintf("INSERT INTO %s (user_id, lesson_id, msg_id, chat_id, submit_time, subgroup_num, is_pending)" + 
+	"values ($1, $2, $3, $4, $5, $6, $7)", LESSONS_REQUESTS_TABLE)
+	_, err = tx.ExecContext(ctx, query, req.UserId, req.LessonId, req.MsgId, req.ChatId, 
+		req.SubmitTime.Format(savedFormat), req.LabworkNumber, true)
 	if err != nil {
 		return fmt.Errorf("failed to insert request into table: %w", err)
 	}
+	
 	err = repo.reorderRequestsTx(ctx, tx, req.LessonId)
 	if err != nil {
 		return err
@@ -52,7 +55,8 @@ func (repo *LessonsRequestsRepository) Add(ctx context.Context, req *entities.Le
 }
 
 func (repo *LessonsRequestsRepository) Get(ctx context.Context, id int64) (*entities.LessonRequest, error) {
-	query := fmt.Sprintf("SELECT id, user_id, lesson_id, msg_id, chat_id, subgroup_num, submit_time FROM %s WHERE id=$1", LESSONS_REQUESTS_TABLE)
+	query := fmt.Sprintf("SELECT id, user_id, lesson_id, msg_id, chat_id, subgroup_num, submit_time FROM %s+ WHERE id=$1",
+	 LESSONS_REQUESTS_TABLE)
 	row := repo.db.QueryRowContext(ctx, query, id)
 	if row.Err() != nil {
 		return nil, row.Err()
@@ -68,7 +72,8 @@ func (repo *LessonsRequestsRepository) Get(ctx context.Context, id int64) (*enti
 }
 
 func (repo *LessonsRequestsRepository) GetByTgIds(ctx context.Context, msgId int64, chatId int64) (*entities.LessonRequest, error) {
-	query := fmt.Sprintf("SELECT id, user_id, chat_id,lesson_id, msg_id, subgroup_num, submit_time FROM %s WHERE msg_id=$1 AND chat_id=$2", LESSONS_REQUESTS_TABLE)
+	query := fmt.Sprintf("SELECT id, user_id, chat_id,lesson_id, msg_id, subgroup_num, submit_time FROM %s " + 
+	"WHERE msg_id=$1 AND chat_id=$2", LESSONS_REQUESTS_TABLE)
 	row := repo.db.QueryRowContext(ctx, query, msgId, chatId)
 	if row.Err() != nil {
 		return nil, row.Err()
@@ -117,7 +122,9 @@ func (repo *LessonsRequestsRepository) Delete(ctx context.Context, requestId int
 		return fmt.Errorf("failed to delete lesson request: %w", err)
 	}
 	err = row.Scan(&lessonId)
-
+	if err != nil {
+		return err
+	}
 	err = repo.reorderRequestsTx(ctx, tx, lessonId)
 	if err != nil {
 		return err
@@ -137,7 +144,9 @@ func (repo *LessonsRequestsRepository) SetToNextLesson(ctx context.Context, requ
 	defer tx.Rollback()
 
 	var lessonId int64
-	query := fmt.Sprintf("UPDATE %s AS lr SET lesson_id = (SELECT id FROM lessons WHERE id>lr.lesson_id AND subject=(SELECT subject FROM %s WHERE id=(SELECT lesson_id FROM %[1]s WHERE id=$1))), resubmissions_count=resubmissions_count+1 WHERE id=$1 RETURNING lesson_id", LESSONS_REQUESTS_TABLE, LESSONS_TABLE)
+	query := fmt.Sprintf("UPDATE %s AS lr SET lesson_id = (SELECT id FROM lessons WHERE id>lr.lesson_id AND " +
+	"subject=(SELECT subject FROM %s WHERE id=(SELECT lesson_id FROM %[1]s WHERE id=$1))), "+ 
+	"resubmissions_count=resubmissions_count+1 WHERE id=$1 RETURNING lesson_id", LESSONS_REQUESTS_TABLE, LESSONS_TABLE)
 	row := tx.QueryRowContext(ctx, query, requestId)
 	if row.Err() != nil {
 		return fmt.Errorf("failed to set to next lesson: %w", err)
@@ -158,17 +167,18 @@ func (repo *LessonsRequestsRepository) SetToNextLesson(ctx context.Context, requ
 }
 
 func (repo *LessonsRequestsRepository) SetAccepted(ctx context.Context, requestId int64) error {
-	query := fmt.Sprintf("SELECT q.lesson_id, q.order_type, q.ascending FROM %s AS q INNER JOIN %s AS r ON r.lesson_id=$1 WHERE q.lesson_id=r.lesson_id", QUEUE_TABLE, LESSONS_REQUESTS_TABLE)
+	query := fmt.Sprintf("SELECT q.lesson_id, q.order_type, q.ascending FROM %s AS q " + 
+	"INNER JOIN %s AS r ON r.lesson_id=$1 WHERE q.lesson_id=r.lesson_id", QUEUE_TABLE, LESSONS_REQUESTS_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query, requestId)
 	if err != nil {
 		return fmt.Errorf("failed to read lesson requests order: %w", err)
 	}
 	defer rows.Close()
 
-	orderTypes := []persistance.OrderType{}
+	orderTypes := []persistence.OrderType{}
 	var lessonId int64
 	for rows.Next() {
-		var orderType persistance.OrderType
+		var orderType persistence.OrderType
 		err = rows.Scan(&lessonId, &orderType.Value, &orderType.Ascending)
 		if err != nil {
 			return fmt.Errorf("failed to scan order types: %w", err)
@@ -272,7 +282,8 @@ func (repo *LessonsRequestsRepository) ChangeOrderationSubject(ctx context.Conte
 
 //Separate swap table for all of this shit, which is also queried every time... Like, holy fuck...
 func (repo *LessonsRequestsRepository) reorderRequestsTx(ctx context.Context, tx *sql.Tx, lessonId int64) error {
-	query := fmt.Sprintf("SELECT id, user_id, lesson_id, msg_id, chat_id, subgroup_num, submit_time FROM %s WHERE id=$1 AND is_pending=false", LESSONS_REQUESTS_TABLE)
+	query := fmt.Sprintf("SELECT id, user_id, lesson_id, msg_id, chat_id, subgroup_num, submit_time FROM %s" + 
+	" WHERE id=$1 AND is_pending=false", LESSONS_REQUESTS_TABLE)
 	rows, err := tx.QueryContext(ctx, query, lessonId)
 	if err != nil {
 		return fmt.Errorf("failed to query requests for lesson: %w", err)
@@ -288,7 +299,7 @@ func (repo *LessonsRequestsRepository) reorderRequestsTx(ctx context.Context, tx
 		requests = append(requests, cur)
 	}
 
-	orderTypes := make([]persistance.OrderType, 0)
+	orderTypes := make([]persistence.OrderType, 0)
 	query = fmt.Sprintf("SELECT q.order_type, q.ascending FROM %s as q WHERE q.lesson_id=$1", QUEUE_TABLE)
 	rows, err = tx.QueryContext(ctx, query, lessonId)
 	if err != nil {
@@ -296,7 +307,7 @@ func (repo *LessonsRequestsRepository) reorderRequestsTx(ctx context.Context, tx
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var cur persistance.OrderType
+		var cur persistence.OrderType
 		err := rows.Scan(&cur.Value, &cur.Ascending)
 		if err != nil {
 			return fmt.Errorf("faield to scan row into order type: %w", err)
@@ -308,7 +319,7 @@ func (repo *LessonsRequestsRepository) reorderRequestsTx(ctx context.Context, tx
 	for _, orderType := range orderTypes {
 		cur := func(_, _ entities.LessonRequest) int { return 0 }
 		switch orderType.Value {
-		case persistance.ByLabworkNumber:
+		case persistence.ByLabworkNumber:
 			cur = func(a, b entities.LessonRequest) int {
 				if orderType.Ascending {
 					return int((a.LabworkNumber - b.LabworkNumber))
@@ -316,7 +327,7 @@ func (repo *LessonsRequestsRepository) reorderRequestsTx(ctx context.Context, tx
 					return (int(b.LabworkNumber - a.LabworkNumber))
 				}
 			}
-		case persistance.BySubmission:
+		case persistence.BySubmission:
 			cur = func(a, b entities.LessonRequest) int {
 				if orderType.Ascending {
 					return int(a.SubmitTime.Unix() - b.SubmitTime.Unix())
@@ -344,13 +355,15 @@ func (repo *LessonsRequestsRepository) reorderRequestsTx(ctx context.Context, tx
 }
 
 func (repo *LessonsRequestsRepository) GetLabworkQueue(ctx context.Context, labworkId int64) ([]entities.User, error) {
-	query := fmt.Sprintf("SELECT u.id, u.full_name, u.tg_id, u.group_id FROM %s AS l INNER JOIN %s as u ON u.tg_id=l.user_id WHERE l.lesson_id=$1 AND is_pending=TRUE ORDER BY order_position", LESSONS_REQUESTS_TABLE, USERS_TABLE)
+	query := fmt.Sprintf("SELECT u.id, u.full_name, u.tg_id, u.group_id FROM %s AS l" + 
+	" INNER JOIN %s as u ON u.tg_id=l.user_id WHERE l.lesson_id=$1 AND is_pending=TRUE ORDER BY order_position", 
+	LESSONS_REQUESTS_TABLE, USERS_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query, labworkId)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	users := make([]entities.User, 0, 10)
+	users := make([]entities.User, 0)
 	var curUser entities.User
 	for rows.Next() {
 		err = rows.Scan(&curUser.Id, &curUser.FullName, &curUser.TgId, &curUser.GroupId)

@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"slices"
 
-	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/sheets_api"
+	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google/sheets_api"
 	iis_api_entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistence"
 )
 
 type LessonsService struct {
@@ -66,7 +66,8 @@ func (serv *LessonsService) AddGroupLessons(ctx context.Context, groupName strin
 }
 
 func (serv *LessonsService) getTotalLessons(responseJson *schedulesResponse) []*iis_api_entities.Lesson {
-	return slices.Concat(responseJson.Monday, responseJson.Tuesday, responseJson.Wednesday, responseJson.Thursday, responseJson.Friday, responseJson.Saturday)
+	return slices.Concat(responseJson.Monday, responseJson.Tuesday, responseJson.Wednesday, responseJson.Thursday, 
+		responseJson.Friday, responseJson.Saturday)
 }
 
 func (serv *LessonsService) getSchedulesJson(ctx context.Context, groupName string) (*schedulesResponse, error) {
@@ -101,7 +102,7 @@ func (serv *LessonsService) assignGroupId(groupId int64, resp *schedulesResponse
 	}
 }
 
-func (serv *LessonsService) Add(ctx context.Context, lesson *persistance.Lesson) error {
+func (serv *LessonsService) Add(ctx context.Context, lesson *persistence.Lesson) error {
 	err := serv.LessonsRepository.Add(ctx, lesson)
 	if err != nil {
 		return err

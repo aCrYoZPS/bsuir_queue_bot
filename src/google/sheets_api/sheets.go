@@ -12,10 +12,10 @@ import (
 	"time"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
-	driveapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/drive_api"
+	driveapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google/drive_api"
 	iis_api_entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistence"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/labworks"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/sheets/v4"
@@ -51,7 +51,7 @@ func NewSheetsApiService(groups interfaces.GroupsRepository, driveApi driveapi.D
 
 type SheetsUrl = string
 
-func (serv *SheetsApiService) CreateSheet(ctx context.Context, groupName string, lessons []persistance.Lesson) (SheetsUrl, error) {
+func (serv *SheetsApiService) CreateSheet(ctx context.Context, groupName string, lessons []persistence.Lesson) (SheetsUrl, error) {
 	group, err := serv.groupsRepo.GetByName(ctx, groupName)
 	if err != nil {
 		return "", err
@@ -108,7 +108,7 @@ func (serv *SheetsApiService) CreateSheet(ctx context.Context, groupName string,
 	return spreadsheet.SpreadsheetUrl, nil
 }
 
-func (serv *SheetsApiService) createLists(ctx context.Context, groupName string, lessons []persistance.Lesson) error {
+func (serv *SheetsApiService) createLists(ctx context.Context, groupName string, lessons []persistence.Lesson) error {
 	group, err := serv.groupsRepo.GetByName(ctx, groupName)
 	if err != nil {
 		return err
@@ -155,7 +155,7 @@ func (serv *SheetsApiService) createLists(ctx context.Context, groupName string,
 	return nil
 }
 
-func (serv *SheetsApiService) createLessonName(lesson persistance.Lesson) string {
+func (serv *SheetsApiService) createLessonName(lesson persistence.Lesson) string {
 	name := lesson.Subject + "\u00A0" + serv.formatDateToEuropean(lesson.DateTime)
 	for _, char := range unallowedSymbols {
 		name = strings.ReplaceAll(name, string(char), "_")
@@ -167,9 +167,7 @@ func (serv *SheetsApiService) createLessonName(lesson persistance.Lesson) string
 }
 
 func (serv *SheetsApiService) formatDateToEuropean(date time.Time) string {
-	zeroPrependedDay := fmt.Sprint(date.Day()/10) + fmt.Sprint(date.Day()%10)
-	zeroPrependedMonth := fmt.Sprint(int(date.Month())/10) + fmt.Sprint(int(date.Month())%10)
-	return zeroPrependedDay + "." + zeroPrependedMonth + "." + fmt.Sprint(date.Year())
+	return fmt.Sprintf("%02d.%02d.%d", date.Day(), date.Month(), date.Year())
 }
 
 func parseLessonName(name string) (subject string, date time.Time, subgroup iis_api_entities.Subgroup) {
@@ -252,7 +250,8 @@ func (serv *SheetsApiService) AddLabworkRequest(ctx context.Context, req *labwor
 	}
 	for _, sheet := range spreadsheet.Sheets {
 		titleSubject, titleDate, subgroupNum := parseLessonName(sheet.Properties.Title)
-		if titleSubject == req.DisciplineName && serv.areDatesEqual(time.Time(req.RequestedDate), titleDate) && req.SubgroupNumber == subgroupNum {
+		if titleSubject == req.DisciplineName && 
+		serv.areDatesEqual(time.Time(req.RequestedDate), titleDate) && req.SubgroupNumber == subgroupNum {
 			if len(sheet.Tables) == 0 {
 				requests := serv.getTableRequests(sheet)
 				err = serv.WithRetries(ctx, func(ctx context.Context) error {
@@ -267,11 +266,13 @@ func (serv *SheetsApiService) AddLabworkRequest(ctx context.Context, req *labwor
 			return err
 		}
 	}
-	return fmt.Errorf("no such labwork found for name: %s, date: %s, subgroup: %d", req.DisciplineName, time.Time(req.RequestedDate).Format(time.Layout), req.SubgroupNumber)
+	return fmt.Errorf("no such labwork found for name: %s, date: %s, subgroup: %d", 
+	req.DisciplineName, time.Time(req.RequestedDate).Format(time.Layout), req.SubgroupNumber)
 }
 
 func (serv *SheetsApiService) areDatesEqual(this time.Time, other time.Time) bool {
-	return time.Date(this.Year(), this.Month(), this.Day(), 0, 0, 0, 0, time.Local).Equal(time.Date(other.Year(), other.Month(), other.Day(), 0, 0, 0, 0, time.Local))
+	return time.Date(this.Year(), this.Month(), this.Day(), 0, 0, 0, 0, time.Local).Equal(
+		time.Date(other.Year(), other.Month(), other.Day(), 0, 0, 0, 0, time.Local))
 }
 
 var unallowedSymbols = "!@#$%^&*()+={}[]|\\;:'\"<>/?~"
@@ -332,7 +333,8 @@ func (serv *SheetsApiService) createTableName(sheet *sheets.Sheet) string {
 	return name
 }
 
-func (serv *SheetsApiService) appendToSheet(ctx context.Context, spreadsheetId string, sheet *sheets.Sheet, req *labworks.AppendedLabwork) error {
+func (serv *SheetsApiService) appendToSheet(ctx context.Context, spreadsheetId string, sheet *sheets.Sheet, 
+	req *labworks.AppendedLabwork) error {
 	tableSearchRange := fmt.Sprintf("'%s'!A1:B5", sheet.Properties.Title)
 	err := serv.WithRetries(ctx, func(ctx context.Context) error {
 		_, err := serv.api.Spreadsheets.Values.Append(spreadsheetId, tableSearchRange, &sheets.ValueRange{
@@ -374,7 +376,8 @@ func (serv *SheetsApiService) formatDateTimeToEuropean(dateTime time.Time) strin
 	return date + " " + time
 }
 
-func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistance.Lesson) error {
+const hoursInDay=24
+func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistence.Lesson) error {
 	group, err := serv.groupsRepo.GetById(ctx, int(lesson.GroupId))
 	if err != nil {
 		return fmt.Errorf("failed to get group in sheets api during addition of custom labwork: %w", err)
@@ -387,7 +390,7 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistance.Lesso
 	sheetIndex := 0
 	sheetTitle := serv.createLessonName(*lesson)
 	for i, sheet := range sheet.Sheets {
-		if _, date, _ := parseLessonName(sheet.Properties.Title); date.After(lesson.DateTime.Round(24 * time.Hour)) {
+		if _, date, _ := parseLessonName(sheet.Properties.Title); date.After(lesson.DateTime.Round(hoursInDay * time.Hour)) {
 			sheetIndex = i - 1
 			break
 		}
@@ -434,7 +437,8 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistance.Lesso
 	if len(createdSheet.UpdatedSpreadsheet.Sheets[sheetIndex].Tables) == 0 {
 		requests := serv.getTableRequests(createdSheet.UpdatedSpreadsheet.Sheets[sheetIndex])
 		err = serv.WithRetries(ctx, func(ctx context.Context) error {
-			_, err := serv.api.Spreadsheets.BatchUpdate(createdSheet.SpreadsheetId, &sheets.BatchUpdateSpreadsheetRequest{Requests: requests}).Context(ctx).Do()
+			_, err := serv.api.Spreadsheets.BatchUpdate(createdSheet.SpreadsheetId, 
+				&sheets.BatchUpdateSpreadsheetRequest{Requests: requests}).Context(ctx).Do()
 			return err
 		})()
 	}
@@ -489,7 +493,8 @@ func (serv *SheetsApiService) ReorderLessons(ctx context.Context, orderTypes []e
 	return nil
 }
 
-func (serv *SheetsApiService) ReorderLesson(ctx context.Context, orderTypes []entities.OrderType, groupName string, lesson persistance.Lesson) error {
+func (serv *SheetsApiService) ReorderLesson(ctx context.Context, orderTypes []entities.OrderType, groupName string, 
+	lesson persistence.Lesson) error {
 	group, err := serv.groupsRepo.GetByName(ctx, groupName)
 	if err != nil {
 		return fmt.Errorf("failed to get group during reordering lessons in sheets: %w", err)

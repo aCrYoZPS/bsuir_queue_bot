@@ -2,6 +2,8 @@ package datastructures
 
 import "iter"
 
+const AsciiChars = 26
+
 type TrieNode[T any] struct {
 	children map[rune]*TrieNode[T]
 	isLeaf   bool
@@ -9,7 +11,7 @@ type TrieNode[T any] struct {
 }
 
 func NewTrieNode[T any]() TrieNode[T] {
-	return TrieNode[T]{children: make(map[rune]*TrieNode[T], 27)}
+	return TrieNode[T]{children: make(map[rune]*TrieNode[T], AsciiChars)}
 }
 
 func (node *TrieNode[T]) IsLeaf() bool {
@@ -24,7 +26,7 @@ func (root *TrieNode[T]) Insert(key string, val T) {
 	cur := root
 	for _, char := range key {
 		if cur.children[char] == nil {
-			node := &TrieNode[T]{children: make(map[rune]*TrieNode[T], 26)}
+			node := &TrieNode[T]{children: make(map[rune]*TrieNode[T], AsciiChars)}
 			cur.children[char] = node
 			cur.isLeaf = false
 		}

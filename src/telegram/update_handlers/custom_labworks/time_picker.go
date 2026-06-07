@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google_docs/sheets_api"
+	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google/sheets_api"
 	iis_api_entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistence"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/constants"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -83,7 +83,7 @@ func parseTimeAcceptCallback(callback string) time.Time {
 }
 
 type LessonsRepository interface {
-	Add(ctx context.Context, lesson *persistance.Lesson) error
+	Add(ctx context.Context, lesson *persistence.Lesson) error
 }
 
 type TimePickerCallbackHandler struct {
@@ -242,7 +242,7 @@ func (callbackHandler *TimePickerCallbackHandler) handleTimeSubmitCallback(ctx c
 	}
 	request.DateTime = request.DateTime.Add(selectedTime.Sub(selectedTime.Truncate(24 * time.Hour)))
 
-	err = callbackHandler.lessons.Add(ctx, persistance.NewPersistedLesson(request.GroupId, iis_api_entities.AllSubgroups, iis_api_entities.Labwork, request.Name, request.DateTime))
+	err = callbackHandler.lessons.Add(ctx, persistence.NewPersistedLesson(request.GroupId, iis_api_entities.AllSubgroups, iis_api_entities.Labwork, request.Name, request.DateTime))
 	if err != nil {
 		return callbackHandler.wrapLessonsServiceError(ctx, err, update)
 	}

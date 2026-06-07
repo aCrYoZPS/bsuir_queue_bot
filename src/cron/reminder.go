@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistence"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/labworks"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -24,8 +24,8 @@ type SheetsApiReminder interface {
 }
 
 type LessonsRepoReminder interface {
-	GetEndedLessons(context.Context, time.Time) ([]persistance.Lesson, error)
-	GetLessonByRequest(ctx context.Context, requestId int64) (*persistance.Lesson, error)
+	GetEndedLessons(context.Context, time.Time) ([]persistence.Lesson, error)
+	GetLessonByRequest(ctx context.Context, requestId int64) (*persistence.Lesson, error)
 }
 
 type LessonsRequestsRepositoryReminder interface {
@@ -49,7 +49,8 @@ type ReminderTask struct {
 	bot            *tgutils.Bot
 }
 
-func NewReminderTask(sheets SheetsApiReminder, lessons LessonsRepoReminder, lessonsRequest LessonsRequestsRepositoryReminder, users UsersRepoReminder, bot *tgutils.Bot) *ReminderTask {
+func NewReminderTask(sheets SheetsApiReminder, lessons LessonsRepoReminder, lessonsRequest LessonsRequestsRepositoryReminder, 
+	users UsersRepoReminder, bot *tgutils.Bot) *ReminderTask {
 	return &ReminderTask{sheets: sheets, lessons: lessons, lessonsRequest: lessonsRequest, users: users, bot: bot}
 }
 
@@ -92,10 +93,12 @@ func (task *ReminderTask) Run(ctx context.Context) {
 	}
 }
 
-func (task *ReminderTask) sendMessageForRequested(ctx context.Context, request *entities.LessonRequest, lesson *persistance.Lesson) error {
-	msg := tgbotapi.NewMessage(request.ChatId, fmt.Sprintf("Вы сдавали данную лабораторную? (%s %s, номер лабораторной %d)", lesson.Subject, lesson.DateTime.Format("02.01.2006"), request.LabworkNumber))
+func (task *ReminderTask) sendMessageForRequested(ctx context.Context, request *entities.LessonRequest, lesson *persistence.Lesson) error {
+	msg := tgbotapi.NewMessage(request.ChatId, fmt.Sprintf("Вы сдавали данную лабораторную? (%s %s, номер лабораторной %d)", 
+	lesson.Subject, lesson.DateTime.Format("02.01.2006"), request.LabworkNumber))
 	msg.ReplyToMessageID = int(request.MsgId)
-	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Да", createSheetsRefreshCallbackData(request.Id, true)),
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Да", 
+	createSheetsRefreshCallbackData(request.Id, true)),
 		tgbotapi.NewInlineKeyboardButtonData("Нет", createSheetsRefreshCallbackData(request.Id, false))})
 	_, err := task.bot.SendCtx(ctx, msg)
 	if err != nil {

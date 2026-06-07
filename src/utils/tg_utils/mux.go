@@ -60,7 +60,9 @@ type Mux struct {
 
 func NewMux(cache Cache, bot *Bot) *Mux {
 	return &Mux{cache: cache, bot: bot, routes: datastructures.NewTrieNode[MuxHandler](),
-		callbacks: datastructures.NewTrieNode[CallbackHandler](), NotFoundHandler: NewHandlerFunc(func(ctx context.Context, message *tgbotapi.Message) error { return errors.ErrUnsupported }, func(ctx context.Context, message *tgbotapi.Message) error { return errors.ErrUnsupported })}
+		callbacks: datastructures.NewTrieNode[CallbackHandler](), 
+		NotFoundHandler: NewHandlerFunc(func(ctx context.Context, message *tgbotapi.Message) error { return errors.ErrUnsupported },
+		 func(ctx context.Context, message *tgbotapi.Message) error { return errors.ErrUnsupported })}
 }
 
 func (mu *Mux) RegisterRoute(stateName string, handler MuxHandler) {

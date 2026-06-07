@@ -31,7 +31,8 @@ type TasksController struct {
 	tasksRepo      TasksRepository
 }
 
-func NewTasksController(sheets SheetsApi, lessons LessonRepo, lessonsRequest LessonsRequestRepo, users UsersRepo, drive DriveApi, tasks TasksRepository, bot *tgutils.Bot) *TasksController {
+func NewTasksController(sheets SheetsApi, lessons LessonRepo, lessonsRequest LessonsRequestRepo, 
+	users UsersRepo, drive DriveApi, tasks TasksRepository, bot *tgutils.Bot) *TasksController {
 	tasksController := &TasksController{
 		sheets:         sheets,
 		lessons:        lessons,
@@ -76,9 +77,11 @@ func (controller *TasksController) InitTasks(ctx context.Context) {
 	daily := gocron.CronJob("00 22 * * *", false)
 
 	sheetsRefresh := NewReminderTask(controller.sheets, controller.lessons, controller.lessonsRequest, controller.users, controller.bot)
-	sheetsRefreshJob, err := scheduler.NewJob(daily, gocron.NewTask(func() { sheetsRefresh.Run(ctx) }), gocron.WithName("sheets refresh"), gocron.WithContext(ctx),
+	sheetsRefreshJob, err := scheduler.NewJob(daily,
+		gocron.NewTask(func() { sheetsRefresh.Run(ctx) }), gocron.WithName("sheets refresh"), gocron.WithContext(ctx),
 		gocron.WithEventListeners(gocron.AfterJobRuns(func(jobID uuid.UUID, jobName string) {
-			err = controller.tasksRepo.Add(ctx, PersistedTask{ExecutedAt: time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 22, 0, 0, 0, time.Local), Name: jobName})
+			err = controller.tasksRepo.Add(ctx, PersistedTask{
+				ExecutedAt: time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 22, 0, 0, 0, time.Local), Name: jobName})
 			if err != nil {
 				slog.Error("failed to add task: %s to db, error: %v", jobName, err)
 			}
@@ -89,9 +92,11 @@ func (controller *TasksController) InitTasks(ctx context.Context) {
 	controller.jobs = append(controller.jobs, sheetsRefreshJob)
 
 	clearLessons := NewClearLessonsTask(controller.sheets, controller.lessons, controller.drive)
-	clearLessonsJob, err := scheduler.NewJob(daily, gocron.NewTask(func() { clearLessons.Run(ctx) }), gocron.WithName("clear lessons"), gocron.WithContext(ctx),
+	clearLessonsJob, err := scheduler.NewJob(daily,
+		gocron.NewTask(func() { clearLessons.Run(ctx) }), gocron.WithName("clear lessons"), gocron.WithContext(ctx),
 		gocron.WithEventListeners(gocron.AfterJobRuns(func(jobID uuid.UUID, jobName string) {
-			err = controller.tasksRepo.Add(ctx, PersistedTask{ExecutedAt: time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 22, 0, 0, 0, time.Local), Name: jobName})
+			err = controller.tasksRepo.Add(ctx, PersistedTask{
+				ExecutedAt: time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 22, 0, 0, 0, time.Local), Name: jobName})
 			if err != nil {
 				slog.Error("failed to add task: %s to db, error: %v", jobName, err)
 			}
@@ -111,7 +116,8 @@ func (controller *TasksController) InitTasks(ctx context.Context) {
 }
 
 func (controller *TasksController) TasksExec(ctx context.Context) {
-	tasks, err := controller.tasksRepo.GetCompleted(ctx, time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day()-1, 0, 0, 0, 0, time.Local))
+	tasks, err := controller.tasksRepo.GetCompleted(ctx, 
+		time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day()-1, 0, 0, 0, 0, time.Local))
 	if err != nil {
 		slog.Error(fmt.Sprintf("failed to get tasks in tasks exec: %v", err))
 	}

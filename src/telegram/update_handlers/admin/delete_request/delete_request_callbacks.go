@@ -10,7 +10,7 @@ import (
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistence"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/constants"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -18,7 +18,7 @@ import (
 
 type LessonsRepository interface {
 	GetSubjects(ctx context.Context, groupId int64) ([]string, error)
-	GetNext(ctx context.Context, subject string, groupId int64) ([]persistance.Lesson, error)
+	GetNext(ctx context.Context, subject string, groupId int64) ([]persistence.Lesson, error)
 }
 
 type DeleteLessonCallbackHandler struct {
@@ -67,7 +67,7 @@ func (state *DeleteLessonCallbackHandler) HandleCallback(ctx context.Context, up
 	return nil
 }
 
-func (state *DeleteLessonCallbackHandler) createMarkup(lessons []persistance.Lesson) tgbotapi.InlineKeyboardMarkup {
+func (state *DeleteLessonCallbackHandler) createMarkup(lessons []persistence.Lesson) tgbotapi.InlineKeyboardMarkup {
 	keyboard := tgbotapi.InlineKeyboardMarkup{}
 	row := []tgbotapi.InlineKeyboardButton{}
 	for chunk := range slices.Chunk(lessons, 4) {

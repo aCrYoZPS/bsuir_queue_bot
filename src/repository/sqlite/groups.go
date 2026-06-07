@@ -49,7 +49,8 @@ func (repos *GroupsRepository) GetAll(ctx context.Context) ([]iisEntities.Group,
 }
 
 func (repos *GroupsRepository) Add(ctx context.Context, group *iisEntities.Group) error {
-	_, err := repos.db.ExecContext(ctx, fmt.Sprintf("INSERT INTO %s (id, name, faculty_id, spreadsheet_id) VALUES ($1, $2, $3, $4)", GROUPS_TABLE),
+	_, err := repos.db.ExecContext(ctx, fmt.Sprintf("INSERT INTO %s (id, name, faculty_id, spreadsheet_id) VALUES ($1, $2, $3, $4)",
+	 GROUPS_TABLE),
 		group.Id, group.Name, group.FacultyId, group.SpreadsheetId)
 	if err != nil {
 		return err
@@ -83,7 +84,8 @@ func (repos *GroupsRepository) AddNonPresented(ctx context.Context, groups []iis
 	query := fmt.Sprintf("INSERT INTO %s (id, name, faculty_id, spreadsheet_id) VALUES ($1, $2, $3, $4)", GROUPS_TABLE)
 	for _, group := range groups {
 		_, err := repos.db.ExecContext(ctx, query, group.Id, group.Name, group.FacultyId, group.SpreadsheetId)
-		if err, ok := err.(sqlite3.Error); ok && err.ExtendedCode != sqlite3.ErrConstraintUnique && err.ExtendedCode != sqlite3.ErrConstraintPrimaryKey {
+		if err, ok := err.(sqlite3.Error); ok && err.ExtendedCode != sqlite3.ErrConstraintUnique &&
+		 err.ExtendedCode != sqlite3.ErrConstraintPrimaryKey {
 			return err
 		}
 	}
@@ -136,13 +138,14 @@ func (repos *GroupsRepository) DoesGroupExist(ctx context.Context, groupName str
 }
 
 func (repos *GroupsRepository) GetAdmins(ctx context.Context, groupName string) ([]entities.User, error) {
-	query := fmt.Sprintf("SELECT us.id, us.tg_id, us.group_id, us.full_name FROM %s AS us INNER JOIN %s AS gr ON gr.id=us.group_id INNER JOIN %s AS r ON r.user_id=us.id AND r.role_name=$1 WHERE gr.name=$2", USERS_TABLE, GROUPS_TABLE, ROLES_TABLE)
+	query := fmt.Sprintf("SELECT us.id, us.tg_id, us.group_id, us.full_name FROM %s AS us INNER JOIN %s AS gr ON gr.id=us.group_id" + 
+	"INNER JOIN %s AS r ON r.user_id=us.id AND r.role_name=$1 WHERE gr.name=$2", USERS_TABLE, GROUPS_TABLE, ROLES_TABLE)
 	rows, err := repos.db.QueryContext(ctx, query, entities.Admin.ToString(), groupName)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	users := make([]entities.User, 0, 4)
+	users := make([]entities.User, 0)
 	for rows.Next() {
 		user := &entities.User{}
 		rows.Scan(&user.Id, &user.TgId, &user.GroupId, &user.FullName)

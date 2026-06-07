@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+const (
+	DaysInWeekCycle = 28
+	LastWeek = 4
+)
+
 var firstWeek = time.Date(2025, time.September, 1, 0, 0, 0, 0, time.Local)
 
 func CalculateWeek(date time.Time) int8 {
@@ -12,7 +17,7 @@ func CalculateWeek(date time.Time) int8 {
 	if duration == 0 {
 		duration = firstWeek.Sub(date)
 	}
-	week := int8(((duration/time.Hour)/24)%28)/7 + 1
+	week := int8(((duration/time.Hour)/24)%DaysInWeekCycle)/7 + 1
 	return week
 }
 
@@ -23,7 +28,7 @@ type Week = int8
 func CalculateWeeksDistance(weeks []Week, current Week) int8 {
 	dist := (weeks[(slices.Index(weeks, current)+1)%len(weeks)] - current)
 	if dist == 0 {
-		return 4
+		return LastWeek
 	}
 	if dist < 0 {
 		return -dist

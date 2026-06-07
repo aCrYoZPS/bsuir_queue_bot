@@ -11,7 +11,7 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
 	iis_api_entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistence"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/constants"
 	customErrors "github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/errors"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
@@ -120,7 +120,7 @@ func (handler *QueueCallbacksHandler) handleDisciplineCallback(ctx context.Conte
 	return nil
 }
 
-func (handler *QueueCallbacksHandler) createDisciplineDatesKeyboard(lessons []persistance.Lesson) *tgbotapi.InlineKeyboardMarkup {
+func (handler *QueueCallbacksHandler) createDisciplineDatesKeyboard(lessons []persistence.Lesson) *tgbotapi.InlineKeyboardMarkup {
 	markup := [][]tgbotapi.InlineKeyboardButton{}
 	for _, lesson := range lessons {
 		row := []tgbotapi.InlineKeyboardButton{}

@@ -73,7 +73,9 @@ func (repo *UsersRepository) GetByTgId(ctx context.Context, tgId int64) (*entiti
 }
 
 func (repo *UsersRepository) GetByRequestId(ctx context.Context, requestId int64) (*entities.User, error) {
-	query := fmt.Sprintf("SELECT u.id, u.tg_id, u.group_id,g.name, u.full_name FROM %s AS u INNER JOIN %s AS r ON r.user_id=u.tg_id INNER JOIN %s AS g ON u.group_id=g.id WHERE r.id=$1", USERS_TABLE, LESSONS_REQUESTS_TABLE, GROUPS_TABLE)
+	query := fmt.Sprintf("SELECT u.id, u.tg_id, u.group_id,g.name, u.full_name FROM %s AS u " + 
+	 "INNER JOIN %s AS r ON r.user_id=u.tg_id INNER JOIN %s AS g ON u.group_id=g.id WHERE r.id=$1", 
+	 USERS_TABLE, LESSONS_REQUESTS_TABLE, GROUPS_TABLE)
 	row := repo.db.QueryRowContext(ctx, query, requestId)
 	if row.Err() != nil {
 		return nil, row.Err()
@@ -87,7 +89,8 @@ func (repo *UsersRepository) GetByRequestId(ctx context.Context, requestId int64
 }
 
 func (repo *UsersRepository) GetAll(ctx context.Context) ([]entities.User, error) {
-	query := fmt.Sprintf("SELECT %[1]s.id, %[1]s.tg_id, %[1]s.group_id, %[1]s.full_name, %[2]s.role_name FROM %[1]s INNER JOIN %[2]s ON %[1]s.id = %[2]s.user_id", USERS_TABLE, ROLES_TABLE)
+	query := fmt.Sprintf("SELECT %[1]s.id, %[1]s.tg_id, %[1]s.group_id, %[1]s.full_name, %[2]s.role_name FROM %[1]s " +  
+	"INNER JOIN %[2]s ON %[1]s.id = %[2]s.user_id", USERS_TABLE, ROLES_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err

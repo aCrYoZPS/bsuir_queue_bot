@@ -51,10 +51,12 @@ func getConfig() (*oauth2.Config, error) {
 	return google.ConfigFromJSON(credentialsFile, "https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive")
 }
 
+
+const ownerOnly = 0600
 func saveToken(path string, token *oauth2.Token) error {
 	slog.Info(fmt.Sprintf("Saving credential file to: %s", path))
 
-	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, ownerOnly)
 	if err != nil {
 		return err
 	}

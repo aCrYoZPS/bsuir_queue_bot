@@ -17,9 +17,11 @@ type TimeWithSeconds time.Time
 
 type DateTime time.Time
 
-func (dt *DateOnly) UnmarshalJSON(json []byte) error {
-	dateString := strings.Trim(string(json), `"`)
-	if dateString == "null" {
+const NullString = "null"
+
+func (dt *DateOnly) UnmarshalJSON(jsonData []byte) error {
+	dateString := strings.Trim(string(jsonData), `"`)
+	if dateString == NullString {
 		*dt = DateOnly{}
 		return errors.New("null time field")
 	}
@@ -40,7 +42,7 @@ func (dt *DateOnly) UnmarshalJSON(json []byte) error {
 		return err
 	}
 	dateVal := time.Date(year, time.Month(months), days, 0, 0, 0, 0, time.Local)
-	*dt = (DateOnly)(dateVal)
+	*dt = DateOnly(dateVal)
 	return nil
 }
 
@@ -53,9 +55,9 @@ func (dt DateOnly) Format(s string) string {
 	return time.Time(dt).Format(s)
 }
 
-func (to *TimeOnly) UnmarshalJSON(json []byte) error {
-	timeString := strings.Trim(string(json), `"`)
-	if timeString == "null" {
+func (to *TimeOnly) UnmarshalJSON(jsonData []byte) error {
+	timeString := strings.Trim(string(jsonData), `"`)
+	if timeString == NullString {
 		*to = TimeOnly{}
 		return errors.New("null time field")
 	}
@@ -69,12 +71,12 @@ func (to TimeOnly) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Time(to).Format("15:04"))
 }
 
-func (to TimeOnly) Format(fmt string) string {
-	return time.Time(to).Format(fmt)
+func (to TimeOnly) Format(format string) string {
+	return time.Time(to).Format(format)
 }
 
-func (to *TimeWithSeconds) UnmarshalJSON(json []byte) error {
-	timeString := strings.Trim(string(json), `"`)
+func (to *TimeWithSeconds) UnmarshalJSON(jsonData []byte) error {
+	timeString := strings.Trim(string(jsonData), `"`)
 	if timeString == "null" {
 		*to = TimeWithSeconds{}
 		return errors.New("null time field")
@@ -89,16 +91,16 @@ func (to TimeWithSeconds) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Time(to).Format("15:04:05"))
 }
 
-func (to TimeWithSeconds) Format(fmt string) string {
-	return time.Time(to).Format(fmt)
+func (to TimeWithSeconds) Format(format string) string {
+	return time.Time(to).Format(format)
 }
 
 func (dt DateTime) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Time(dt).Format("02.01.2006 15:04:05"))
 }
 
-func (dt *DateTime) UnmarshalJSON(json []byte) error {
-	dateString := strings.Trim(string(json), `"`)
+func (dt *DateTime) UnmarshalJSON(jsonData []byte) error {
+	dateString := strings.Trim(string(jsonData), `"`)
 	if dateString == "null" {
 		*dt = DateTime{}
 		return errors.New("null time field")
@@ -142,6 +144,6 @@ func (dt *DateTime) UnmarshalJSON(json []byte) error {
 		return fmt.Errorf("time is not in format 14:05:53")
 	}
 	dateVal := time.Date(year, time.Month(months), days, hours, minutes, seconds, 0, time.Local)
-	*dt = (DateTime)(dateVal)
+	*dt = DateTime(dateVal)
 	return nil
 }

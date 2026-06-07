@@ -27,7 +27,8 @@ type AdminCallbackHandler struct {
 	lessons   adminInterfaces.LessonsService
 }
 
-func NewAdminCallbackHandler(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache, requests interfaces.AdminRequestsRepository, lessons adminInterfaces.LessonsService) *AdminCallbackHandler {
+func NewAdminCallbackHandler(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache,
+	 requests interfaces.AdminRequestsRepository, lessons adminInterfaces.LessonsService) *AdminCallbackHandler {
 	return &AdminCallbackHandler{
 		usersRepo: usersRepo,
 		cache:     cache,
@@ -53,7 +54,8 @@ func (handler *AdminCallbackHandler) HandleCallback(ctx context.Context, update 
 	return err
 }
 
-func (handler *AdminCallbackHandler) handleAcceptCallback(ctx context.Context, msg *tgbotapi.Message, command string, bot *tgutils.Bot) error {
+func (handler *AdminCallbackHandler) handleAcceptCallback(ctx context.Context, msg *tgbotapi.Message, command string, 
+	bot *tgutils.Bot) error {
 	var chatId int64
 	chatId, err := strconv.ParseInt(strings.TrimPrefix(command, "accept"), 10, 64)
 	if err != nil {
@@ -124,7 +126,8 @@ func (handler *AdminCallbackHandler) addAdmin(ctx context.Context, form *adminSu
 	return nil
 }
 
-func (handler *AdminCallbackHandler) handleDeclineCallback(ctx context.Context, msg *tgbotapi.Message, command string, bot *tgutils.Bot) error {
+func (handler *AdminCallbackHandler) handleDeclineCallback(ctx context.Context, msg *tgbotapi.Message, command string, 
+	bot *tgutils.Bot) error {
 	var chatId int64
 	err := json.Unmarshal([]byte(strings.TrimPrefix(command, "decline")), &chatId)
 	if err != nil {
@@ -167,7 +170,8 @@ func (handler *AdminCallbackHandler) RemoveMarkupFromOwners(ctx context.Context,
 		if err != nil {
 			return err
 		}
-		_, err := bot.Send(tgbotapi.NewEditMessageReplyMarkup(request.ChatId, int(request.MsgId), tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
+		_, err := bot.Send(tgbotapi.NewEditMessageReplyMarkup(request.ChatId, int(request.MsgId), 
+		tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
 		if err != nil {
 			return err
 		}

@@ -1,4 +1,4 @@
-package persistance
+package persistence
 
 import (
 	"time"
@@ -18,7 +18,8 @@ type Lesson struct {
 	DateTime       time.Time
 }
 
-func NewPersistedLesson(groupId int64, subgroupNumber iisEntities.Subgroup, lessonType iisEntities.LessonType, subject string, dateTime time.Time) *Lesson {
+func NewPersistedLesson(groupId int64, subgroupNumber iisEntities.Subgroup, lessonType iisEntities.LessonType, subject string, 
+	dateTime time.Time) *Lesson {
 	return &Lesson{
 		GroupId:        groupId,
 		SubgroupNumber: subgroupNumber,

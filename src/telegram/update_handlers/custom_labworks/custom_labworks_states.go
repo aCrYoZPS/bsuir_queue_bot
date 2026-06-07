@@ -9,7 +9,7 @@ import (
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistence"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/constants"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -24,7 +24,7 @@ type HandlersCache interface {
 }
 
 type LabworksService interface {
-	AddLabwork(ctx context.Context, lesson *persistance.Lesson)
+	AddLabwork(ctx context.Context, lesson *persistence.Lesson)
 }
 
 type UsersService interface {

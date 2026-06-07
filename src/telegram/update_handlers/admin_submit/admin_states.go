@@ -31,7 +31,8 @@ type adminSubmitForm struct {
 	AdditionalInfo string `json:"info,omitempty"`
 }
 
-const infoTemplate = "(ЗАЯВКА НА РОЛЬ АДМИНИСТРАТОРА)\n Имя: {{.Name}} \nГруппа: {{.Group}}\nИмя пользователя: @{{.TgName}} \n{{if .AdditionalInfo}}Доп информация: {{.AdditionalInfo}} {{end}}"
+const infoTemplate = "(ЗАЯВКА НА РОЛЬ АДМИНИСТРАТОРА)\n Имя: {{.Name}} \nГруппа: {{.Group}}\nИмя пользователя: @{{.TgName}} \n" + 
+"{{if .AdditionalInfo}}Доп информация: {{.AdditionalInfo}} {{end}}"
 
 type adminSubmitStartState struct {
 	cache           interfaces.HandlersCache
@@ -39,7 +40,8 @@ type adminSubmitStartState struct {
 	bot             *tgutils.Bot
 }
 
-func NewAdminSubmitState(cache interfaces.HandlersCache, bot *tgutils.Bot, usersRepository interfaces.UsersRepository) *adminSubmitStartState {
+func NewAdminSubmitState(cache interfaces.HandlersCache, bot *tgutils.Bot, 
+	usersRepository interfaces.UsersRepository) *adminSubmitStartState {
 	return &adminSubmitStartState{cache: cache, bot: bot, usersRepository: usersRepository}
 }
 
@@ -53,11 +55,13 @@ func (state *adminSubmitStartState) Handle(ctx context.Context, message *tgbotap
 		return fmt.Errorf("couldn't get user by id when checking admin: %w", err)
 	}
 	if slices.Contains(user.Roles, entities.Admin) {
-		err = state.TransitionAndSend(ctx, interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE), tgbotapi.NewMessage(message.Chat.ID, "Вы уже админ группы"))
+		err = state.TransitionAndSend(ctx, interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE), 
+		tgbotapi.NewMessage(message.Chat.ID, "Вы уже админ группы"))
 		return err
 	}
 	if user.Id != 0 {
-		info, err := json.Marshal(&adminSubmitForm{UserId: message.From.ID, Group: user.GroupName, Name: user.FullName, TgName: message.From.UserName})
+		info, err := json.Marshal(&adminSubmitForm{UserId: message.From.ID, Group: user.GroupName, Name: user.FullName,
+			 TgName: message.From.UserName})
 		if err != nil {
 			return fmt.Errorf("failed to marshal admin submit form: %w", err)
 		}
@@ -76,7 +80,8 @@ func (state *adminSubmitStartState) Handle(ctx context.Context, message *tgbotap
 	return err
 }
 
-func (state *adminSubmitStartState) TransitionAndSend(ctx context.Context, newState *interfaces.CachedInfo, msg tgbotapi.MessageConfig) error {
+func (state *adminSubmitStartState) TransitionAndSend(ctx context.Context, newState *interfaces.CachedInfo,
+	 msg tgbotapi.MessageConfig) error {
 	err := state.cache.SaveState(ctx, *newState)
 	if err != nil {
 		return fmt.Errorf("couldn't save state during admin submit: %w", err)
@@ -164,7 +169,8 @@ type adminSubmitingGroupState struct {
 	machine StateMachine
 }
 
-func NewAdminSubmitingGroupState(cache interfaces.HandlersCache, bot *tgutils.Bot, srv GroupsService, machine StateMachine) *adminSubmitingGroupState {
+func NewAdminSubmitingGroupState(cache interfaces.HandlersCache, bot *tgutils.Bot, srv GroupsService,
+	 machine StateMachine) *adminSubmitingGroupState {
 	return &adminSubmitingGroupState{cache: cache, bot: bot, srv: srv, machine: machine}
 }
 
@@ -213,7 +219,8 @@ func (state *adminSubmitingGroupState) Handle(ctx context.Context, message *tgbo
 	if err != nil {
 		return fmt.Errorf("failed save new state during transitioning from admin submitting group to admin submitting proof")
 	}
-	msg := tgbotapi.NewMessage(message.Chat.ID, "Предоставьте доказательство вверенных группой полномочий (в виде фото, с дополнительной текстовой информацией по усмотрению)")
+	msg := tgbotapi.NewMessage(message.Chat.ID, 
+		"Предоставьте доказательство вверенных группой полномочий (в виде фото, с дополнительной текстовой информацией по усмотрению)")
 	_, err = state.bot.SendCtx(ctx, msg)
 	if err != nil {
 		return fmt.Errorf("failed to send message at the end of admin submitting group")
@@ -240,7 +247,8 @@ type adminSubmittingProofState struct {
 	machine  StateMachine
 }
 
-func NewAdminSubmitingProofState(cache interfaces.HandlersCache, bot *tgutils.Bot, requests interfaces.AdminRequestsRepository, machine StateMachine) *adminSubmittingProofState {
+func NewAdminSubmitingProofState(cache interfaces.HandlersCache, bot *tgutils.Bot,
+	 requests interfaces.AdminRequestsRepository, machine StateMachine) *adminSubmittingProofState {
 	return &adminSubmittingProofState{cache: cache, bot: bot, requests: requests, machine: machine}
 }
 

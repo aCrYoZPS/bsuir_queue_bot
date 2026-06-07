@@ -41,7 +41,7 @@ func GetCurrentWeek() (int, error) {
 func GetWeekForDate(date time.Time) int {
 	date = date.Add(time.Duration(-weekday_map[date.Weekday()]) * time.Hour)
 	weeks_delta := int(reference_date.Sub(date).Abs().Hours() / (24 * 7))
-	week_number := 1
+	var week_number int 
 	if reference_date.Before(date) {
 		week_number = (reference_date_week + weeks_delta%4) % 4
 	} else {

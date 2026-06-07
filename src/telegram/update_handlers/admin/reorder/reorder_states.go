@@ -11,7 +11,7 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
 	iis_api_entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistence"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/constants"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -19,8 +19,8 @@ import (
 
 type LessonsRepository interface {
 	GetSubjects(ctx context.Context, groupId int64) ([]string, error)
-	GetNext(ctx context.Context, subject string, groupId int64) ([]persistance.Lesson, error)
-	Get(ctx context.Context, id int64) (persistance.Lesson, error)
+	GetNext(ctx context.Context, subject string, groupId int64) ([]persistence.Lesson, error)
+	Get(ctx context.Context, id int64) (persistence.Lesson, error)
 }
 
 type UsersRepository interface {
@@ -257,7 +257,7 @@ func (state *ReorderChooseAllState) Handle(ctx context.Context, message *tgbotap
 	return nil
 }
 
-func createLessonConcreteCallback(lesson persistance.Lesson) string {
+func createLessonConcreteCallback(lesson persistence.Lesson) string {
 	return fmt.Sprintf("%s|%d", constants.REORDER_LESSON_CONCRETE_CALLBACK, lesson.Id)
 }
 
@@ -318,7 +318,7 @@ func (state *ReorderChooseLessonState) Revert(ctx context.Context, msg *tgbotapi
 
 type SheetsApi interface {
 	ReorderLessons(ctx context.Context, orderTypes []entities.OrderType, groupName, subject string) error
-	ReorderLesson(ctx context.Context, orderTypes []entities.OrderType, groupName string, lesson persistance.Lesson) error
+	ReorderLesson(ctx context.Context, orderTypes []entities.OrderType, groupName string, lesson persistence.Lesson) error
 }
 
 type ReorderMethodState struct {

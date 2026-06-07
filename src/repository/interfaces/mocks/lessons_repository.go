@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistance"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistence"
 )
 
 type LessonsRepositoryMock struct {
@@ -15,12 +15,12 @@ func NewLessonsRepositoryMock() *LessonsRepositoryMock {
 	return &LessonsRepositoryMock{}
 }
 
-func (*LessonsRepositoryMock) GetAllLabworks(int64) ([]persistance.Lesson, error) {
+func (*LessonsRepositoryMock) GetAllLabworks(int64) ([]persistence.Lesson, error) {
 	start, _ := time.Parse(time.DateOnly, "2025-02-15")
 	end, _ := time.Parse(time.DateOnly, "2025-06-07")
 	startTime, _ := time.Parse(time.TimeOnly, "09:00:00")
 	secondStartTime, _ := time.Parse(time.TimeOnly, "10:35:00")
-	return []persistance.Lesson{
+	return []persistence.Lesson{
 		{
 			Subject:        "ООП",
 			LessonType:     "ЛР",
@@ -38,6 +38,6 @@ func (*LessonsRepositoryMock) GetAllLabworks(int64) ([]persistance.Lesson, error
 	}, nil
 }
 
-func (mock *LessonsRepositoryMock) GetNextLabworks(subject string, groupId int64) ([]persistance.Lesson, error) {
+func (mock *LessonsRepositoryMock) GetNextLabworks(subject string, groupId int64) ([]persistence.Lesson, error) {
 	return mock.GetAllLabworks(groupId)
 }

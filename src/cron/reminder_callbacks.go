@@ -17,7 +17,8 @@ type ReminderCallbackHandler struct {
 	users           UsersRepoReminder
 }
 
-func NewSheetsRefreshCallbackHandler(lessonsRequests LessonsRequestsRepositoryReminder, sheets SheetsApiReminder, users UsersRepoReminder, lessons LessonsRepoReminder) *ReminderCallbackHandler {
+func NewSheetsRefreshCallbackHandler(lessonsRequests LessonsRequestsRepositoryReminder, sheets SheetsApiReminder,
+	users UsersRepoReminder, lessons LessonsRepoReminder) *ReminderCallbackHandler {
 	return &ReminderCallbackHandler{lessonsRequests: lessonsRequests, sheets: sheets, users: users, lessons: lessons}
 }
 
@@ -35,7 +36,8 @@ func (handler *ReminderCallbackHandler) HandleCallback(ctx context.Context, upda
 				return err
 			}
 		}
-		_, err := bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.FromChat().ID, update.CallbackQuery.Message.MessageID, tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
+		_, err := bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.FromChat().ID, update.CallbackQuery.Message.MessageID,
+			tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
 		if err != nil {
 			return fmt.Errorf("failed to delete reply markup on a reminder message: %w", err)
 		}
@@ -59,12 +61,14 @@ func (handler *ReminderCallbackHandler) SetNextLesson(ctx context.Context, reque
 	if err != nil {
 		return fmt.Errorf("failed to get lessons by request id in sheets refresh cron: %w", err)
 	}
-	
+
 	req, err := handler.lessonsRequests.Get(ctx, requestId)
 	if err != nil {
 		return fmt.Errorf("failed to get lesson request by id in sheets refresh cron: %w", err)
 	}
-	err = handler.sheets.AddLabworkRequest(ctx, labworks.NewAppendedLabwork(lesson.DateTime, req.SubmitTime, lesson.Subject, usr.GroupName, usr.FullName, lesson.SubgroupNumber, req.LabworkNumber))
+	err = handler.sheets.AddLabworkRequest(ctx,
+		labworks.NewAppendedLabwork(lesson.DateTime, req.SubmitTime, lesson.Subject, usr.GroupName, usr.FullName,
+			lesson.SubgroupNumber, req.LabworkNumber))
 	if err != nil {
 		return fmt.Errorf("failed to add labwork to sheets during sheets refresh cron: %w", err)
 	}
