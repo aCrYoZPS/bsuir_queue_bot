@@ -28,7 +28,8 @@ type DeleteLessonCallbackHandler struct {
 	lessons LessonsRepository
 }
 
-func NewDeleteLessonCallbackHandler(cache interfaces.HandlersCache, users UsersRepository, bot *tgutils.Bot, lessons LessonsRepository) *DeleteLessonCallbackHandler {
+func NewDeleteLessonCallbackHandler(cache interfaces.HandlersCache, users UsersRepository, bot *tgutils.Bot, 
+	lessons LessonsRepository) *DeleteLessonCallbackHandler {
 	return &DeleteLessonCallbackHandler{
 		cache:   cache,
 		users:   users,
@@ -60,17 +61,19 @@ func (state *DeleteLessonCallbackHandler) HandleCallback(ctx context.Context, up
 		return fmt.Errorf("failed to unmarshal json into info in delete lesson request callback: %w", err)
 	}
 
-	_, err = state.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.FromChat().ChatConfig().ChatID, info.SentMsgId, state.createMarkup(lessons)))
+	_, err = state.bot.SendCtx(ctx, 
+		tgbotapi.NewEditMessageReplyMarkup(update.FromChat().ChatConfig().ChatID, info.SentMsgId, state.createMarkup(lessons)))
 	if err != nil {
 		return fmt.Errorf("failed to edit markup in delete lesson request callback: %w", err)
 	}
 	return nil
 }
 
+const markupLen = 4
 func (state *DeleteLessonCallbackHandler) createMarkup(lessons []persistence.Lesson) tgbotapi.InlineKeyboardMarkup {
 	keyboard := tgbotapi.InlineKeyboardMarkup{}
 	row := []tgbotapi.InlineKeyboardButton{}
-	for chunk := range slices.Chunk(lessons, 4) {
+	for chunk := range slices.Chunk(lessons, markupLen) {
 		for _, lesson := range chunk {
 			row = append(row, tgbotapi.NewInlineKeyboardButtonData(lesson.Subject+fmt.Sprintf(" (%s)",
 				lesson.DateTime.Format("02.01.2006")), createTimeCallbackData(lesson.Id)))
@@ -99,7 +102,8 @@ type DeleteTimeCallbackHandler struct {
 	users    UsersRepository
 }
 
-func NewDeleteTimeCallbackHandler(cache interfaces.HandlersCache, bot *tgutils.Bot, requests LessonRequestsRepository, users UsersRepository) *DeleteTimeCallbackHandler {
+func NewDeleteTimeCallbackHandler(cache interfaces.HandlersCache, bot *tgutils.Bot, requests LessonRequestsRepository,
+	users UsersRepository) *DeleteTimeCallbackHandler {
 	return &DeleteTimeCallbackHandler{cache: cache, bot: bot, requests: requests, users: users}
 }
 

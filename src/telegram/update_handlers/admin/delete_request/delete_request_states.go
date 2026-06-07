@@ -34,7 +34,8 @@ type DeleteStartState struct {
 
 const SubjectsChunk = 3
 
-func NewDeleteStartState(bot *tgutils.Bot, cache interfaces.HandlersCache, requests RequestsRepository, users UsersRepository, lessons LessonsRepository) *DeleteStartState {
+func NewDeleteStartState(bot *tgutils.Bot, cache interfaces.HandlersCache, requests RequestsRepository, users UsersRepository,
+	 lessons LessonsRepository) *DeleteStartState {
 	return &DeleteStartState{cache: cache, bot: bot, requests: requests, users: users, lessons: lessons}
 }
 
@@ -122,7 +123,9 @@ func (state *DeleteWaitingState) Revert(ctx context.Context, message *tgbotapi.M
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal jsoned info in request delete waiting state: %w", err)
 	}
-	_, err = state.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(message.Chat.ID, info.SentMsgId, tgbotapi.NewInlineKeyboardMarkup(make([]tgbotapi.InlineKeyboardButton, 0))))
+	_, err = state.bot.SendCtx(ctx, 
+		tgbotapi.NewEditMessageReplyMarkup(message.Chat.ID, info.SentMsgId, 
+			tgbotapi.NewInlineKeyboardMarkup(make([]tgbotapi.InlineKeyboardButton, 0))))
 	if err != nil {
 		return fmt.Errorf("failed to remove markup during delete waiting state reversal: %w", err)
 	}
@@ -168,7 +171,8 @@ func (state *DeleteChooseState) Handle(ctx context.Context, message *tgbotapi.Me
 		return fmt.Errorf("failed to unmarshal jsoned info into states info: %w", err)
 	}
 	if num-1 < 0 || num-1 < int64(len(info.Requests)) {
-		_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, fmt.Sprintf("Пожалуйста, введите валидное число в пределах от 1 до %d", len(info.Requests))))
+		_, err := state.bot.SendCtx(ctx, 
+			tgbotapi.NewMessage(message.Chat.ID, fmt.Sprintf("Пожалуйста, введите валидное число в пределах от 1 до %d", len(info.Requests))))
 		if err != nil {
 			return fmt.Errorf("failed to send invalid len response in delete request choose state: %w", err)
 		}
@@ -180,6 +184,9 @@ func (state *DeleteChooseState) Handle(ctx context.Context, message *tgbotapi.Me
 	}
 
 	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.IDLE_STATE))
+	if err != nil {
+		return fmt.Errorf("failed to save %s during %s: %w", constants.IDLE_STATE, constants.DELETE_CHOOSE_STATE, err)
+	}
 	return nil
 }
 
