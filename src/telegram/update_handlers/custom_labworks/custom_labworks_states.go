@@ -41,10 +41,6 @@ func NewLabworkAddStartState(bot *tgutils.Bot, cache HandlersCache, users UsersS
 	return &labworkAddStartState{bot: bot, cache: cache, users: users}
 }
 
-func (*labworkAddStartState) StateName() string {
-	return constants.LABWORK_ADD_START_STATE
-}
-
 func (state *labworkAddStartState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	user, err := state.users.GetByTgId(ctx, message.From.ID)
 	if err != nil {
@@ -95,10 +91,6 @@ func NewLabworkAddSubmitNameState(bot *tgutils.Bot, cache HandlersCache) *labwor
 		bot:   bot,
 		cache: cache,
 	}
-}
-
-func (*labworkAddSubmitNameState) StateName() string {
-	return constants.LABWORK_ADD_SUBMIT_NAME_STATE
 }
 
 type LessonRequest struct {
@@ -179,10 +171,6 @@ func NewLabworkAddWaitingState(bot *tgutils.Bot, cache HandlersCache, machine St
 	return &LabworkAddWaitingState{bot: bot, cache: cache, machine: machine}
 }
 
-func (*LabworkAddWaitingState) StateName() string {
-	return constants.LABWORK_ADD_WAITING_STATE
-}
-
 func (state *LabworkAddWaitingState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Выберите дату и время пары"))
 	if err != nil {
@@ -203,7 +191,8 @@ func (state *LabworkAddWaitingState) Revert(ctx context.Context, msg *tgbotapi.M
 		return fmt.Errorf("failed to unmarshal info (%s) in custom labwork add waiting state: %w", info, err)
 	}
 
-	_, err = state.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, req.MarkupMessageId, tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
+	_, err = state.bot.SendCtx(ctx, 
+		tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, req.MarkupMessageId, tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
 	if err != nil {
 		return fmt.Errorf("failed to edit message markup during labwork add waiting state: %w", err)
 	}

@@ -65,8 +65,8 @@ func NewMux(cache Cache, bot *Bot) *Mux {
 		 func(ctx context.Context, message *tgbotapi.Message) error { return errors.ErrUnsupported })}
 }
 
-func (mu *Mux) RegisterRoute(stateName string, handler MuxHandler) {
-	mu.routes.Insert(stateName, handler)
+func (mu *Mux) RegisterRoute(state constants.State, handler MuxHandler) {
+	mu.routes.Insert(string(state), handler)
 }
 
 func (mux *Mux) Handle(ctx context.Context, message *tgbotapi.Message) error {

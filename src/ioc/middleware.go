@@ -6,7 +6,6 @@ import (
 	"slices"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/entities"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -32,20 +31,4 @@ var useAdminMiddleware = func(next tgutils.MuxHandler) func() tgutils.MuxHandler
 				}, next.Revert)
 		},
 	)
-}
-
-var useStateTransferMiddleware = func(next tgutils.MuxHandler, stateName string) tgutils.MuxHandler {
-	cache := useHandlersCache()
-	return tgutils.NewHandlerFunc(
-		func(ctx context.Context, message *tgbotapi.Message) error {
-			err := next.Handle(ctx, message)
-			if err != nil {
-				return err
-			}
-			err = cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, stateName))
-			if err != nil {
-				return fmt.Errorf("failed to save state %s in chat %d: %w", stateName, message.Chat.ID, err)
-			}
-			return nil
-		}, next.Revert)
 }

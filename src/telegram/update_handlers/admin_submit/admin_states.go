@@ -45,10 +45,6 @@ func NewAdminSubmitState(cache interfaces.HandlersCache, bot *tgutils.Bot,
 	return &adminSubmitStartState{cache: cache, bot: bot, usersRepository: usersRepository}
 }
 
-func (*adminSubmitStartState) StateName() string {
-	return constants.ADMIN_SUBMIT_START_STATE
-}
-
 func (state *adminSubmitStartState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	user, err := state.usersRepository.GetByTgId(ctx, message.From.ID)
 	if err != nil {
@@ -119,10 +115,6 @@ func NewAdminSubmittingNameState(cache interfaces.HandlersCache, bot *tgutils.Bo
 	return &adminSubmittingNameState{cache: cache, bot: bot, machine: machine}
 }
 
-func (*adminSubmittingNameState) StateName() string {
-	return constants.ADMIN_SUBMITTING_NAME_STATE
-}
-
 func (state *adminSubmittingNameState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	if message.Text == "" {
 		return errors.New("no text in message")
@@ -172,10 +164,6 @@ type adminSubmitingGroupState struct {
 func NewAdminSubmitingGroupState(cache interfaces.HandlersCache, bot *tgutils.Bot, srv GroupsService,
 	 machine StateMachine) *adminSubmitingGroupState {
 	return &adminSubmitingGroupState{cache: cache, bot: bot, srv: srv, machine: machine}
-}
-
-func (*adminSubmitingGroupState) StateName() string {
-	return constants.ADMIN_SUBMITTING_GROUP_STATE
 }
 
 func (state *adminSubmitingGroupState) Handle(ctx context.Context, message *tgbotapi.Message) error {
@@ -252,10 +240,6 @@ func NewAdminSubmitingProofState(cache interfaces.HandlersCache, bot *tgutils.Bo
 	return &adminSubmittingProofState{cache: cache, bot: bot, requests: requests, machine: machine}
 }
 
-func (state *adminSubmittingProofState) StateName() string {
-	return constants.ADMIN_SUBMITTING_PROOF_STATE
-}
-
 func (state *adminSubmittingProofState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	if message.Photo == nil {
 		_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Отправьте фото как часть сообщения"))
@@ -310,10 +294,6 @@ func NewAdminWaitingProofState(cache interfaces.HandlersCache, bot *tgutils.Bot)
 	return &adminWaitingState{cache: cache, bot: bot}
 }
 
-func (state *adminWaitingState) StateName() string {
-	return constants.ADMIN_WAITING_STATE
-}
-
 func (state *adminWaitingState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	msg := tgbotapi.NewMessage(message.From.ID, "Подождите,ваш запрос на роль администратора ещё обрабатывается")
 	_, err := state.bot.SendCtx(ctx, msg)
@@ -347,7 +327,8 @@ func selectMaxSizedPhoto(sizes []tgbotapi.PhotoSize) string {
 	return maxSizeId
 }
 
-func (state *adminSubmittingProofState) createTemplateResponse(chatId int64, form *adminSubmitForm, fileBytes []byte) *tgbotapi.PhotoConfig {
+func (state *adminSubmittingProofState) createTemplateResponse(chatId int64, form *adminSubmitForm, 
+	fileBytes []byte) *tgbotapi.PhotoConfig {
 	msg := tgbotapi.NewPhoto(chatId, tgbotapi.FileBytes{Name: "rnd_name", Bytes: fileBytes})
 	var buf bytes.Buffer
 	tmpl := template.Must(template.New("tmpl").Parse(infoTemplate))
@@ -375,7 +356,8 @@ func (state *adminSubmittingProofState) getFileBytes(fileId string) ([]byte, err
 	return bytes, nil
 }
 
-func (state *adminSubmittingProofState) sendPhotoToOwners(ctx context.Context, senderChatId int64, msg tgbotapi.PhotoConfig, bot *tgutils.Bot) error {
+func (state *adminSubmittingProofState) sendPhotoToOwners(ctx context.Context, senderChatId int64, msg tgbotapi.PhotoConfig, 
+	bot *tgutils.Bot) error {
 	owners := strings.Split(os.Getenv("OWNERS"), ",")
 
 	for _, owner := range owners {
@@ -387,7 +369,8 @@ func (state *adminSubmittingProofState) sendPhotoToOwners(ctx context.Context, s
 		sentMsg, err := bot.SendCtx(ctx, msg)
 		if err != nil {
 			if errors.Is(err, tgutils.ErrMsgInvalidLen) {
-				_, err := bot.SendCtx(ctx, tgbotapi.NewMessage(senderChatId, "Ваша заявка превысила допустимый лимит длины. Пожалуйста,перепишите её и отправьте снова"))
+				_, err := bot.SendCtx(ctx,
+					 tgbotapi.NewMessage(senderChatId, "Ваша заявка превысила допустимый лимит длины. Пожалуйста,перепишите её и отправьте снова"))
 				if err != nil {
 					return fmt.Errorf("failed to send too long response during admin submitting proof state: %w", err)
 				}

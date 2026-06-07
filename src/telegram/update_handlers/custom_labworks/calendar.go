@@ -105,6 +105,7 @@ func createDateRows(markup *[][]tgbotapi.InlineKeyboardButton, firstDayWeekday t
 	}
 }
 
+
 func createCalendarHeader(markup *[][]tgbotapi.InlineKeyboardButton, currentMonth time.Month, currentYear int) {
 	currentMonthString := fmt.Sprintf(months[currentMonth]+" %d", currentYear)
 	(*markup)[0] = make([]tgbotapi.InlineKeyboardButton, 1)
@@ -114,7 +115,7 @@ func createCalendarHeader(markup *[][]tgbotapi.InlineKeyboardButton, currentMont
 		(*markup)[i] = make([]tgbotapi.InlineKeyboardButton, daysInWeek)
 	}
 
-	(*markup)[1] = make([]tgbotapi.InlineKeyboardButton, 7)
+	(*markup)[1] = make([]tgbotapi.InlineKeyboardButton, daysInWeek)
 	//Row of week days
 	for i := range 7 {
 		(*markup)[1][i] = tgbotapi.NewInlineKeyboardButtonData(days[time.Weekday(i)], constants.IGNORE_CALLBACKS)
@@ -205,7 +206,9 @@ func (handler *CalendarCallbackHandler) handleNavigateFront(ctx context.Context,
 	curDate := parseForwardCallback(update.CallbackData())
 	curDate = curDate.AddDate(0, 1, -curDate.Day()+1)
 
-	_, err := handler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, *createCalendar(curDate, false)))
+	_, err := handler.bot.SendCtx(ctx, 
+		tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, 
+			*createCalendar(curDate, false)))
 	if err != nil {
 		return fmt.Errorf("failed to edit reply markup while navigating front in calendar: %w", err)
 	}
@@ -220,7 +223,9 @@ func (handler *CalendarCallbackHandler) handleNavigateBack(ctx context.Context, 
 		curDate = time.Now()
 		isCurrentMonth = true
 	}
-	_, err := handler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, *createCalendar(curDate, isCurrentMonth)))
+	_, err := handler.bot.SendCtx(ctx, 
+		tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID,
+			 *createCalendar(curDate, isCurrentMonth)))
 	if err != nil {
 		return fmt.Errorf("failed to edit reply markup while navigating back in calendar: %w", err)
 	}
@@ -246,7 +251,8 @@ func (handler *CalendarCallbackHandler) handleDate(ctx context.Context, update *
 		return fmt.Errorf("failed to save jsoned info during date callback handling in calendar: %w", err)
 	}
 
-	_, err = handler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, *createTimePicker("")))
+	_, err = handler.bot.SendCtx(ctx, 
+		tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, *createTimePicker("")))
 	if err != nil {
 		return fmt.Errorf("failed to edit message during date callback handling in calendar: %w", err)
 	}

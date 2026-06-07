@@ -52,10 +52,6 @@ func NewLabworkSubmitStartState(bot *tgutils.Bot, cache interfaces.HandlersCache
 	return &labworkSubmitStartState{bot: bot, cache: cache, labworks: labworks, users: users}
 }
 
-func (*labworkSubmitStartState) StateName() string {
-	return constants.LABWORK_SUBMIT_START_STATE
-}
-
 func (state *labworkSubmitStartState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	user, err := state.users.GetByTgId(ctx, message.Chat.ID)
 	if err != nil {
@@ -169,10 +165,6 @@ func NewLabworkSubmitWaitingState(bot *tgutils.Bot, cache interfaces.HandlersCac
 	return &labworkSubmitWaitingState{bot: bot, cache: cache, machine: machine}
 }
 
-func (*labworkSubmitWaitingState) StateName() string {
-	return constants.LABWORK_SUBMIT_WAITING_STATE
-}
-
 func (state *labworkSubmitWaitingState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, 
 		"Пожалуйста, закончите отправление заявки, прежде чем переходить к остальным командам"))
@@ -190,12 +182,12 @@ func (state *labworkSubmitWaitingState) Revert(ctx context.Context, msg *tgbotap
 	request := LabworkRequest{}
 	err = json.Unmarshal([]byte(info), &request)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal info into labwork request in %s: %w", state.StateName(), err)
+		return fmt.Errorf("failed to unmarshal info into labwork request in %s: %w", constants.LABWORK_SUBMIT_WAITING_STATE, err)
 	}
 
 	err = state.cache.RemoveInfo(ctx, msg.Chat.ID)
 	if err != nil {
-		return fmt.Errorf("failed to remove cache in %s: %w", state.StateName(), err)
+		return fmt.Errorf("failed to remove cache in %s: %w", constants.LABWORK_SUBMIT_WAITING_STATE, err)
 	}
 
 	err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.IDLE_STATE))
@@ -206,7 +198,8 @@ func (state *labworkSubmitWaitingState) Revert(ctx context.Context, msg *tgbotap
 	_, err = state.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, request.MarkupMessageId,
 		tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
 	if err != nil {
-		return fmt.Errorf("failed to remove markup during %s from message in chat with %d: %w", state.StateName(), msg.Chat.ID, err)
+		return fmt.Errorf("failed to remove markup during %s from message in chat with %d: %w", constants.LABWORK_SUBMIT_WAITING_STATE, 
+		msg.Chat.ID, err)
 	}
 	return nil
 }
@@ -226,10 +219,6 @@ type labworkSubmitNumberState struct {
 func NewLabworkSubmitNumberState(bot *tgutils.Bot, cache interfaces.HandlersCache, labworks LabworksService,
 	 users UsersService, stateMachine StateMachine) *labworkSubmitNumberState {
 	return &labworkSubmitNumberState{bot: bot, cache: cache, labworks: labworks, users: users, stateMachine: stateMachine}
-}
-
-func (*labworkSubmitNumberState) StateName() string {
-	return constants.LABWORK_SUBMIT_NUMBER_STATE
 }
 
 func (state *labworkSubmitNumberState) Handle(ctx context.Context, message *tgbotapi.Message) error {
@@ -295,10 +284,6 @@ type labworkSubmitProofState struct {
 func NewLabworkSubmitProofState(bot *tgutils.Bot, cache interfaces.HandlersCache, groups GroupsService,
 	 requests interfaces.RequestsRepository, lessonsRequests LabworkRequests) *labworkSubmitProofState {
 	return &labworkSubmitProofState{bot: bot, cache: cache, groups: groups, groupedRequests: requests, lessonsRequests: lessonsRequests}
-}
-
-func (*labworkSubmitProofState) StateName() string {
-	return constants.LABWORK_SUBMIT_PROOF_STATE
 }
 
 func (state *labworkSubmitProofState) Handle(ctx context.Context, message *tgbotapi.Message) error {

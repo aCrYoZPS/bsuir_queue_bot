@@ -4,16 +4,18 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/constants"
 )
 
 type CachedInfo struct {
 	chatId   int64
-	state    string
+	state    constants.State
 	sendTime time.Time
 }
 
 func (info *CachedInfo) State() string {
-	return info.state
+	return string(info.state)
 }
 
 func (info *CachedInfo) SendTime() time.Time {
@@ -24,10 +26,10 @@ func (info *CachedInfo) ChatId() int64 {
 	return info.chatId
 }
 
-func NewCachedInfo(ChatId int64, State string) *CachedInfo {
+func NewCachedInfo(ChatId int64, state constants.State) *CachedInfo {
 	return &CachedInfo{
 		chatId:   ChatId,
-		state:    State,
+		state:    state,
 		sendTime: time.Now(),
 	}
 }

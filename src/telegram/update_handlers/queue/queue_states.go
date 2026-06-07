@@ -20,17 +20,14 @@ type QueueStartState struct {
 	lessons   interfaces.LessonsRepository
 }
 
-func NewQueueStartState(bot *tgutils.Bot, cache interfaces.HandlersCache, usersRepo interfaces.UsersRepository, lessons interfaces.LessonsRepository) *QueueStartState {
+func NewQueueStartState(bot *tgutils.Bot, cache interfaces.HandlersCache, usersRepo interfaces.UsersRepository, 
+	lessons interfaces.LessonsRepository) *QueueStartState {
 	return &QueueStartState{
 		bot:       bot,
 		cache:     cache,
 		usersRepo: usersRepo,
 		lessons:   lessons,
 	}
-}
-
-func (*QueueStartState) StateName() string {
-	return constants.QUEUE_START_STATE
 }
 
 func (state *QueueStartState) Handle(ctx context.Context, msg *tgbotapi.Message) error {
@@ -85,9 +82,10 @@ func (state *QueueStartState) Revert(ctx context.Context, msg *tgbotapi.Message)
 	return nil
 }
 
+const labworksMarkupSize = 4
 func createLabworksKeyboard(userTgId int64, subjects []string) *tgbotapi.InlineKeyboardMarkup {
 	markup := [][]tgbotapi.InlineKeyboardButton{}
-	for chunk := range slices.Chunk(subjects, 4) {
+	for chunk := range slices.Chunk(subjects, labworksMarkupSize) {
 		row := []tgbotapi.InlineKeyboardButton{}
 		for _, discipline := range chunk {
 			row = append(row, tgbotapi.NewInlineKeyboardButtonData(discipline, createQueueDisciplineCallback(userTgId, discipline)))
@@ -122,10 +120,6 @@ type QueueWaitingState struct {
 
 func NewQueueWaitingState(cache interfaces.HandlersCache, bot *tgutils.Bot) *QueueWaitingState {
 	return &QueueWaitingState{cache: cache, bot: bot}
-}
-
-func (*QueueWaitingState) StateName() string {
-	return constants.QUEUE_WAITING_STATE
 }
 
 func (*QueueWaitingState) Handle(ctx context.Context, msg *tgbotapi.Message) error {

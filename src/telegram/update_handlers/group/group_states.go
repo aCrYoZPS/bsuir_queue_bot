@@ -41,10 +41,6 @@ func NewGroupSubmitState(cache interfaces.HandlersCache, bot *tgutils.Bot, group
 	return &groupSubmitStartState{cache: cache, bot: bot, groups: groups, users: users}
 }
 
-func (*groupSubmitStartState) StateName() string {
-	return constants.GROUP_SUBMIT_START_STATE
-}
-
 func (state *groupSubmitStartState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	user, err := state.users.GetByTgId(ctx, message.From.ID)
 	if err != nil {
@@ -85,10 +81,6 @@ type groupSubmitGroupNameState struct {
 
 func NewGroupSubmitGroupNameState(cache interfaces.HandlersCache, bot *tgutils.Bot, groups GroupsRepository) *groupSubmitGroupNameState {
 	return &groupSubmitGroupNameState{bot: bot, cache: cache, groups: groups}
-}
-
-func (*groupSubmitGroupNameState) StateName() string {
-	return constants.GROUP_SUBMIT_GROUPNAME_STATE
 }
 
 func (state *groupSubmitGroupNameState) Handle(ctx context.Context, message *tgbotapi.Message) error {
@@ -175,10 +167,6 @@ func NewGroupSubmitNameState(cache interfaces.HandlersCache, bot *tgutils.Bot, g
 	}
 }
 
-func (state *groupSubmitNameState) StateName() string {
-	return constants.GROUP_SUBMIT_NAME_STATE
-}
-
 func (state *groupSubmitNameState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	name := message.Text
 	fullName := strings.Fields(name)
@@ -239,7 +227,8 @@ func (state *groupSubmitNameState) Revert(ctx context.Context, msg *tgbotapi.Mes
 	return state.machine.Handle(ctx, msg)
 }
 
-func (state *groupSubmitNameState) SendMessagesToAdmins(ctx context.Context, senderMessage *tgbotapi.Message, admins []entities.User, form *groupSubmitForm) error {
+func (state *groupSubmitNameState) SendMessagesToAdmins(ctx context.Context, senderMessage *tgbotapi.Message, admins []entities.User,
+	 form *groupSubmitForm) error {
 	if len(admins) == 0 {
 		return errors.New("no admins found in group")
 	}
@@ -251,9 +240,12 @@ func (state *groupSubmitNameState) SendMessagesToAdmins(ctx context.Context, sen
 		sentMsg, err := state.bot.SendCtx(ctx, msg)
 		if err != nil {
 			if errors.Is(err, tgutils.ErrMsgInvalidLen) {
-				resp := tgbotapi.NewMessage(senderMessage.Chat.ID, "Ваше сообщение превосходит лимиты размера сообщений в телеграме. Пожалуйста, измените его и отправьте снова")
+				resp := tgbotapi.NewMessage(senderMessage.Chat.ID, 
+					"Ваше сообщение превосходит лимиты размера сообщений в телеграме. Пожалуйста, измените его и отправьте снова")
 				resp.ReplyToMessageID = senderMessage.MessageID
-				_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(senderMessage.Chat.ID, "Ваше сообщение превосходит лимиты размера сообщений в телеграме. Пожалуйста, измените его и отправьте снова"))
+				_, err := state.bot.SendCtx(ctx, 
+					tgbotapi.NewMessage(senderMessage.Chat.ID, 
+						"Ваше сообщение превосходит лимиты размера сообщений в телеграме. Пожалуйста, измените его и отправьте снова"))
 				if err != nil {
 					return fmt.Errorf("failed to send too large message as a response during group submit name state: %w", err)
 				}
@@ -278,10 +270,6 @@ func NewGroupWaitingState(cache interfaces.HandlersCache, bot *tgutils.Bot) *gro
 	return &groupWaitingState{cache: cache, bot: bot}
 }
 
-func (*groupWaitingState) StateName() string {
-	return constants.GROUP_WAITING_STATE
-}
-
 func (state *groupWaitingState) Handle(ctx context.Context, message *tgbotapi.Message) error {
 	_, err := state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "Ваша заявка всё ещё рассматривается, подождите"))
 	if err != nil {
@@ -298,7 +286,8 @@ func createMarkupKeyboard(form *groupSubmitForm) *tgbotapi.InlineKeyboardMarkup 
 	row := []tgbotapi.InlineKeyboardButton{}
 	acceptData := constants.GROUP_CALLBACKS + "accept" + fmt.Sprint(form.UserId)
 	declineData := constants.GROUP_CALLBACKS + "decline" + fmt.Sprint(form.UserId)
-	row = append(row, tgbotapi.NewInlineKeyboardButtonData("Принять", acceptData), tgbotapi.NewInlineKeyboardButtonData("Отклонить", declineData))
+	row = append(row, 
+		tgbotapi.NewInlineKeyboardButtonData("Принять", acceptData), tgbotapi.NewInlineKeyboardButtonData("Отклонить", declineData))
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(row)
 	return &keyboard
 }

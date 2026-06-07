@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/update_handlers/constants"
 )
 
 var _ interfaces.HandlersCache = (*HandlersCache)(nil)
@@ -45,11 +46,11 @@ func (cache *HandlersCache) GetState(ctx context.Context, chatId int64) (*interf
 	err := row.Scan(&state)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return interfaces.NewCachedInfo(chatId, state), nil
+			return interfaces.NewCachedInfo(chatId, constants.State(state)), nil
 		}
 		return nil, err
 	}
-	return interfaces.NewCachedInfo(chatId, state), nil
+	return interfaces.NewCachedInfo(chatId, constants.State(state)), nil
 }
 
 func (cache *HandlersCache) AcquireLock(ctx context.Context, chatId int64, key string) *sync.Mutex {

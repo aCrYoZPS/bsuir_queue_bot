@@ -105,10 +105,6 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 	return nil
 }
 
-func (*idleState) StateName() string {
-	return constants.IDLE_STATE
-}
-
 func (state *idleState) HandleTableCommand(ctx context.Context, msg *tgbotapi.Message) error {
 	usr, err := state.usersRepo.GetByTgId(ctx, msg.From.ID)
 	if err != nil {
