@@ -7,15 +7,17 @@ import (
 	"math/big"
 )
 
+const BitsInByte = 8
+
 type BloomFilter struct {
 	size   int
 	hashes []hash.Hash64
 	bits   *big.Int
 }
 
-func NewBloomFilter(size int, hashCount int) *BloomFilter {
+func NewBloomFilter(size, hashCount int) *BloomFilter {
 	bits := &big.Int{}
-	bits.FillBytes(make([]byte, (size+8-1)/8))
+	bits.FillBytes(make([]byte, (size+BitsInByte-1)/BitsInByte))
 	hashes := make([]hash.Hash64, hashCount)
 	for i := range hashCount {
 		hashes[i] = fnv.New64()
