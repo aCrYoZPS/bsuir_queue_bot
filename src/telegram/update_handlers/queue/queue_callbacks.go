@@ -32,7 +32,8 @@ type QueueCallbacksHandler struct {
 	requests LabworksRequest
 }
 
-func NewQueueCallbackHandler(users interfaces.UsersRepository, labworks interfaces.LessonsRepository, cache interfaces.HandlersCache, bot *tgutils.Bot, requests LabworksRequest) *QueueCallbacksHandler {
+func NewQueueCallbackHandler(users interfaces.UsersRepository, labworks interfaces.LessonsRepository, cache interfaces.HandlersCache, 
+	bot *tgutils.Bot, requests LabworksRequest) *QueueCallbacksHandler {
 	return &QueueCallbacksHandler{
 		users:    users,
 		labworks: labworks,
@@ -55,7 +56,8 @@ func (handler *QueueCallbacksHandler) HandleCallback(ctx context.Context, update
 				if err != nil {
 					return fmt.Errorf("failed to transition to idle state during labwork callback handling: %w", err)
 				}
-				_, err = bot.SendCtx(ctx, tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, cases.Title(language.English).String(customErrors.ErrNoLabworks.Error())))
+				_, err = bot.SendCtx(ctx, tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, 
+					cases.Title(language.English).String(customErrors.ErrNoLabworks.Error())))
 				return fmt.Errorf("failed to send no lessons error to user during labwork callback handling: %w", err)
 			}
 			return err
@@ -92,7 +94,8 @@ func (handler *QueueCallbacksHandler) handleCancelCallback(ctx context.Context, 
 	if err != nil {
 		return fmt.Errorf("failed to get subjects during queue cancel callback handling: %w", err)
 	}
-	_, err = handler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.FromChat().ID, msgId, *createLabworksKeyboard(usr.TgId, subjects)))
+	_, err = handler.bot.SendCtx(ctx,
+		 tgbotapi.NewEditMessageReplyMarkup(update.FromChat().ID, msgId, *createLabworksKeyboard(usr.TgId, subjects)))
 	if err != nil {
 		return fmt.Errorf("failed to send new reply markup durning queue cancel callback handling: %w", err)
 	}
@@ -128,7 +131,8 @@ func (handler *QueueCallbacksHandler) createDisciplineDatesKeyboard(lessons []pe
 		if lesson.SubgroupNumber != iis_api_entities.AllSubgroups {
 			formattedDate += fmt.Sprintf(" (%d)", lesson.SubgroupNumber)
 		}
-		row = append(row, tgbotapi.NewInlineKeyboardButtonData(formattedDate, createQueueTimeCallback(lesson.Id, lesson.DateTime, lesson.SubgroupNumber)))
+		row = append(row, 
+			tgbotapi.NewInlineKeyboardButtonData(formattedDate, createQueueTimeCallback(lesson.Id, lesson.DateTime, lesson.SubgroupNumber)))
 		markup = append(markup, row)
 	}
 	markup = append(markup, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Назад", constants.QUEUE_CANCEL_CALLBACKS)))
@@ -136,16 +140,17 @@ func (handler *QueueCallbacksHandler) createDisciplineDatesKeyboard(lessons []pe
 	return &keyboard
 }
 
+const maxCallbackSize = 64
 func createQueueTimeCallback(lessonId int64, date time.Time, subgroup iis_api_entities.Subgroup) string {
 	builder := strings.Builder{}
-	builder.Grow(64)
+	builder.Grow(maxCallbackSize)
 	builder.WriteString(constants.QUEUE_TIME_CALLBACKS)
 	builder.WriteString("|")
-	builder.WriteString(fmt.Sprintf("%d.%d.%d", date.Day(), date.Month(), date.Year()))
+	fmt.Fprintf(&builder, "%d.%d.%d", date.Day(), date.Month(), date.Year())
 	builder.WriteString("|")
-	builder.WriteString(fmt.Sprint(lessonId))
+	fmt.Fprint(&builder, lessonId)
 	builder.WriteString("|")
-	builder.WriteString(fmt.Sprint(subgroup))
+	fmt.Fprint(&builder, subgroup)
 	return builder.String()
 }
 
@@ -199,7 +204,8 @@ func (handler *QueueCallbacksHandler) handleTimeCallback(ctx context.Context, up
 	if output.String() == "" {
 		output.WriteString("На эту лабораторную нет заявок. Как знать,может,вы будете первым")
 	}
-	_, err = handler.bot.SendCtx(ctx, tgbotapi.NewEditMessageTextAndMarkup(update.FromChat().ChatConfig().ChatID, update.CallbackQuery.Message.MessageID, output.String(),
+	_, err = handler.bot.SendCtx(ctx, 
+		tgbotapi.NewEditMessageTextAndMarkup(update.FromChat().ChatConfig().ChatID, update.CallbackQuery.Message.MessageID, output.String(),
 		tgbotapi.InlineKeyboardMarkup{InlineKeyboard: make([][]tgbotapi.InlineKeyboardButton, 0)}))
 	if err != nil {
 		return fmt.Errorf("failed to send queue during queue time callback handling: %w", err)

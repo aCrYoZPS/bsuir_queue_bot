@@ -135,7 +135,8 @@ func (state *QueueWaitingState) Revert(ctx context.Context, msg *tgbotapi.Messag
 	if err != nil {
 		return fmt.Errorf("failed to parse info (%s), as msg id int64: %w", info, err)
 	}
-	_, err = state.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, int(markupMsgId), tgbotapi.NewInlineKeyboardMarkup(make([]tgbotapi.InlineKeyboardButton, 0))))
+	_, err = state.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, int(markupMsgId),
+	 tgbotapi.NewInlineKeyboardMarkup(make([]tgbotapi.InlineKeyboardButton, 0))))
 	if err != nil {
 		return fmt.Errorf("failed to send delete message during queue waiting state reversal: %w", err)
 	}

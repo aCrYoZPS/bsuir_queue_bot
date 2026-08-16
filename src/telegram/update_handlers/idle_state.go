@@ -23,7 +23,8 @@ type idleState struct {
 	mux        tgutils.MuxHandler
 }
 
-func NewIdleState(cache interfaces.HandlersCache, bot *tgutils.Bot, usersRepo interfaces.UsersRepository, groupsRepo interfaces.GroupsRepository, lessons interfaces.LessonsRepository, mux tgutils.MuxHandler) *idleState {
+func NewIdleState(cache interfaces.HandlersCache, bot *tgutils.Bot, usersRepo interfaces.UsersRepository, 
+	groupsRepo interfaces.GroupsRepository, lessons interfaces.LessonsRepository, mux tgutils.MuxHandler) *idleState {
 	return &idleState{cache: cache, bot: bot, usersRepo: usersRepo, groupsRepo: groupsRepo, lessons: lessons, mux: mux}
 }
 

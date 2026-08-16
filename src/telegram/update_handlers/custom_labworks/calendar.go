@@ -81,7 +81,8 @@ func createCalendar(date time.Time, isCurrentMonth bool) *tgbotapi.InlineKeyboar
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: markup}
 }
 
-func createDateRows(markup *[][]tgbotapi.InlineKeyboardButton, firstDayWeekday time.Weekday, currentDay, currentMonth, currentYear int, lastOfMonth time.Time) {
+func createDateRows(markup *[][]tgbotapi.InlineKeyboardButton, firstDayWeekday time.Weekday, currentDay, currentMonth, currentYear int,
+	 lastOfMonth time.Time) {
 	for i := range 7 {
 		(*markup)[1][i] = tgbotapi.NewInlineKeyboardButtonData(days[time.Weekday(i)], constants.IGNORE_CALLBACKS)
 	}
@@ -97,7 +98,8 @@ func createDateRows(markup *[][]tgbotapi.InlineKeyboardButton, firstDayWeekday t
 		}
 		for ; j < 7; j, displayedDate = j+1, displayedDate+1 {
 			if displayedDate >= currentDay && displayedDate <= lastOfMonth.Day() {
-				(*markup)[i][j] = tgbotapi.NewInlineKeyboardButtonData(fmt.Sprint(displayedDate), createDateCallback(displayedDate, currentMonth, currentYear))
+				(*markup)[i][j] = tgbotapi.NewInlineKeyboardButtonData(fmt.Sprint(displayedDate),
+				 createDateCallback(displayedDate, currentMonth, currentYear))
 			} else {
 				(*markup)[i][j] = tgbotapi.NewInlineKeyboardButtonData("-", constants.IGNORE_CALLBACKS)
 			}
