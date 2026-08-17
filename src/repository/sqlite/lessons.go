@@ -17,7 +17,7 @@ import (
 
 const (
 	LESSONS_TABLE = "lessons"
-	QUERY_TIMEOUT = 30 * time.Second
+	QUERY_TIMEOUT = 120 * time.Second
 )
 
 var _ interfaces.LessonsRepository = (*LessonsRepository)(nil)
@@ -42,7 +42,6 @@ func (repo *LessonsRepository) AddRange(ctx context.Context, lessons []*entities
 	if err != nil {
 		return err
 	}
-
 	storedLessons := repo.getSortedLessons(ctx, lessons)
 	for _, lesson := range storedLessons {
 		query := fmt.Sprintf("INSERT INTO %s (group_id, subject, lesson_type, subgroup_number, date_time) values ($1,$2,$3,$4,$5)", LESSONS_TABLE)
