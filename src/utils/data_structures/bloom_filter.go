@@ -57,6 +57,8 @@ func NewOptimalBloomFilter(numElements int, falsePositiveRate float64) *BloomFil
 
 func optimalParams(n int, p float64) (int, int) {
 	m := int(math.Ceil(float64(-n) * math.Log(p) / (math.Pow(math.Log(2), 2))))
+	const minimalSize = 10
+	m = max(minimalSize, m)
 	k := int(math.Ceil(math.Log(2) * float64(m) / float64(n)))
 	return m, k
 }
