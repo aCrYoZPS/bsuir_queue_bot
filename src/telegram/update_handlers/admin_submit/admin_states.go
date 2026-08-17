@@ -31,7 +31,7 @@ type adminSubmitForm struct {
 	AdditionalInfo string `json:"info,omitempty"`
 }
 
-const infoTemplate = "(ЗАЯВКА НА РОЛЬ АДМИНИСТРАТОРА)\n Имя: {{.Name}} \nГруппа: {{.Group}}\nИмя пользователя: @{{.TgName}} \n" + 
+const infoTemplate = "(ЗАЯВКА НА РОЛЬ АДМИНИСТРАТОРА)\nИмя: {{.Name}} \nГруппа: {{.Group}}\nИмя пользователя: @{{.TgName}} \n" + 
 "{{if .AdditionalInfo}}Доп информация: {{.AdditionalInfo}} {{end}}"
 
 type adminSubmitStartState struct {
