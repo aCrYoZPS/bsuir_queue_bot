@@ -216,7 +216,7 @@ func areLessonsEqual(self *entities.Lesson) func(other *entities.Lesson) bool {
 func (repo *LessonsRepository) GetEndedLessons(ctx context.Context, before time.Time) ([]persistence.Lesson, error) {
 	lessons := []persistence.Lesson{}
 	query := fmt.Sprintf("SELECT id, group_id, subject, lesson_type, subgroup_number, date_time FROM %s" + 
-	"WHERE date_time <= $1 ORDER BY date_time", 
+	" WHERE date_time <= $1 ORDER BY date_time", 
 	LESSONS_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query, time.Now().Unix())
 	if err != nil {
