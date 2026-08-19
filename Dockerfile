@@ -26,9 +26,8 @@ WORKDIR /app
 
 COPY run.sh /bin/run.sh
 COPY --from=build /bin/dlv /bin/dlv
-COPY --from=build /bin/main /bin/main
+COPY --from=build /bin/main ./bin/main
 
 RUN --mount=type=secret,id=credentials.json
 RUN --mount=type=secret,id=token.json
-WORKDIR /app/bin
-ENTRYPOINT ["/app/bin/run.sh"]
+ENTRYPOINT ["/bin/run.sh"]

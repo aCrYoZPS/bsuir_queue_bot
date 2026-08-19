@@ -1,3 +1,4 @@
+#!/bin/sh
 cmd="/app/bin/main"
 if [ "$REMOTE_DEBUG_PORT" ]; then
   echo "Starting application with remote debugging on port $REMOTE_DEBUG_PORT"
