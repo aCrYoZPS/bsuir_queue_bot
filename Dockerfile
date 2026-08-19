@@ -1,6 +1,5 @@
 FROM alpine:latest AS build
 
-WORKDIR /build
 RUN apk add --no-cache --update go gcc g++
 
 COPY ./go.mod .
@@ -8,7 +7,7 @@ COPY ./go.sum .
 
 ARG TARGETARCH
 
-RUN go install github.com/go-delve/delve/cmd/dlv@latest
+RUN GOBIN=/bin go install github.com/go-delve/delve/cmd/dlv@latest
 RUN --mount=type=cache,target=/go/pkg/mod 
 RUN go mod download
 
@@ -26,9 +25,8 @@ RUN apk add --no-cache --update musl-dev
 WORKDIR /app
 
 COPY run.sh /bin/run.sh
-COPY --from=build /go/bin/dlv /bin/dlv
+COPY --from=build /bin/dlv /bin/dlv
 COPY --from=build /bin/main /bin/main
-EXPOSE 8080
 
 RUN --mount=type=secret,id=credentials.json
 RUN --mount=type=secret,id=token.json
