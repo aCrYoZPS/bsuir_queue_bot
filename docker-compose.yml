@@ -15,15 +15,15 @@ services:
       - SQLITE_FILE=../data/sqlite3.db
       - SQLITE_INIT_FILE=../sql/db_setup.sql
       - DATA_DIRECTORY=./data
-      - REMOTE_DEBUG_PORT=8080
+      # - REMOTE_DEBUG_PORT=8080
     volumes:
       - ./data:/app/data
       - ./sql:/app/sql
     secrets:
       - credentials
       - token
-    ports:
-      - 8080:8080
+    # ports:
+    #   - 8080:8080
 secrets:
   credentials:
    file: ./src/credentials.json
