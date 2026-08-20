@@ -42,7 +42,7 @@ func (repo *LessonsRepository) AddRange(ctx context.Context, lessons []*entities
 	if err != nil {
 		return err
 	}
-	storedLessons := repo.getSortedLessons(ctx, lessons)
+	storedLessons := repo.getSortedLessons(lessons)
 	for _, lesson := range storedLessons {
 		query := fmt.Sprintf("INSERT INTO %s (group_id, subject, lesson_type, subgroup_number, date_time) values ($1,$2,$3,$4,$5)", LESSONS_TABLE)
 		_, err := tx.ExecContext(ctx, query, lesson.GroupId, lesson.Subject, lesson.LessonType, lesson.SubgroupNumber, lesson.DateTime.Unix())
@@ -157,50 +157,40 @@ func (repo *LessonsRepository) GetSubjects(ctx context.Context, groupId int64) (
 
 const falsePositiveRate = 0.01
 
-func (repo *LessonsRepository) getSortedLessons(ctx context.Context, lessons []*entities.Lesson) []persistence.Lesson {
-	resChan := make(chan []persistence.Lesson, 1)
-	go func(chan []persistence.Lesson) {
-		if len(lessons) == 0 {
-			resChan <- nil
-		}
-		storedLessons := make([]persistence.Lesson, 0, len(lessons)*3)
-		filter := datastructures.NewOptimalBloomFilter(len(lessons), falsePositiveRate)
-		for _, lesson := range lessons {
-			if lesson.LessonType != entities.Labwork {
-				continue
-			}
-			checkedName := createCheckedName(lesson)
-			exists := filter.Check(checkedName)
-			if exists {
-				notFalsePositive := slices.ContainsFunc(lessons, areLessonsEqual(lesson))
-				if notFalsePositive {
-					continue
-				}
-			}
-			filter.Add(checkedName)
-
-			startDate, endDate := time.Time(lesson.StartDate), time.Time(lesson.EndDate)
-			currentDate := startDate
-			for !currentDate.Equal(endDate) {
-				storedLesson := *persistence.FromLessonEntity(lesson, currentDate)
-				storedLessons = append(storedLessons, storedLesson)
-				addedTime := time.Hour * 24 * 7 * time.Duration(utils.CalculateWeeksDistance(lesson.WeekNumber, utils.CalculateWeek(currentDate)))
-				currentDate = currentDate.Add(addedTime)
-			}
-		}
-
-		sort.Slice(storedLessons, func(i, j int) bool {
-			return storedLessons[i].DateTime.Before(storedLessons[j].DateTime)
-		})
-		resChan <- storedLessons
-	}(resChan)
-
-	select {
-	case res := <-resChan:
-		return res
-	case <-ctx.Done():
+func (repo *LessonsRepository) getSortedLessons(lessons []*entities.Lesson) []persistence.Lesson {
+	if len(lessons) == 0 {
 		return nil
 	}
+	storedLessons := make([]persistence.Lesson, 0, len(lessons)*3)
+	filter := datastructures.NewOptimalBloomFilter(len(lessons), falsePositiveRate)
+	for _, lesson := range lessons {
+		if lesson.LessonType != entities.Labwork {
+			continue
+		}
+		checkedName := createCheckedName(lesson)
+		exists := filter.Check(checkedName)
+		if exists {
+			notFalsePositive := slices.ContainsFunc(lessons, areLessonsEqual(lesson))
+			if notFalsePositive {
+				continue
+			}
+		}
+		filter.Add(checkedName)
+
+		startDate, endDate := time.Time(lesson.StartDate), time.Time(lesson.EndDate)
+		currentDate := startDate
+		for !currentDate.Equal(endDate) {
+			storedLesson := *persistence.FromLessonEntity(lesson, currentDate)
+			storedLessons = append(storedLessons, storedLesson)
+			addedTime := time.Hour * 24 * 7 * time.Duration(utils.CalculateWeeksDistance(lesson.WeekNumber, utils.CalculateWeek(currentDate)))
+			currentDate = currentDate.Add(addedTime)
+		}
+	}
+
+	sort.Slice(storedLessons, func(i, j int) bool {
+		return storedLessons[i].DateTime.Before(storedLessons[j].DateTime)
+	})
+	return storedLessons
 }
 
 func createCheckedName(storedLesson *entities.Lesson) string {
