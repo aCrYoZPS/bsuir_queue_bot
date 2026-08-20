@@ -7,15 +7,15 @@ import (
 
 const (
 	DaysInWeekCycle = 28
-	LastWeek = 4
+	LastWeek        = 4
 )
 
 var firstWeek = time.Date(2026, time.August, 3, 0, 0, 0, 0, time.Local)
 
 func CalculateWeek(date time.Time) int8 {
 	duration := date.Sub(firstWeek)
-	if duration == 0 {
-		duration = firstWeek.Sub(date)
+	if duration < 0 {
+		duration = -duration
 	}
 	week := int8(((duration/time.Hour)/24)%DaysInWeekCycle)/7 + 1
 	return week
