@@ -24,10 +24,11 @@ FROM alpine AS main
 RUN apk add --no-cache --update musl-dev
 WORKDIR /app
 
-COPY run.sh /bin/run.sh
+COPY run.sh /app/bin/run.sh
 COPY --from=build /bin/dlv /bin/dlv
 COPY --from=build /bin/main ./bin/main
 
+WORKDIR /app/bin
 RUN --mount=type=secret,id=credentials.json
 RUN --mount=type=secret,id=token.json
-ENTRYPOINT ["/bin/run.sh"]
+ENTRYPOINT ["/app/bin/run.sh"]
