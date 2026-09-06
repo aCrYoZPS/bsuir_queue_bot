@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"slices"
 	"sort"
@@ -13,6 +14,7 @@ import (
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistence"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/utils"
 	datastructures "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/data_structures"
+	"github.com/mattn/go-sqlite3"
 )
 
 const (
@@ -54,6 +56,34 @@ func (repo *LessonsRepository) AddRange(ctx context.Context, lessons []*entities
 	return err
 }
 
+func (repo *LessonsRepository) AddUnpresented(ctx context.Context, lessons []*entities.Lesson) ([]*persistence.Lesson, error) {
+	tx, err := repo.db.BeginTx(ctx, nil)
+	defer tx.Rollback()
+	if err != nil {
+		return nil, err
+	}
+	storedLessons := repo.getSortedLessons(lessons)
+	newLessons := make([]*persistence.Lesson, 0)
+	for _, lesson := range storedLessons {
+		query := fmt.Sprintf("INSERT INTO %s (group_id, subject, lesson_type, subgroup_number, date_time) values ($1,$2,$3,$4,$5)", LESSONS_TABLE)
+		_, err := tx.ExecContext(ctx, query, lesson.GroupId, lesson.Subject, lesson.LessonType, lesson.SubgroupNumber, lesson.DateTime.Unix())
+		if err != nil {
+			if err, ok := errors.AsType[sqlite3.Error](err); ok {
+				if err.ExtendedCode == sqlite3.ErrConstraintUnique {
+					continue
+				}
+			}
+			return nil, err
+		}
+		newLessons = append(newLessons, &lesson)
+	}
+	err = tx.Commit()
+	if err != nil {
+		return nil, err
+	}
+	return newLessons, err
+}
+
 func (repo *LessonsRepository) Get(ctx context.Context, id int64) (persistence.Lesson, error) {
 	query := fmt.Sprintf("SELECT l.group_id, l.lesson_type, l.subject, l.subgroup_number, l.date_time FROM %s as l WHERE l.id=$1",
 		LESSONS_TABLE)
@@ -76,13 +106,13 @@ func (repo *LessonsRepository) Add(ctx context.Context, lesson *persistence.Less
 
 func (repo *LessonsRepository) GetAll(ctx context.Context, groupName string) ([]persistence.Lesson, error) {
 	query := fmt.Sprintf("SELECT l.id, l.group_id, l.lesson_type, l.subject, l.subgroup_number, l.date_time FROM %s as l "+
-		"INNER JOIN %s as g ON l.group_id=g.id WHERE g.name=$1", LESSONS_TABLE, GROUPS_TABLE)
+		"INNER JOIN %s as g ON l.group_id=g.id WHERE g.name=$1", LESSONS_TABLE, GroupsTable)
 	rows, err := repo.db.QueryContext(ctx, query, groupName)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	lessons := make([]persistence.Lesson, 0, 100)
+	lessons := make([]persistence.Lesson, 0)
 	i := 0
 	var storedDateTime int64
 	for rows.Next() {
@@ -94,6 +124,9 @@ func (repo *LessonsRepository) GetAll(ctx context.Context, groupName string) ([]
 		lesson.DateTime = time.Unix(storedDateTime, 0)
 		i++
 		lessons = append(lessons, *lesson)
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
 	}
 	if i == 0 {
 		return nil, nil
@@ -111,7 +144,8 @@ func (repo *LessonsRepository) GetNext(ctx context.Context, subject string, grou
 		return nil, err
 	}
 	defer rows.Close()
-	lessons := make([]persistence.Lesson, 4)
+	const lessonsLimit = 4
+	lessons := make([]persistence.Lesson, lessonsLimit)
 	i := 0
 	for rows.Next() {
 		var storedDateTime int64
@@ -122,6 +156,9 @@ func (repo *LessonsRepository) GetNext(ctx context.Context, subject string, grou
 		}
 		lessons[i].DateTime = time.Unix(storedDateTime, 0)
 		i++
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
 	}
 	if i == 0 {
 		return []persistence.Lesson{}, nil

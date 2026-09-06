@@ -9,19 +9,25 @@ import (
 
 	sheetsapi "github.com/aCrYoZPS/bsuir_queue_bot/src/google/sheets_api"
 	iis_api_entities "github.com/aCrYoZPS/bsuir_queue_bot/src/iis_api/entities"
-	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/interfaces"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/repository/sqlite/persistence"
 )
 
-type LessonsService struct {
-	sheetsApi sheetsapi.SheetsApi
-	interfaces.LessonsRepository
+type LessonsRepository interface {
+	AddUnpresented(ctx context.Context, lessons []*iis_api_entities.Lesson) ([]*persistence.Lesson, error)
+	GetAll(ctx context.Context, groupName string) ([]persistence.Lesson, error)
+	AddRange(context.Context, []*iis_api_entities.Lesson) error
+	Add(ctx context.Context, lesson *persistence.Lesson) error
 }
 
-func NewLessonsService(repos interfaces.LessonsRepository, sheetsApi sheetsapi.SheetsApi) *LessonsService {
+type LessonsService struct {
+	sheetsApi sheetsapi.SheetsApi
+	lessons   LessonsRepository
+}
+
+func NewLessonsService(repos LessonsRepository, sheetsApi sheetsapi.SheetsApi) *LessonsService {
 	return &LessonsService{
-		LessonsRepository: repos,
-		sheetsApi:         sheetsApi,
+		lessons:   repos,
+		sheetsApi: sheetsApi,
 	}
 }
 
@@ -34,13 +40,32 @@ type schedulesResponse struct {
 	Saturday  []*iis_api_entities.Lesson `json:"Суббота"`
 }
 
+func (serv *LessonsService) AddUnpresentedLessons(ctx context.Context, groupName string) error {
+	responseJson, err := serv.getSchedulesJson(ctx, groupName)
+	if err != nil {
+		return err
+	}
+	totalLessons := serv.getTotalLessons(responseJson)
+	unpresented, err := serv.lessons.AddUnpresented(ctx, totalLessons)
+	if err != nil {
+		return fmt.Errorf("failed to add unpresented lessons to db in lessons service: %w", err)
+	}
+	for _, lesson := range unpresented {
+		err := serv.sheetsApi.Add(ctx, lesson)
+		if err != nil {
+			return fmt.Errorf("failed to add unpresented lesson to sheet in lessons service: %w", err)
+		}
+	}
+	return nil
+}
+
 func (serv *LessonsService) AddGroupLessons(ctx context.Context, groupName string) (url string, err error) {
 	responseJson, err := serv.getSchedulesJson(ctx, groupName)
 	if err != nil {
 		return "", err
 	}
 
-	lessons, err := serv.GetAll(ctx, groupName)
+	lessons, err := serv.lessons.GetAll(ctx, groupName)
 	if err != nil {
 		return "", fmt.Errorf("failed to get group %s lessons during addition in lessons service: %w", groupName, err)
 	}
@@ -49,24 +74,24 @@ func (serv *LessonsService) AddGroupLessons(ctx context.Context, groupName strin
 	}
 
 	totalLessons := serv.getTotalLessons(responseJson)
-	err = serv.AddRange(ctx, totalLessons)
+	err = serv.lessons.AddRange(ctx, totalLessons)
 	if err != nil {
 		return "", fmt.Errorf("failed to add lessons to db during lessons service add group lessons: %w", err)
 	}
 
-	lessons, err = serv.GetAll(ctx, groupName)
+	lessons, err = serv.lessons.GetAll(ctx, groupName)
 	if err != nil {
 		return "", fmt.Errorf("failed to get group %s lessons during addition in lessons service: %w", groupName, err)
 	}
 	if len(lessons) != 0 {
 		return serv.sheetsApi.CreateSheet(ctx, groupName, lessons)
 	} else {
-		return "", fmt.Errorf("failed to create filled sheet: no lesson found")
+		return "", fmt.Errorf("failed to create filled sheet: no lessons found")
 	}
 }
 
 func (serv *LessonsService) getTotalLessons(responseJson *schedulesResponse) []*iis_api_entities.Lesson {
-	return slices.Concat(responseJson.Monday, responseJson.Tuesday, responseJson.Wednesday, responseJson.Thursday, 
+	return slices.Concat(responseJson.Monday, responseJson.Tuesday, responseJson.Wednesday, responseJson.Thursday,
 		responseJson.Friday, responseJson.Saturday)
 }
 
@@ -103,7 +128,7 @@ func (serv *LessonsService) assignGroupId(groupId int64, resp *schedulesResponse
 }
 
 func (serv *LessonsService) Add(ctx context.Context, lesson *persistence.Lesson) error {
-	err := serv.LessonsRepository.Add(ctx, lesson)
+	err := serv.lessons.Add(ctx, lesson)
 	if err != nil {
 		return err
 	}

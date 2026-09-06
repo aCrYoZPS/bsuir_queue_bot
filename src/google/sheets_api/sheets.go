@@ -44,11 +44,12 @@ type SheetsApiService struct {
 }
 
 func NewSheetsApiService(groups interfaces.GroupsRepository, driveApi driveapi.DriveApi, api *sheets.Service) *SheetsApiService {
+	const SheetsRateLimit = 100
 	return &SheetsApiService{
 		groupsRepo: groups,
 		driveApi:   driveApi,
 		api:        api,
-		limiter:    rate.NewLimiter(rate.Every(time.Minute), 100),
+		limiter:    rate.NewLimiter(rate.Every(time.Minute), SheetsRateLimit),
 	}
 }
 

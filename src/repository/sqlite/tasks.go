@@ -45,5 +45,8 @@ func (repo *TasksRepository) GetCompleted(ctx context.Context, after time.Time) 
 		task.ExecutedAt = time.Unix(ExecutedAt, 0)
 		result = append(result, task)
 	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
 	return result, nil
 }

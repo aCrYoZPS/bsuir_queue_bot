@@ -29,7 +29,7 @@ func NewUsersRepository(db *sql.DB) *UsersRepository {
 func (repo *UsersRepository) GetById(ctx context.Context, id int64) (*entities.User, error) {
 	query := fmt.Sprintf(`SELECT %[1]s.id, %[1]s.tg_id, %[1]s.group_id, %[1]s.full_name, %[3]s.name, %[2]s.role_name FROM %[1]s 
 						INNER JOIN %[2]s ON %[1]s.id = %[2]s.user_id 
-						INNER JOIN %[3]s ON %[1]s.group_id=%[3]s.id WHERE %[1]s.id = $1`, USERS_TABLE, ROLES_TABLE, GROUPS_TABLE)
+						INNER JOIN %[3]s ON %[1]s.group_id=%[3]s.id WHERE %[1]s.id = $1`, USERS_TABLE, ROLES_TABLE, GroupsTable)
 	rows, err := repo.db.QueryContext(ctx, query, id)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,8 @@ func (repo *UsersRepository) GetById(ctx context.Context, id int64) (*entities.U
 }
 
 func (repo *UsersRepository) GetByTgId(ctx context.Context, tgId int64) (*entities.User, error) {
-	query := fmt.Sprintf("SELECT u.id, u.tg_id, u.group_id, g.name, u.full_name, r.role_name FROM %[1]s AS u INNER JOIN %[2]s AS r ON u.id = r.user_id INNER JOIN %[3]s as g ON u.group_id = g.id WHERE u.tg_id = $1", USERS_TABLE, ROLES_TABLE, GROUPS_TABLE)
+	query := fmt.Sprintf("SELECT u.id, u.tg_id, u.group_id, g.name, u.full_name, r.role_name FROM %[1]s AS u INNER JOIN %[2]s "+
+		"AS r ON u.id = r.user_id INNER JOIN %[3]s as g ON u.group_id = g.id WHERE u.tg_id = $1", USERS_TABLE, ROLES_TABLE, GroupsTable)
 	rows, err := repo.db.QueryContext(ctx, query, tgId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -73,9 +74,9 @@ func (repo *UsersRepository) GetByTgId(ctx context.Context, tgId int64) (*entiti
 }
 
 func (repo *UsersRepository) GetByRequestId(ctx context.Context, requestId int64) (*entities.User, error) {
-	query := fmt.Sprintf("SELECT u.id, u.tg_id, u.group_id,g.name, u.full_name FROM %s AS u " + 
-	 "INNER JOIN %s AS r ON r.user_id=u.tg_id INNER JOIN %s AS g ON u.group_id=g.id WHERE r.id=$1", 
-	 USERS_TABLE, LESSONS_REQUESTS_TABLE, GROUPS_TABLE)
+	query := fmt.Sprintf("SELECT u.id, u.tg_id, u.group_id,g.name, u.full_name FROM %s AS u "+
+		"INNER JOIN %s AS r ON r.user_id=u.tg_id INNER JOIN %s AS g ON u.group_id=g.id WHERE r.id=$1",
+		USERS_TABLE, LESSONS_REQUESTS_TABLE, GroupsTable)
 	row := repo.db.QueryRowContext(ctx, query, requestId)
 	if row.Err() != nil {
 		return nil, row.Err()
@@ -89,8 +90,8 @@ func (repo *UsersRepository) GetByRequestId(ctx context.Context, requestId int64
 }
 
 func (repo *UsersRepository) GetAll(ctx context.Context) ([]entities.User, error) {
-	query := fmt.Sprintf("SELECT %[1]s.id, %[1]s.tg_id, %[1]s.group_id, %[1]s.full_name, %[2]s.role_name FROM %[1]s " +  
-	"INNER JOIN %[2]s ON %[1]s.id = %[2]s.user_id", USERS_TABLE, ROLES_TABLE)
+	query := fmt.Sprintf("SELECT %[1]s.id, %[1]s.tg_id, %[1]s.group_id, %[1]s.full_name, %[2]s.role_name FROM %[1]s "+
+		"INNER JOIN %[2]s ON %[1]s.id = %[2]s.user_id", USERS_TABLE, ROLES_TABLE)
 	rows, err := repo.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
@@ -125,7 +126,7 @@ func (repo *UsersRepository) Add(ctx context.Context, user *entities.User) error
 		return err
 	}
 	defer tx.Rollback()
-	query := fmt.Sprintf("SELECT id FROM %s WHERE name=$1", GROUPS_TABLE)
+	query := fmt.Sprintf("SELECT id FROM %s WHERE name=$1", GroupsTable)
 	row := tx.QueryRowContext(ctx, query, user.GroupName)
 	if row.Err() != nil {
 		return err
@@ -218,7 +219,8 @@ func (repo *UsersRepository) Delete(ctx context.Context, id int64) error {
 }
 
 func (repo *UsersRepository) GetStudents(ctx context.Context, groupname string) ([]entities.User, error) {
-	query := fmt.Sprintf("SELECT u.id, u.tg_id, u.group_id, u.full_name FROM %s as u INNER JOIN %s as g ON g.id=u.group_id WHERE g.name=$1", USERS_TABLE, GROUPS_TABLE)
+	query := fmt.Sprintf("SELECT u.id, u.tg_id, u.group_id, u.full_name FROM %s as u INNER JOIN %s as g ON g.id=u.group_id WHERE g.name=$1",
+		USERS_TABLE, GroupsTable)
 	rows, err := repo.db.QueryContext(ctx, query, groupname)
 	if err != nil {
 		return nil, err
@@ -232,6 +234,9 @@ func (repo *UsersRepository) GetStudents(ctx context.Context, groupname string) 
 			return nil, err
 		}
 		users = append(users, user)
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
 	}
 	return users, nil
 }

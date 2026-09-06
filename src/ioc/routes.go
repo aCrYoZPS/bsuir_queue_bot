@@ -48,7 +48,10 @@ func RegisterLabworkAddRoutes(mux *tgutils.Mux) {
 
 	mux.RegisterCallback(constants.CALENDAR_CALLBACKS, useCalendarCallbackHandler())
 	mux.RegisterCallback(constants.TIME_PICKER_CALLBACKS, useTimePickerCallbackHandler())
-	mux.RegisterCallback(constants.IGNORE_CALLBACKS, tgutils.CallbackHandlerFunc(func(ctx context.Context, update *tgbotapi.Update, bot *tgutils.Bot) error { return nil }))
+	mux.RegisterCallback(constants.IGNORE_CALLBACKS, tgutils.CallbackHandlerFunc(func(ctx context.Context, update *tgbotapi.Update,
+		bot *tgutils.Bot) error {
+		return nil
+	}))
 }
 
 func RegisterGroupRoutes(mux *tgutils.Mux) {
@@ -97,7 +100,8 @@ var useLabworkSubmitNumberState = provider(
 )
 var useLabworkSubmitProofState = provider(
 	func() tgutils.MuxHandler {
-		return labworks.NewLabworkSubmitProofState(useTgBot(), useHandlersCache(), useGroupsService(), useRequestsRepository(), useLessonsRequestsRepository())
+		return labworks.NewLabworkSubmitProofState(useTgBot(), useHandlersCache(), useGroupsService(), useRequestsRepository(),
+			useLessonsRequestsRepository())
 	},
 )
 var useLabworkSubmitWaitingState = provider(
@@ -175,7 +179,8 @@ var useQueueWaitingState = provider(
 )
 var useQueueCallbackHandler = provider(
 	func() tgutils.CallbackHandler {
-		return queue.NewQueueCallbackHandler(useUsersRepository(), useLessonsRepository(), useHandlersCache(), useTgBot(), useLessonsRequestsRepository())
+		return queue.NewQueueCallbackHandler(useUsersRepository(), useLessonsRepository(), useHandlersCache(), useTgBot(),
+			useLessonsRequestsRepository())
 	},
 )
 var useAdminSubmitStartState = provider(
@@ -211,7 +216,8 @@ var useAdminCallbackHandler = provider(
 
 var useIdleState = provider(
 	func() tgutils.MuxHandler {
-		return stateMachine.NewIdleState(useHandlersCache(), useTgBot(), useUsersRepository(), useGroupsRepository(), useLessonsRepository(), useMux())
+		return stateMachine.NewIdleState(useHandlersCache(), useTgBot(), useUsersRepository(), useGroupsRepository(), useLessonsRepository(),
+			useMux())
 	},
 )
 
@@ -227,5 +233,6 @@ var useDeleteChooseState = provider(
 )
 
 var useReminderCallbackHandler = provider(func() *cron.ReminderCallbackHandler {
-	return cron.NewSheetsRefreshCallbackHandler(useLessonsRequestsRepository(), UseSheetsApiService(), useUsersRepository(), UseLessonsService())
+	return cron.NewSheetsRefreshCallbackHandler(useLessonsRequestsRepository(), UseSheetsApiService(), useUsersRepository(),
+		useLessonsRepository())
 })

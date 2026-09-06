@@ -12,7 +12,7 @@ import (
 	"github.com/mattn/go-sqlite3"
 )
 
-const GROUPS_TABLE = "groups"
+const GroupsTable = "groups"
 
 var _ interfaces.GroupsRepository = (*GroupsRepository)(nil)
 
@@ -29,7 +29,7 @@ func NewGroupsRepository(db *sql.DB) (*GroupsRepository, error) {
 }
 
 func (repos *GroupsRepository) GetAll(ctx context.Context) ([]iisEntities.Group, error) {
-	rows, err := repos.db.QueryContext(ctx, fmt.Sprintf("SELECT * FROM %s", GROUPS_TABLE))
+	rows, err := repos.db.QueryContext(ctx, fmt.Sprintf("SELECT * FROM %s", GroupsTable))
 	if err != nil {
 		return nil, err
 	}
@@ -44,13 +44,38 @@ func (repos *GroupsRepository) GetAll(ctx context.Context) ([]iisEntities.Group,
 		}
 		groups = append(groups, g)
 	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+	return groups, nil
+}
 
+func (repos *GroupsRepository) GetActiveGroups(ctx context.Context) ([]iisEntities.Group, error) {
+	rows, err := repos.db.QueryContext(ctx, fmt.Sprintf("SELECT id,name,faculty_ID,spreadsheet_id FROM %s WHERE spreadsheet_id <> ''",
+		GroupsTable))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	groups := make([]iisEntities.Group, 0)
+	for rows.Next() {
+		g := iisEntities.Group{}
+		err := rows.Scan(&g.Id, &g.Name, &g.FacultyId, &g.SpreadsheetId)
+		if err != nil {
+			return nil, err
+		}
+		groups = append(groups, g)
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
 	return groups, nil
 }
 
 func (repos *GroupsRepository) Add(ctx context.Context, group *iisEntities.Group) error {
 	_, err := repos.db.ExecContext(ctx, fmt.Sprintf("INSERT INTO %s (id, name, faculty_id, spreadsheet_id) VALUES ($1, $2, $3, $4)",
-	 GROUPS_TABLE),
+		GroupsTable),
 		group.Id, group.Name, group.FacultyId, group.SpreadsheetId)
 	if err != nil {
 		return err
@@ -60,7 +85,7 @@ func (repos *GroupsRepository) Add(ctx context.Context, group *iisEntities.Group
 }
 
 func (repos *GroupsRepository) AddRange(ctx context.Context, groups []iisEntities.Group) error {
-	query := fmt.Sprintf("INSERT INTO %s (id, name, faculty_id, spreadsheet_id) VALUES ", GROUPS_TABLE)
+	query := fmt.Sprintf("INSERT INTO %s (id, name, faculty_id, spreadsheet_id) VALUES ", GroupsTable)
 	args := []any{}
 	placeholders := []string{}
 
@@ -81,11 +106,11 @@ func (repos *GroupsRepository) AddRange(ctx context.Context, groups []iisEntitie
 }
 
 func (repos *GroupsRepository) AddNonPresented(ctx context.Context, groups []iisEntities.Group) error {
-	query := fmt.Sprintf("INSERT INTO %s (id, name, faculty_id, spreadsheet_id) VALUES ($1, $2, $3, $4)", GROUPS_TABLE)
+	query := fmt.Sprintf("INSERT INTO %s (id, name, faculty_id, spreadsheet_id) VALUES ($1, $2, $3, $4)", GroupsTable)
 	for _, group := range groups {
 		_, err := repos.db.ExecContext(ctx, query, group.Id, group.Name, group.FacultyId, group.SpreadsheetId)
 		if err, ok := err.(sqlite3.Error); ok && err.ExtendedCode != sqlite3.ErrConstraintUnique &&
-		 err.ExtendedCode != sqlite3.ErrConstraintPrimaryKey {
+			err.ExtendedCode != sqlite3.ErrConstraintPrimaryKey {
 			return err
 		}
 	}
@@ -93,7 +118,7 @@ func (repos *GroupsRepository) AddNonPresented(ctx context.Context, groups []iis
 }
 
 func (repos *GroupsRepository) GetById(ctx context.Context, id int) (*iisEntities.Group, error) {
-	row := repos.db.QueryRowContext(ctx, fmt.Sprintf("SELECT * FROM %s WHERE id=$1", GROUPS_TABLE), id)
+	row := repos.db.QueryRowContext(ctx, fmt.Sprintf("SELECT * FROM %s WHERE id=$1", GroupsTable), id)
 	g := &iisEntities.Group{}
 
 	err := row.Scan(&g.Id, &g.Name, &g.FacultyId, &g.SpreadsheetId)
@@ -105,7 +130,7 @@ func (repos *GroupsRepository) GetById(ctx context.Context, id int) (*iisEntitie
 }
 
 func (repos *GroupsRepository) GetByName(ctx context.Context, name string) (*iisEntities.Group, error) {
-	row := repos.db.QueryRowContext(ctx, fmt.Sprintf("SELECT id, name, faculty_id, spreadsheet_id FROM %s WHERE name=$1", GROUPS_TABLE), name)
+	row := repos.db.QueryRowContext(ctx, fmt.Sprintf("SELECT id, name, faculty_id, spreadsheet_id FROM %s WHERE name=$1", GroupsTable), name)
 	group := &iisEntities.Group{}
 
 	err := row.Scan(&group.Id, &group.Name, &group.FacultyId, &group.SpreadsheetId)
@@ -127,7 +152,7 @@ func (repos *GroupsRepository) Update(ctx context.Context, group *iisEntities.Gr
 }
 
 func (repos *GroupsRepository) DoesGroupExist(ctx context.Context, groupName string) (bool, error) {
-	query := fmt.Sprintf("SELECT EXISTS (SELECT 1 FROM %s WHERE name=$1)", GROUPS_TABLE)
+	query := fmt.Sprintf("SELECT EXISTS (SELECT 1 FROM %s WHERE name=$1)", GroupsTable)
 	row := repos.db.QueryRowContext(ctx, query, groupName)
 	exists := false
 	if row.Err() != nil {
@@ -138,8 +163,8 @@ func (repos *GroupsRepository) DoesGroupExist(ctx context.Context, groupName str
 }
 
 func (repos *GroupsRepository) GetAdmins(ctx context.Context, groupName string) ([]entities.User, error) {
-	query := fmt.Sprintf("SELECT us.id, us.tg_id, us.group_id, us.full_name FROM %s AS us INNER JOIN %s AS gr ON gr.id=us.group_id" + 
-	" INNER JOIN %s AS r ON r.user_id=us.id AND r.role_name=$1 WHERE gr.name=$2", USERS_TABLE, GROUPS_TABLE, ROLES_TABLE)
+	query := fmt.Sprintf("SELECT us.id, us.tg_id, us.group_id, us.full_name FROM %s AS us INNER JOIN %s AS gr ON gr.id=us.group_id"+
+		" INNER JOIN %s AS r ON r.user_id=us.id AND r.role_name=$1 WHERE gr.name=$2", USERS_TABLE, GroupsTable, ROLES_TABLE)
 	rows, err := repos.db.QueryContext(ctx, query, entities.Admin.ToString(), groupName)
 	if err != nil {
 		return nil, err
