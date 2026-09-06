@@ -37,29 +37,27 @@ var _ SheetsApi = (*SheetsApiService)(nil)
 var _ labworks.SheetsService = (*SheetsApiService)(nil)
 
 type SheetsApiService struct {
-	limiter    *rate.Limiter
-	groupsRepo interfaces.GroupsRepository
-	driveApi   driveapi.DriveApi
-	api        *sheets.Service
+	writeLimiter *rate.Limiter
+	readLimiter  *rate.Limiter
+	groupsRepo   interfaces.GroupsRepository
+	driveApi     driveapi.DriveApi
+	api          *sheets.Service
 }
 
 func NewSheetsApiService(groups interfaces.GroupsRepository, driveApi driveapi.DriveApi, api *sheets.Service) *SheetsApiService {
-	const SheetsRateLimit, SheetsBurst = 250, 50
+	const SheetsRateLimit, SheetsBurst = 60, 3
 	return &SheetsApiService{
-		groupsRepo: groups,
-		driveApi:   driveApi,
-		api:        api,
-		limiter:    rate.NewLimiter(rate.Every(time.Minute/SheetsRateLimit), SheetsBurst),
+		groupsRepo:   groups,
+		driveApi:     driveApi,
+		api:          api,
+		writeLimiter: rate.NewLimiter(rate.Every(time.Minute/SheetsRateLimit), SheetsBurst),
+		readLimiter:  rate.NewLimiter(rate.Every(time.Minute/SheetsRateLimit), SheetsBurst),
 	}
 }
 
 type SheetsUrl = string
 
 func (serv *SheetsApiService) CreateSheet(ctx context.Context, groupName string, lessons []persistence.Lesson) (SheetsUrl, error) {
-	err := serv.limiter.Wait(ctx)
-	if err != nil {
-		return "", fmt.Errorf("rate limiter error: %w", err)
-	}
 	group, err := serv.groupsRepo.GetByName(ctx, groupName)
 	if err != nil {
 		return "", err
@@ -77,6 +75,8 @@ func (serv *SheetsApiService) CreateSheet(ctx context.Context, groupName string,
 		if err != nil {
 			return "", err
 		}
+
+		serv.readLimiter.Wait(ctx)
 		sheet, err := serv.api.Spreadsheets.Get(existsRes.SpreadsheetId()).Context(ctx).Do()
 		if err != nil {
 			return "", err
@@ -92,6 +92,7 @@ func (serv *SheetsApiService) CreateSheet(ctx context.Context, groupName string,
 		Locale: "ru",
 	}}
 
+	serv.writeLimiter.Wait(ctx)
 	res := serv.api.Spreadsheets.Create(&newSpreadsheet)
 	spreadsheet, err := res.Context(ctx).Do()
 	if err != nil {
@@ -134,7 +135,7 @@ func (serv *SheetsApiService) createLists(ctx context.Context, groupName string,
 	var resp sheets.BatchUpdateSpreadsheetResponse
 	err = serv.WithRetries(ctx, func(resp *sheets.BatchUpdateSpreadsheetResponse) func(ctx context.Context) error {
 		return func(ctx context.Context) error {
-			err := serv.limiter.WaitN(ctx, len(update.Requests))
+			err := serv.writeLimiter.Wait(ctx)
 			if err != nil {
 				return fmt.Errorf("rate limiter error during list creation: %w", err)
 			}
@@ -158,7 +159,7 @@ func (serv *SheetsApiService) createLists(ctx context.Context, groupName string,
 	// always has id of 0
 	if len(resp.UpdatedSpreadsheet.Sheets) > 0 {
 		err = serv.WithRetries(ctx, func(ctx context.Context) error {
-			err = serv.limiter.Wait(ctx)
+			err = serv.writeLimiter.Wait(ctx)
 			if err != nil {
 				return fmt.Errorf("rate limiter error during list creation: %w", err)
 			}
@@ -234,9 +235,13 @@ func (serv *SheetsApiService) ClearSpreadsheet(ctx context.Context, spreadsheetI
 	)
 	err = serv.WithRetries(ctx, func(spreadsheet *sheets.Spreadsheet) func(ctx context.Context) error {
 		return func(ctx context.Context) error {
-			err := serv.limiter.Wait(ctx)
+			err := serv.writeLimiter.Wait(ctx)
 			if err != nil {
-				return fmt.Errorf("rate limiter error during clear of spreadsheet: %w", err)
+				return fmt.Errorf("write rate limiter error during clear of spreadsheet: %w", err)
+			}
+			err = serv.readLimiter.Wait(ctx)
+			if err != nil {
+				return fmt.Errorf("read rate limiter error during clear of spreadsheet: %w", err)
 			}
 			val, err := serv.api.Spreadsheets.Get(spreadsheetId).Context(ctx).Do()
 			if val != nil {
@@ -258,7 +263,7 @@ func (serv *SheetsApiService) ClearSpreadsheet(ctx context.Context, spreadsheetI
 		}
 	}
 	err = serv.WithRetries(ctx, func(ctx context.Context) error {
-		err := serv.limiter.WaitN(ctx, len(deleteSheetsRequest.Requests))
+		err := serv.writeLimiter.Wait(ctx)
 		if err != nil {
 			return fmt.Errorf("rate limiter error during clear of spreadsheet: %w", err)
 		}
@@ -285,7 +290,7 @@ func (serv *SheetsApiService) AddLabworkRequest(ctx context.Context, req *labwor
 			if len(sheet.Tables) == 0 {
 				requests := serv.getTableRequests(sheet)
 				err = serv.WithRetries(ctx, func(ctx context.Context) error {
-					err := serv.limiter.WaitN(ctx, len(requests))
+					err := serv.writeLimiter.Wait(ctx)
 					if err != nil {
 						return fmt.Errorf("rate limiter error during table creation: %w", err)
 					}
@@ -371,7 +376,7 @@ func (serv *SheetsApiService) appendToSheet(ctx context.Context, spreadsheetId s
 	req *labworks.AppendedLabwork) error {
 	tableSearchRange := fmt.Sprintf("'%s'!A1:B5", sheet.Properties.Title)
 	err := serv.WithRetries(ctx, func(ctx context.Context) error {
-		err := serv.limiter.Wait(ctx)
+		err := serv.writeLimiter.Wait(ctx)
 		if err != nil {
 			return fmt.Errorf("rate limiter error during appending data to sheet: %w", err)
 		}
@@ -387,7 +392,7 @@ func (serv *SheetsApiService) appendToSheet(ctx context.Context, spreadsheetId s
 		return fmt.Errorf("failed to append values to sheet: %w", err)
 	}
 	err = serv.WithRetries(ctx, func(ctx context.Context) error {
-		err = serv.limiter.Wait(ctx)
+		err = serv.writeLimiter.Wait(ctx)
 		if err != nil {
 			return fmt.Errorf("rate limiter error: failed to sort sheet: %w", err)
 		}
@@ -426,9 +431,13 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistence.Lesso
 		return fmt.Errorf("failed to get group in sheets api during addition of custom labwork: %w", err)
 	}
 
-	err = serv.limiter.Wait(ctx)
+	err = serv.writeLimiter.Wait(ctx)
 	if err != nil {
-		return fmt.Errorf("rate limiter error during trying to get spreadsheet: %w", err)
+		return fmt.Errorf("write rate limiter error during trying to get spreadsheet: %w", err)
+	}
+	err = serv.readLimiter.Wait(ctx)
+	if err != nil {
+		return fmt.Errorf("read rate limiter error during trying to get spreadsheet: %w", err)
 	}
 	sheet, err := serv.api.Spreadsheets.Get(group.SpreadsheetId).Context(ctx).Do()
 	if err != nil {
@@ -453,7 +462,7 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistence.Lesso
 		}
 	}
 
-	err = serv.limiter.Wait(ctx)
+	err = serv.writeLimiter.Wait(ctx)
 	if err != nil {
 		return fmt.Errorf("rate limiter error during trying to add spreadsheet: %w", err)
 	}
@@ -474,7 +483,7 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistence.Lesso
 	var createdSheet *sheets.BatchUpdateSpreadsheetResponse
 	err = serv.WithRetries(ctx, func(*sheets.BatchUpdateSpreadsheetResponse) func(ctx context.Context) error {
 		return func(ctx context.Context) error {
-			err = serv.limiter.Wait(ctx)
+			err = serv.writeLimiter.Wait(ctx)
 			if err != nil {
 				return fmt.Errorf("rate limiter error during trying to get sheet: %w", err)
 			}
@@ -492,7 +501,7 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistence.Lesso
 	if len(createdSheet.UpdatedSpreadsheet.Sheets[sheetIndex].Tables) == 0 {
 		requests := serv.getTableRequests(createdSheet.UpdatedSpreadsheet.Sheets[sheetIndex])
 		err = serv.WithRetries(ctx, func(ctx context.Context) error {
-			err = serv.limiter.Wait(ctx)
+			err = serv.writeLimiter.Wait(ctx)
 			if err != nil {
 				return fmt.Errorf("rate limiter error during trying to append tables: %w", err)
 			}
@@ -510,7 +519,7 @@ func (serv *SheetsApiService) ReorderLessons(ctx context.Context, orderTypes []e
 		return fmt.Errorf("failed to get group during reordering lessons in sheets: %w", err)
 	}
 
-	err = serv.limiter.Wait(ctx)
+	err = serv.readLimiter.Wait(ctx)
 	if err != nil {
 		return fmt.Errorf("rate limiter error during trying to get sheet: %w", err)
 	}
@@ -546,7 +555,7 @@ func (serv *SheetsApiService) ReorderLessons(ctx context.Context, orderTypes []e
 		}
 	}
 	err = serv.WithRetries(ctx, func(ctx context.Context) error {
-		err = serv.limiter.WaitN(ctx, len(requests))
+		err = serv.writeLimiter.Wait(ctx)
 		if err != nil {
 			return fmt.Errorf("rate limiter error during trying to sort sheets: %w", err)
 		}
@@ -566,6 +575,10 @@ func (serv *SheetsApiService) ReorderLesson(ctx context.Context, orderTypes []en
 	group, err := serv.groupsRepo.GetByName(ctx, groupName)
 	if err != nil {
 		return fmt.Errorf("failed to get group during reordering lessons in sheets: %w", err)
+	}
+	err = serv.readLimiter.Wait(ctx)
+	if err != nil {
+		return fmt.Errorf("read limiter error during reordering lessons in sheets: %w", err)
 	}
 	spreadsheet, err := serv.api.Spreadsheets.Get(group.SpreadsheetId).Context(ctx).Do()
 	if err != nil {
@@ -599,7 +612,7 @@ func (serv *SheetsApiService) ReorderLesson(ctx context.Context, orderTypes []en
 		}
 	}
 	err = serv.WithRetries(ctx, func(ctx context.Context) error {
-		err = serv.limiter.WaitN(ctx, len(requests))
+		err = serv.writeLimiter.Wait(ctx)
 		if err != nil {
 			return fmt.Errorf("rate limiter error during trying to sort sheets: %w", err)
 		}
