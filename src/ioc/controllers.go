@@ -83,8 +83,7 @@ func AddClearTask(controller *cron.TasksController) {
 
 func AddRefreshTask(controller *cron.TasksController) {
 	refresh := schedule.NewRefreshScheduleTask(useGroupsRepository(), UseLessonsService())
-	test := gocron.CronJob("36 00 * * *", false)
-	controller.AddTask(test, gocron.NewTask(func(ctx context.Context) {
+	controller.AddTask(daily, gocron.NewTask(func(ctx context.Context) {
 		const sheetsClearTimeout = 5 * time.Minute
 		ctx, cancel := context.WithTimeout(ctx, sheetsClearTimeout)
 		defer cancel()
