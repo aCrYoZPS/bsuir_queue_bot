@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS lessons (
     FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS lessons_idx ON lessons(group_id,subject,lesson_type,date_time);
+
 CREATE INDEX IF NOT EXISTS lessons_group_id_idx ON lessons(group_id);
 
 CREATE TABLE IF NOT EXISTS users (
