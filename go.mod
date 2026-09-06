@@ -1,6 +1,6 @@
 module github.com/aCrYoZPS/bsuir_queue_bot
 
-go 1.23.9
+go 1.26.0
 
 require (
 	github.com/go-co-op/gocron/v2 v2.16.3
@@ -33,6 +33,7 @@ require (
 	golang.org/x/crypto v0.40.0 // indirect
 	golang.org/x/net v0.42.0 // indirect
 	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/time v0.15.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250715232539-7130f93afb79 // indirect
 	google.golang.org/grpc v1.74.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
