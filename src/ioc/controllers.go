@@ -1,13 +1,17 @@
 package ioc
 
 import (
+	"context"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/cron"
+	"github.com/aCrYoZPS/bsuir_queue_bot/src/cron/schedule"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/logging"
 	"github.com/aCrYoZPS/bsuir_queue_bot/src/telegram/bot"
 	tgutils "github.com/aCrYoZPS/bsuir_queue_bot/src/utils/tg_utils"
+	"github.com/go-co-op/gocron/v2"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -46,8 +50,44 @@ var useMux = provider(
 
 var UseTasksController = provider(
 	func() *cron.TasksController {
-		return cron.NewTasksController(UseSheetsApiService(), useLessonsRepository(),
-			useLessonsRequestsRepository(), useUsersRepository(),
-			UseDriveApiService(), useTasksRepository(), useTgBot())
+		controller := cron.NewTasksController(useTasksRepository())
+		AddClearTask(controller)
+		AddRefreshTask(controller)
+		AddReminderTask(controller)
+		return controller
 	},
 )
+
+var daily = gocron.CronJob("00 22 * * *", false)
+
+func AddReminderTask(controller *cron.TasksController) {
+	reminder := cron.NewReminderTask(UseSheetsApiService(), useLessonsRepository(), useLessonsRequestsRepository(),
+		useUsersRepository(), useTgBot())
+	controller.AddTask(daily, gocron.NewTask(func(ctx context.Context) {
+		const sheetsRefreshTimeout = 5 * time.Minute
+		ctx, cancel := context.WithTimeout(ctx, sheetsRefreshTimeout)
+		defer cancel()
+		reminder.Run(ctx)
+	}), gocron.WithName("sheets refresh"))
+}
+
+func AddClearTask(controller *cron.TasksController) {
+	clear := cron.NewClearLessonsTask(UseSheetsApiService(), useLessonsRepository(), UseDriveApiService())
+	controller.AddTask(daily, gocron.NewTask(func(ctx context.Context) {
+		const sheetsClearTimeout = 5 * time.Minute
+		ctx, cancel := context.WithTimeout(ctx, sheetsClearTimeout)
+		defer cancel()
+		clear.Run(ctx)
+	}), gocron.WithName("sheets clear"))
+}
+
+func AddRefreshTask(controller *cron.TasksController) {
+	refresh := schedule.NewRefreshScheduleTask(useGroupsRepository(), UseLessonsService())
+	test := gocron.CronJob("36 00 * * *", false)
+	controller.AddTask(test, gocron.NewTask(func(ctx context.Context) {
+		const sheetsClearTimeout = 5 * time.Minute
+		ctx, cancel := context.WithTimeout(ctx, sheetsClearTimeout)
+		defer cancel()
+		refresh.Run(ctx)
+	}), gocron.WithName("schedule refresh"))
+}

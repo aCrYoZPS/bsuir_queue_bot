@@ -14,7 +14,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-
 func main() {
 	logging.InitLogging()
 

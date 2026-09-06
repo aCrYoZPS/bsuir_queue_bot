@@ -50,7 +50,7 @@ func (repos *GroupsRepository) GetAll(ctx context.Context) ([]iisEntities.Group,
 	return groups, nil
 }
 
-func (repos *GroupsRepository) GetActiveGroups(ctx context.Context) ([]iisEntities.Group, error) {
+func (repos *GroupsRepository) GetActive(ctx context.Context) ([]iisEntities.Group, error) {
 	rows, err := repos.db.QueryContext(ctx, fmt.Sprintf("SELECT id,name,faculty_ID,spreadsheet_id FROM %s WHERE spreadsheet_id <> ''",
 		GroupsTable))
 	if err != nil {

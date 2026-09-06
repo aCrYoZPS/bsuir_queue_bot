@@ -111,7 +111,7 @@ func (serv *LessonsService) getSchedulesJson(ctx context.Context, groupName stri
 	groupId := int64(0)
 	err = json.NewDecoder(resp.Body).Decode(&struct {
 		GroupInfo struct{ Id *int64 } `json:"studentGroupDto"`
-		Resp      *schedulesResponse  `json:"nextSchedules"`
+		Resp      *schedulesResponse  `json:"schedules"`
 	}{struct{ Id *int64 }{&groupId}, responseJson})
 	if err != nil {
 		return nil, err
