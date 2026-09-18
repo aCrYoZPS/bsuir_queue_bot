@@ -137,7 +137,7 @@ var useCalendarCallbackHandler = provider(
 )
 var useTimePickerCallbackHandler = provider(
 	func() tgutils.CallbackHandler {
-		return customlabworks.NewTimePickerCallbackHandler(useTgBot(), UseSheetsApiService(), useHandlersCache())
+		return customlabworks.NewTimePickerCallbackHandler(useTgBot(), UseLessonsService(), useHandlersCache())
 	},
 )
 

@@ -54,7 +54,8 @@ func (handler *ReorderLessonCallbackHandler) Handle(ctx context.Context, update 
 		return fmt.Errorf("failed to save info during reorder lesson callback handler: %w", err)
 	}
 
-	_, err = bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.FromChat().ChatConfig().ChatID, info.MarkupMessageId, tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
+	_, err = bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.FromChat().ChatConfig().ChatID, info.MarkupMessageId,
+		tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
 	if err != nil {
 		return fmt.Errorf("failed to remove reply markup from message in reorder lesson callback handler: %w", err)
 	}
@@ -104,7 +105,8 @@ func (handler *ReorderConcreteLessonCallbackHandler) Handle(ctx context.Context,
 		return fmt.Errorf("failed to save info during reorder callback handling: %w", err)
 	}
 
-	_, err = handler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.FromChat().ID, info.MarkupMessageId, tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
+	_, err = handler.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(update.FromChat().ID, info.MarkupMessageId,
+		tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
 	if err != nil {
 		return fmt.Errorf("failed to remove reply markup during reorder concrete lesson callback handler: %w", err)
 	}

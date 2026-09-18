@@ -37,7 +37,8 @@ type groupSubmitStartState struct {
 	users  UsersRepository
 }
 
-func NewGroupSubmitState(cache interfaces.HandlersCache, bot *tgutils.Bot, groups GroupsRepository, users UsersRepository) *groupSubmitStartState {
+func NewGroupSubmitState(cache interfaces.HandlersCache, bot *tgutils.Bot, groups GroupsRepository,
+	users UsersRepository) *groupSubmitStartState {
 	return &groupSubmitStartState{cache: cache, bot: bot, groups: groups, users: users}
 }
 
@@ -107,7 +108,9 @@ func (state *groupSubmitGroupNameState) Handle(ctx context.Context, message *tgb
 		if err != nil {
 			return fmt.Errorf("failed to save idle state during group name submit: %w", err)
 		}
-		_, err = state.bot.SendCtx(ctx, tgbotapi.NewMessage(message.Chat.ID, "У данной группы пока нет администраторов. Попросите кого-либо из участников группы выступить в его роли"))
+		_, err = state.bot.SendCtx(ctx,
+			tgbotapi.NewMessage(message.Chat.ID, "У данной группы пока нет администраторов. "+
+				"Попросите кого-либо из участников группы выступить в его роли"))
 		if err != nil {
 			return fmt.Errorf("failed to send message during group name submit: %w", err)
 		}
@@ -157,7 +160,8 @@ type groupSubmitNameState struct {
 	machine  StateMachine
 }
 
-func NewGroupSubmitNameState(cache interfaces.HandlersCache, bot *tgutils.Bot, groups GroupsRepository, requests interfaces.RequestsRepository, machine StateMachine) *groupSubmitNameState {
+func NewGroupSubmitNameState(cache interfaces.HandlersCache, bot *tgutils.Bot, groups GroupsRepository,
+	requests interfaces.RequestsRepository, machine StateMachine) *groupSubmitNameState {
 	return &groupSubmitNameState{
 		cache:    cache,
 		bot:      bot,
@@ -228,7 +232,7 @@ func (state *groupSubmitNameState) Revert(ctx context.Context, msg *tgbotapi.Mes
 }
 
 func (state *groupSubmitNameState) SendMessagesToAdmins(ctx context.Context, senderMessage *tgbotapi.Message, admins []entities.User,
-	 form *groupSubmitForm) error {
+	form *groupSubmitForm) error {
 	if len(admins) == 0 {
 		return errors.New("no admins found in group")
 	}
@@ -240,11 +244,11 @@ func (state *groupSubmitNameState) SendMessagesToAdmins(ctx context.Context, sen
 		sentMsg, err := state.bot.SendCtx(ctx, msg)
 		if err != nil {
 			if errors.Is(err, tgutils.ErrMsgInvalidLen) {
-				resp := tgbotapi.NewMessage(senderMessage.Chat.ID, 
+				resp := tgbotapi.NewMessage(senderMessage.Chat.ID,
 					"Ваше сообщение превосходит лимиты размера сообщений в телеграме. Пожалуйста, измените его и отправьте снова")
 				resp.ReplyToMessageID = senderMessage.MessageID
-				_, err := state.bot.SendCtx(ctx, 
-					tgbotapi.NewMessage(senderMessage.Chat.ID, 
+				_, err := state.bot.SendCtx(ctx,
+					tgbotapi.NewMessage(senderMessage.Chat.ID,
 						"Ваше сообщение превосходит лимиты размера сообщений в телеграме. Пожалуйста, измените его и отправьте снова"))
 				if err != nil {
 					return fmt.Errorf("failed to send too large message as a response during group submit name state: %w", err)
@@ -286,7 +290,7 @@ func createMarkupKeyboard(form *groupSubmitForm) *tgbotapi.InlineKeyboardMarkup 
 	row := []tgbotapi.InlineKeyboardButton{}
 	acceptData := constants.GROUP_CALLBACKS + "accept" + fmt.Sprint(form.UserId)
 	declineData := constants.GROUP_CALLBACKS + "decline" + fmt.Sprint(form.UserId)
-	row = append(row, 
+	row = append(row,
 		tgbotapi.NewInlineKeyboardButtonData("Принять", acceptData), tgbotapi.NewInlineKeyboardButtonData("Отклонить", declineData))
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(row)
 	return &keyboard

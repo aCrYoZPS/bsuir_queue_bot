@@ -443,18 +443,8 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistence.Lesso
 	if err != nil {
 		return fmt.Errorf("failed to get spreadsheet by id during addition of custom labwork: %w", err)
 	}
-	sheetIndex := 0
+	sheetIndex := getSheetIndex(lesson, sheet.Sheets)
 	sheetTitle := serv.createLessonName(*lesson)
-	for i, sheet := range sheet.Sheets {
-		if _, date, _ := parseLessonName(sheet.Properties.Title); date.After(lesson.DateTime.Round(hoursInDay * time.Hour)) {
-			sheetIndex = i - 1
-			break
-		}
-	}
-
-	if sheetIndex < 0 {
-		sheetIndex = 0
-	}
 
 	for _, sheet := range sheet.Sheets {
 		if sheetTitle == sheet.Properties.Title {
@@ -511,6 +501,21 @@ func (serv *SheetsApiService) Add(ctx context.Context, lesson *persistence.Lesso
 		})()
 	}
 	return err
+}
+
+func getSheetIndex(lesson *persistence.Lesson, sheets []*sheets.Sheet) int {
+	var sheetIndex int
+	for i, sheet := range sheets {
+		if _, date, _ := parseLessonName(sheet.Properties.Title); date.After(lesson.DateTime.Round(hoursInDay * time.Hour)) {
+			sheetIndex = i - 1
+			break
+		}
+	}
+
+	if sheetIndex < 0 {
+		sheetIndex = 0
+	}
+	return sheetIndex
 }
 
 func (serv *SheetsApiService) ReorderLessons(ctx context.Context, orderTypes []entities.OrderType, groupName, subject string) error {

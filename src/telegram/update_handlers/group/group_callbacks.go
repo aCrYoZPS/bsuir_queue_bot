@@ -20,7 +20,8 @@ type GroupCallbackHandler struct {
 	cache    interfaces.HandlersCache
 }
 
-func NewGroupCallbackHandler(users interfaces.UsersRepository, cache interfaces.HandlersCache, requests interfaces.RequestsRepository) *GroupCallbackHandler {
+func NewGroupCallbackHandler(users interfaces.UsersRepository, cache interfaces.HandlersCache,
+	requests interfaces.RequestsRepository) *GroupCallbackHandler {
 	return &GroupCallbackHandler{
 		users:    users,
 		cache:    cache,
@@ -45,7 +46,8 @@ func (handler *GroupCallbackHandler) HandleCallback(ctx context.Context, update 
 	return err
 }
 
-func (handler *GroupCallbackHandler) handleAcceptCallback(ctx context.Context, msg *tgbotapi.Message, command string, bot *tgutils.Bot) error {
+func (handler *GroupCallbackHandler) handleAcceptCallback(ctx context.Context, msg *tgbotapi.Message, command string,
+	bot *tgutils.Bot) error {
 	var chatId int64
 	chatId, err := strconv.ParseInt(strings.TrimPrefix(command, "accept"), 10, 64)
 	if err != nil {
@@ -86,7 +88,8 @@ func (handler *GroupCallbackHandler) handleAcceptCallback(ctx context.Context, m
 	return nil
 }
 
-func (handler *GroupCallbackHandler) handleDeclineCallback(ctx context.Context, msg *tgbotapi.Message, command string, bot *tgutils.Bot) error {
+func (handler *GroupCallbackHandler) handleDeclineCallback(ctx context.Context, msg *tgbotapi.Message, command string,
+	bot *tgutils.Bot) error {
 	var chatId int64
 	err := json.Unmarshal([]byte(strings.TrimPrefix(command, "decline")), &chatId)
 	if err != nil {
@@ -128,7 +131,8 @@ func (handler *GroupCallbackHandler) RemoveMarkup(ctx context.Context, msg *tgbo
 		if err != nil {
 			return fmt.Errorf("failed to delete group request during markup removal: %w", err)
 		}
-		_, err := bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(request.ChatId, int(request.MsgId), tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
+		_, err := bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(request.ChatId, int(request.MsgId),
+			tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
 		if err != nil {
 			return fmt.Errorf("failed to send markup removal message: %w", err)
 		}

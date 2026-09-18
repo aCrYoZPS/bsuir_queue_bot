@@ -39,7 +39,8 @@ type ReorderStartState struct {
 	groups  GroupsRepository
 }
 
-func NewReorderStartState(cache interfaces.HandlersCache, bot *tgutils.Bot, users UsersRepository, lessons LessonsRepository, groups GroupsRepository) *ReorderStartState {
+func NewReorderStartState(cache interfaces.HandlersCache, bot *tgutils.Bot, users UsersRepository,
+	lessons LessonsRepository, groups GroupsRepository) *ReorderStartState {
 	return &ReorderStartState{cache: cache, bot: bot, users: users, lessons: lessons, groups: groups}
 }
 
@@ -76,6 +77,9 @@ func (state *ReorderStartState) Handle(ctx context.Context, message *tgbotapi.Me
 	}
 
 	jsonedInfo, err := json.Marshal(&ReorderInfo{MarkupMessageId: sended.MessageID, GroupName: userGroup.Name})
+	if err != nil {
+		return fmt.Errorf("failed to parse reorder info from json: %w", err)
+	}
 	err = state.cache.SaveInfo(ctx, message.Chat.ID, string(jsonedInfo))
 	if err != nil {
 		return fmt.Errorf("failed to save info during request reorder start state %w", err)
@@ -171,12 +175,14 @@ type ReorderChooseAllState struct {
 	users   UsersRepository
 }
 
-func NewReorderChooseState(bot *tgutils.Bot, cache interfaces.HandlersCache, machine StateMachine, lessons LessonsRepository, users UsersRepository) *ReorderChooseAllState {
+func NewReorderChooseState(bot *tgutils.Bot, cache interfaces.HandlersCache, machine StateMachine,
+	lessons LessonsRepository, users UsersRepository) *ReorderChooseAllState {
 	return &ReorderChooseAllState{bot: bot, cache: cache, lessons: lessons, machine: machine, users: users}
 }
 
 func orderationMessage(chatId int64) tgbotapi.MessageConfig {
-	text := "Выберите способы сортировки данных,через запятую (порядок важен, сортировка будет применена в указанном порядке).\n1 - по времени отправки. 2 - по номеру лабораторной. Добавьте префикс + к номеру, если хотите установить сортировку по убыванию"
+	text := "Выберите способы сортировки данных,через запятую (порядок важен, сортировка будет применена в указанном порядке).\n" +
+		"1 - по времени отправки. 2 - по номеру лабораторной. Добавьте префикс + к номеру, если хотите установить сортировку по убыванию"
 	return tgbotapi.NewMessage(chatId, text)
 }
 
@@ -216,17 +222,7 @@ func (state *ReorderChooseAllState) Handle(ctx context.Context, message *tgbotap
 		}
 		var keyboard tgbotapi.InlineKeyboardMarkup
 
-		for chunk := range slices.Chunk(next, 3) {
-			var row []tgbotapi.InlineKeyboardButton
-			for _, lesson := range chunk {
-				buttonVisual := fmt.Sprintf("%s %s", lesson.Subject, lesson.DateTime.Format("02.01.2006"))
-				if lesson.SubgroupNumber != 0 {
-					buttonVisual += fmt.Sprintf(" (%d)", lesson.SubgroupNumber)
-				}
-				row = append(row, tgbotapi.NewInlineKeyboardButtonData(buttonVisual, constants.REORDER_LESSON_CONCRETE_CALLBACK))
-			}
-			keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, row)
-		}
+		createLessonsKeyboard(next, &keyboard.InlineKeyboard)
 
 		err = state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.REORDER_CHOOSE_LESSON_STATE))
 		if err != nil {
@@ -247,7 +243,7 @@ func (state *ReorderChooseAllState) Handle(ctx context.Context, message *tgbotap
 		}
 		err = state.cache.SaveInfo(ctx, message.Chat.ID, string(jsonedInfo))
 		if err != nil {
-			return fmt.Errorf("failed to save info during requesr reorder choose all state: %w", err)
+			return fmt.Errorf("failed to save info during request reorder choose all state: %w", err)
 		}
 	}
 	_, err = state.bot.SendCtx(ctx, orderationMessage(message.Chat.ID))
@@ -255,6 +251,20 @@ func (state *ReorderChooseAllState) Handle(ctx context.Context, message *tgbotap
 		return fmt.Errorf("faield to send response during reorder choose state: %w", err)
 	}
 	return nil
+}
+
+func createLessonsKeyboard(lessons []persistence.Lesson, markup *[][]tgbotapi.InlineKeyboardButton) {
+	for chunk := range slices.Chunk(lessons, 3) {
+		var row []tgbotapi.InlineKeyboardButton
+		for _, lesson := range chunk {
+			buttonVisual := fmt.Sprintf("%s %s", lesson.Subject, lesson.DateTime.Format("02.01.2006"))
+			if lesson.SubgroupNumber != 0 {
+				buttonVisual += fmt.Sprintf(" (%d)", lesson.SubgroupNumber)
+			}
+			row = append(row, tgbotapi.NewInlineKeyboardButtonData(buttonVisual, constants.REORDER_LESSON_CONCRETE_CALLBACK))
+		}
+		*markup = append(*markup, row)
+	}
 }
 
 func createLessonConcreteCallback(lesson persistence.Lesson) string {
@@ -309,7 +319,8 @@ func (state *ReorderChooseLessonState) Revert(ctx context.Context, msg *tgbotapi
 		return fmt.Errorf("failed to unmarshal jsoned info into reorder states info: %w", err)
 	}
 
-	_, err = state.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, info.MarkupMessageId, tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
+	_, err = state.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, info.MarkupMessageId,
+		tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
 	if err != nil {
 		return fmt.Errorf("failed to remove reply markup during reorder choose lesson state: %w", err)
 	}
@@ -335,7 +346,8 @@ type LessonRequestsRepository interface {
 	ChangeSubjectOrderation(context.Context, []entities.OrderType, string) error
 }
 
-func NewReorderMethodState(cache interfaces.HandlersCache, bot *tgutils.Bot, requests LessonRequestsRepository, sheets SheetsApi) *ReorderMethodState {
+func NewReorderMethodState(cache interfaces.HandlersCache, bot *tgutils.Bot,
+	requests LessonRequestsRepository, sheets SheetsApi) *ReorderMethodState {
 	return &ReorderMethodState{cache: cache, bot: bot, requests: requests, sheets: sheets}
 }
 
@@ -378,7 +390,7 @@ func (state *ReorderMethodState) Handle(ctx context.Context, message *tgbotapi.M
 			return fmt.Errorf("failed to get lesson by id during reorder method state: %w", err)
 		}
 
-		err = state.sheets.ReorderLesson(ctx,orderTypes, info.GroupName, lesson)
+		err = state.sheets.ReorderLesson(ctx, orderTypes, info.GroupName, lesson)
 		if err != nil {
 			return fmt.Errorf("failed to reorder lesson in google sheets during reorder method state: %w", err)
 		}
@@ -408,8 +420,8 @@ func (state *ReorderMethodState) parseMessage(message *tgbotapi.Message) ([]stru
 		orderation int8
 		ascending  bool
 	}{}
-	parts := strings.Split(message.Text, ",")
-	for _, part := range parts {
+	parts := strings.SplitSeq(message.Text, ",")
+	for part := range parts {
 		after, found := strings.CutPrefix(part, "+")
 		order, err := strconv.ParseInt(after, 10, 8)
 		if err != nil {
