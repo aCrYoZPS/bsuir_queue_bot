@@ -95,7 +95,7 @@ func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) e
 	default:
 		return errors.Join(errors.ErrUnsupported, errors.New("answers are only to commands"))
 	}
-	err = state.mux.Handle(ctx, message)
+	err := state.mux.Handle(ctx, message)
 	if err != nil {
 		return err
 	}
