@@ -29,19 +29,6 @@ func NewIdleState(cache interfaces.HandlersCache, bot *tgutils.Bot, usersRepo in
 }
 
 func (state *idleState) Handle(ctx context.Context, message *tgbotapi.Message) error {
-	keyboardRemove := tgbotapi.NewRemoveKeyboard(false)
-	emptyMsg := tgbotapi.NewMessage(message.Chat.ID, "Убираю бесполезную клавиатуру с боку от экрана. "+
-		"Хвала апи телеграма: это нельзя сделать лучше чем через сообщение с параметром и его удаление")
-	emptyMsg.ReplyMarkup = keyboardRemove
-	sentMsg, err := state.bot.SendCtx(ctx, emptyMsg)
-	if err != nil {
-		return fmt.Errorf("failed to send keyboard removing message during idle state: %w", err)
-	}
-	_, err = state.bot.Request(tgbotapi.NewDeleteMessage(sentMsg.Chat.ID, sentMsg.MessageID))
-	if err != nil {
-		return fmt.Errorf("failed to delete message for keyboard removal during idle state: %w", err)
-	}
-
 	switch message.Text {
 	case constants.ASSIGN_COMMAND:
 		err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(message.Chat.ID, constants.ADMIN_SUBMIT_START_STATE))
