@@ -77,13 +77,9 @@ func (handler *GroupCallbackHandler) handleAcceptCallback(ctx context.Context, m
 		return err
 	}
 	resp := tgbotapi.NewMessage(form.UserId, "Ваша заявка была одобрена")
-	user, err := handler.users.GetByTgId(ctx, msg.From.ID)
+	_, err = bot.SendCtx(ctx, resp)
 	if err != nil {
-		return fmt.Errorf("failed to get user by tg id (%d) during group accept callback handling: %w", msg.From.ID, err)
-	}
-	err = tgutils.CreateStartReplyMarkup(ctx, &resp, user, bot)
-	if err != nil {
-		return fmt.Errorf("failed to create start reply markup during group accept callback handling: %w", err)
+		return fmt.Errorf("failed to send response during group accept callback handling: %w", err)
 	}
 	return nil
 }

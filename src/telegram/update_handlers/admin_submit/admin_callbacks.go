@@ -28,7 +28,7 @@ type AdminCallbackHandler struct {
 }
 
 func NewAdminCallbackHandler(usersRepo interfaces.UsersRepository, cache interfaces.HandlersCache,
-	 requests interfaces.AdminRequestsRepository, lessons adminInterfaces.LessonsService) *AdminCallbackHandler {
+	requests interfaces.AdminRequestsRepository, lessons adminInterfaces.LessonsService) *AdminCallbackHandler {
 	return &AdminCallbackHandler{
 		usersRepo: usersRepo,
 		cache:     cache,
@@ -54,7 +54,7 @@ func (handler *AdminCallbackHandler) HandleCallback(ctx context.Context, update 
 	return err
 }
 
-func (handler *AdminCallbackHandler) handleAcceptCallback(ctx context.Context, msg *tgbotapi.Message, command string, 
+func (handler *AdminCallbackHandler) handleAcceptCallback(ctx context.Context, msg *tgbotapi.Message, command string,
 	bot *tgutils.Bot) error {
 	var chatId int64
 	chatId, err := strconv.ParseInt(strings.TrimPrefix(command, "accept"), 10, 64)
@@ -88,13 +88,9 @@ func (handler *AdminCallbackHandler) handleAcceptCallback(ctx context.Context, m
 
 	resp := tgbotapi.NewMessage(form.UserId, fmt.Sprintf("Ваша заявка была одобрена. Ссылка на гугл-таблицу: %s", url))
 
-	user, err := handler.usersRepo.GetByTgId(ctx, form.UserId)
+	_, err = bot.SendCtx(ctx, resp)
 	if err != nil {
-		return fmt.Errorf("failed to get user by tg id (%d) during admin accept callback handling: %w", msg.From.ID, err)
-	}
-	err = tgutils.CreateStartReplyMarkup(ctx, &resp, user, bot)
-	if err != nil {
-		return fmt.Errorf("failed to create start reply markup during admin accept callback handling: %w", err)
+		return fmt.Errorf("failed to send response during admin accept callback handling: %w", err)
 	}
 
 	err = handler.RemoveMarkupFromOwners(ctx, msg, bot)
@@ -126,7 +122,7 @@ func (handler *AdminCallbackHandler) addAdmin(ctx context.Context, form *adminSu
 	return nil
 }
 
-func (handler *AdminCallbackHandler) handleDeclineCallback(ctx context.Context, msg *tgbotapi.Message, command string, 
+func (handler *AdminCallbackHandler) handleDeclineCallback(ctx context.Context, msg *tgbotapi.Message, command string,
 	bot *tgutils.Bot) error {
 	var chatId int64
 	err := json.Unmarshal([]byte(strings.TrimPrefix(command, "decline")), &chatId)
@@ -170,8 +166,8 @@ func (handler *AdminCallbackHandler) RemoveMarkupFromOwners(ctx context.Context,
 		if err != nil {
 			return err
 		}
-		_, err := bot.Send(tgbotapi.NewEditMessageReplyMarkup(request.ChatId, int(request.MsgId), 
-		tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
+		_, err := bot.Send(tgbotapi.NewEditMessageReplyMarkup(request.ChatId, int(request.MsgId),
+			tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{})))
 		if err != nil {
 			return err
 		}
