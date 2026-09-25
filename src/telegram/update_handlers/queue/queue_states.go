@@ -20,7 +20,7 @@ type QueueStartState struct {
 	lessons   interfaces.LessonsRepository
 }
 
-func NewQueueStartState(bot *tgutils.Bot, cache interfaces.HandlersCache, usersRepo interfaces.UsersRepository, 
+func NewQueueStartState(bot *tgutils.Bot, cache interfaces.HandlersCache, usersRepo interfaces.UsersRepository,
 	lessons interfaces.LessonsRepository) *QueueStartState {
 	return &QueueStartState{
 		bot:       bot,
@@ -79,10 +79,15 @@ func (state *QueueStartState) Handle(ctx context.Context, msg *tgbotapi.Message)
 }
 
 func (state *QueueStartState) Revert(ctx context.Context, msg *tgbotapi.Message) error {
+	err := state.cache.SaveState(ctx, *interfaces.NewCachedInfo(msg.Chat.ID, constants.IDLE_STATE))
+	if err != nil {
+		return fmt.Errorf("failed to revert to idle state during queue start state: %w", err)
+	}
 	return nil
 }
 
 const labworksMarkupSize = 4
+
 func createLabworksKeyboard(userTgId int64, subjects []string) *tgbotapi.InlineKeyboardMarkup {
 	markup := [][]tgbotapi.InlineKeyboardButton{}
 	for chunk := range slices.Chunk(subjects, labworksMarkupSize) {
@@ -136,7 +141,7 @@ func (state *QueueWaitingState) Revert(ctx context.Context, msg *tgbotapi.Messag
 		return fmt.Errorf("failed to parse info (%s), as msg id int64: %w", info, err)
 	}
 	_, err = state.bot.SendCtx(ctx, tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, int(markupMsgId),
-	 tgbotapi.NewInlineKeyboardMarkup(make([]tgbotapi.InlineKeyboardButton, 0))))
+		tgbotapi.NewInlineKeyboardMarkup(make([]tgbotapi.InlineKeyboardButton, 0))))
 	if err != nil {
 		return fmt.Errorf("failed to send delete message during queue waiting state reversal: %w", err)
 	}
