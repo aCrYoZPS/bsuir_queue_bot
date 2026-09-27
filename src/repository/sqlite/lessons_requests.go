@@ -55,7 +55,7 @@ func (repo *LessonsRequestsRepository) Add(ctx context.Context, req *entities.Le
 }
 
 func (repo *LessonsRequestsRepository) Get(ctx context.Context, id int64) (*entities.LessonRequest, error) {
-	query := fmt.Sprintf("SELECT id, user_id, lesson_id, msg_id, chat_id, subgroup_num, submit_time FROM %s+ WHERE id=$1",
+	query := fmt.Sprintf("SELECT id, user_id, lesson_id, msg_id, chat_id, subgroup_num, submit_time FROM %s WHERE id=$1",
 		LESSONS_REQUESTS_TABLE)
 	row := repo.db.QueryRowContext(ctx, query, id)
 	if row.Err() != nil {
