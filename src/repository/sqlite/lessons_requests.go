@@ -145,8 +145,9 @@ func (repo *LessonsRequestsRepository) SetToNextLesson(ctx context.Context, requ
 
 	var lessonId int64
 	query := fmt.Sprintf("UPDATE %s AS lr SET lesson_id = (SELECT id FROM lessons WHERE id>lr.lesson_id AND "+
-		"subject=(SELECT subject FROM %s WHERE id=(SELECT lesson_id FROM %[1]s WHERE id=$1))), "+
-		"resubmissions_count=resubmissions_count+1 WHERE id=$1 RETURNING lesson_id", LESSONS_REQUESTS_TABLE, LESSONS_TABLE)
+		"subject=(SELECT subject FROM %s WHERE id=(SELECT lesson_id FROM %[1]s WHERE id=$1)) AND date_time>unixepoch('now') ), "+
+		"resubmissions_count=resubmissions_count+1 WHERE id=$1 RETURNING lesson_id",
+		LESSONS_REQUESTS_TABLE, LESSONS_TABLE)
 	row := tx.QueryRowContext(ctx, query, requestId)
 	if row.Err() != nil {
 		return fmt.Errorf("failed to set to next lesson: %w", err)
